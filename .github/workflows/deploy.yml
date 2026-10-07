@@ -1,0 +1,144 @@
+# Deploys main to production after CI passes (SPEC §15).
+# Phase 0 flow: OIDC → SAM deploy → API smoke test → web build → Amplify deploy → web smoke test.
+# Phase 1 adds database migrations; Phase 9 adds the Playwright @smoke suite.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    # Only for a successful CI run triggered by a push to main (not by a pull request).
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ vars.ALLOWED_ORIGIN }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AMPLIFY_APP_ID: ${{ vars.AMPLIFY_APP_ID }}
+      AMPLIFY_BRANCH: ${{ vars.AMPLIFY_BRANCH }}
+      ALLOWED_ORIGIN: ${{ vars.ALLOWED_ORIGIN }}
+      GIT_SHA: ${{ github.event.workflow_run.head_sha }}
+      STACK_NAME: hiresignal-api
+    steps:
+      - name: Check required environment variables
+        env:
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          missing=0
+          for name in AWS_DEPLOY_ROLE_ARN AWS_REGION AMPLIFY_APP_ID AMPLIFY_BRANCH ALLOWED_ORIGIN; do
+            if [ -z "${!name}" ]; then echo "::error::Variable $name is not set in the production environment"; missing=1; fi
+          done
+          exit "$missing"
+
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: hiresignal-deploy-${{ github.run_id }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: aws-actions/setup-sam@v3
+        with:
+          version: 1.167.0
+          use-installer: true
+
+      - name: Build and smoke-test the API bundle
+        run: |
+          npm run build -w @hiresignal/api
+          npm run smoke:bundle -w @hiresignal/api
+
+      - name: Deploy API (SAM)
+        run: |
+          sam deploy \
+            --template-file infra/template.yaml \
+            --stack-name "$STACK_NAME" \
+            --region "$AWS_REGION" \
+            --resolve-s3 \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides "GitSha=$GIT_SHA" "LlmMode=live" "AllowedOrigin=$ALLOWED_ORIGIN"
+
+      - name: Read the API URL from the stack outputs
+        id: api
+        run: |
+          url=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text)
+          if [[ ! "$url" =~ ^https://[a-z0-9]+\.lambda-url\.[a-z0-9-]+\.on\.aws/?$ ]]; then
+            echo "::error::Stack output ApiUrl is missing or malformed: '$url'"
+            exit 1
+          fi
+          echo "url=${url%/}" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke-test the API
+        env:
+          API_URL: ${{ steps.api.outputs.url }}
+        run: |
+          curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 \
+            "$API_URL/api/health" -o health.json
+          cat health.json
+          jq -e --arg sha "$GIT_SHA" '.status == "ok" and .gitSha == $sha' health.json > /dev/null
+
+      - name: Build the web app
+        env:
+          VITE_API_BASE_URL: ${{ steps.api.outputs.url }}
+        run: npm run build -w @hiresignal/web
+
+      - name: Deploy the web app (Amplify manual deployment)
+        run: |
+          zip_file="$RUNNER_TEMP/web.zip"
+          (cd apps/web/dist && zip -qr "$zip_file" .)
+          read -r job_id upload_url < <(aws amplify create-deployment \
+            --app-id "$AMPLIFY_APP_ID" --branch-name "$AMPLIFY_BRANCH" \
+            --query '[jobId, zipUploadUrl]' --output text)
+          if [ -z "$job_id" ] || [ -z "$upload_url" ]; then
+            echo "::error::create-deployment returned no job id or upload URL"
+            exit 1
+          fi
+          curl --fail --silent --show-error -X PUT -H 'Content-Type: application/zip' \
+            --upload-file "$zip_file" "$upload_url"
+          aws amplify start-deployment --app-id "$AMPLIFY_APP_ID" --branch-name "$AMPLIFY_BRANCH" \
+            --job-id "$job_id" > /dev/null
+          for attempt in $(seq 1 60); do
+            status=$(aws amplify get-job --app-id "$AMPLIFY_APP_ID" --branch-name "$AMPLIFY_BRANCH" \
+              --job-id "$job_id" --query 'job.summary.status' --output text)
+            echo "Amplify job $job_id: $status (check $attempt)"
+            case "$status" in
+              SUCCEED) exit 0 ;;
+              FAILED | CANCELLED) echo "::error::Amplify deployment $status"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          echo "::error::Amplify deployment did not finish within 5 minutes"
+          exit 1
+
+      - name: Smoke-test the web app
+        run: |
+          curl --fail --silent --show-error --max-time 30 "$ALLOWED_ORIGIN/" | grep -q '<div id="root">'
+          # A client-side route must serve index.html too (SPA rewrite rule).
+          curl --fail --silent --show-error --max-time 30 "$ALLOWED_ORIGIN/jobs/smoke-test" | grep -q '<div id="root">'
+          echo "Web app is live at $ALLOWED_ORIGIN"

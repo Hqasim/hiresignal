@@ -1,0 +1,77 @@
+# Quality gates for every pull request and every push to main (SPEC §15).
+# Phase 1 adds the integration job, Phase 9 the evals and e2e jobs.
+# CI never receives GEMINI_API_KEY: anything that talks to an LLM runs in replay mode.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  quality:
+    name: Quality (format, lint, types, boundaries)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run depcruise
+
+  unit:
+    name: Unit tests (coverage gates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+      - name: Upload API coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-coverage
+          path: apps/api/coverage/
+          retention-days: 7
+          if-no-files-found: error
+
+  build:
+    name: Build (API bundle, web, SAM templates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Smoke-test the Lambda bundle with a Function URL event
+        run: npm run smoke:bundle -w @hiresignal/api
+      - uses: aws-actions/setup-sam@v3
+        with:
+          version: 1.167.0
+          use-installer: true
+      - name: Lint SAM templates
+        run: |
+          sam validate --lint --region us-east-1 --template-file infra/template.yaml
+          sam validate --lint --region us-east-1 --template-file infra/bootstrap.yaml
