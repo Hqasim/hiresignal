@@ -4,19 +4,19 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 
 ## Phases
 
-| # | Phase | Status | Date | Notes |
-|---|---|---|---|---|
-| 0 | Foundations and walking skeleton | ☐ Not started | | |
-| 1 | Database and persistence | ☐ Not started | | |
-| 2 | LLM platform | ☐ Not started | | |
-| 3 | Safety layer: redaction and injection guard | ☐ Not started | | |
-| 4 | Synthetic data and ingestion | ☐ Not started | | |
-| 5 | Screening agent and scorecards | ☐ Not started | | |
-| 6 | Ask the talent pool (hybrid RAG) | ☐ Not started | | |
-| 7 | API hardening and ops endpoints | ☐ Not started | | |
-| 8 | Frontend | ☐ Not started | | |
-| 9 | Evals, E2E and CI hardening | ☐ Not started | | |
-| 10 | Launch and documentation | ☐ Not started | | |
+| #   | Phase                                       | Status        | Date | Notes |
+| --- | ------------------------------------------- | ------------- | ---- | ----- |
+| 0   | Foundations and walking skeleton            | ☐ Not started |      |       |
+| 1   | Database and persistence                    | ☐ Not started |      |       |
+| 2   | LLM platform                                | ☐ Not started |      |       |
+| 3   | Safety layer: redaction and injection guard | ☐ Not started |      |       |
+| 4   | Synthetic data and ingestion                | ☐ Not started |      |       |
+| 5   | Screening agent and scorecards              | ☐ Not started |      |       |
+| 6   | Ask the talent pool (hybrid RAG)            | ☐ Not started |      |       |
+| 7   | API hardening and ops endpoints             | ☐ Not started |      |       |
+| 8   | Frontend                                    | ☐ Not started |      |       |
+| 9   | Evals, E2E and CI hardening                 | ☐ Not started |      |       |
+| 10  | Launch and documentation                    | ☐ Not started |      |       |
 
 Status values: ☐ Not started · ◐ In progress · ☑ Done
 

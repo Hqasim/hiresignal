@@ -1,0 +1,11 @@
+package-lock.json
+**/dist/
+**/coverage/
+.aws-sam/
+playwright-report/
+test-results/
+# Recorded LLM fixtures are written by tools, never by hand.
+apps/api/fixtures/
+# Hand-written by the owner; kept out of auto-formatting so their diffs stay reviewable.
+.claude/
+docs/SPEC.md

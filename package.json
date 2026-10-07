@@ -1,0 +1,52 @@
+{
+  "name": "hiresignal",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Blind, injection-aware candidate screening. Every score is backed by evidence you can click.",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "e2e"
+  ],
+  "engines": {
+    "node": ">=24.21.0 <25",
+    "npm": ">=11.19.0"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "depcruise": "depcruise apps packages e2e --config .dependency-cruiser.cjs",
+    "test:unit": "npm run test:unit --workspaces --if-present",
+    "test:integration": "npm run test:integration --workspaces --if-present",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm run depcruise && npm run test:unit",
+    "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm run dev -w @hiresignal/api\" \"npm run dev -w @hiresignal/web\"",
+    "build": "npm run build -w @hiresignal/api && npm run build -w @hiresignal/web",
+    "db:up": "docker compose up --detach --wait",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.1",
+    "concurrently": "10.0.5",
+    "dependency-cruiser": "18.5.0",
+    "eslint": "10.12.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "globals": "17.13.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1"
+  },
+  "overrides": {
+    "shell-quote": "1.12.0",
+    "eslint-plugin-jsx-a11y": {
+      "eslint": "$eslint"
+    }
+  }
+}

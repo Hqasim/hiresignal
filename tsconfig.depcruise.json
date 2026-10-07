@@ -1,0 +1,7 @@
+{
+  "//": "Used only by dependency-cruiser, to resolve the web app's @/ alias. Each workspace typechecks with its own tsconfig.json.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "paths": { "@/*": ["./apps/web/src/*"] }
+  }
+}

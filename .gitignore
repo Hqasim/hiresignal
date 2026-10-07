@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.aws-sam/
+*.tsbuildinfo
+web.zip
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+# Local environment (only .env.example is committed)
+.env
+.env.*
+!.env.example
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db

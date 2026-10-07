@@ -1,0 +1,7 @@
+{
+  "name": "@hiresignal/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright end-to-end tests (added in Phase 9)."
+}
