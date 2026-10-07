@@ -1,0 +1,24 @@
+# Local Postgres + pgvector for development and integration tests (SPEC §19).
+# Port 5433 avoids clashing with a Postgres already installed on 5432.
+# The credentials are for this local container only; production uses Neon (SPEC §16).
+name: hiresignal
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: hiresignal
+      POSTGRES_PASSWORD: hiresignal
+      POSTGRES_DB: hiresignal
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U hiresignal -d hiresignal']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  db-data:
