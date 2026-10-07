@@ -101,6 +101,9 @@ module.exports = {
     // Anchored to workspace build output; an unanchored '/dist/' would also drop edges into node_modules/*/dist.
     exclude: { path: ['^apps/[a-z-]+/(dist|coverage)/', '^packages/[a-z-]+/(dist|coverage)/'] },
     tsPreCompilationDeps: true,
+    // Keep workspace packages at their node_modules/@hiresignal/* path. Without this they resolve
+    // through the symlink to packages/*, count as "undetermined", and escape no-non-package-json.
+    preserveSymlinks: true,
     tsConfig: { fileName: 'tsconfig.depcruise.json' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],

@@ -54,6 +54,7 @@
     }
   },
   "allowScripts": {
-    "lefthook": false
+    "lefthook": false,
+    "esbuild": false
   }
 }
