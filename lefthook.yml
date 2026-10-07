@@ -1,0 +1,16 @@
+# Git hooks. `npm ci` / `npm install` install them through the root `prepare` script.
+# They are a fast local preview of CI, not a replacement: CI runs the full `npm run verify`.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: format
+      glob: '*.{js,cjs,mjs,ts,tsx,json,md,yml,yaml,css,html}'
+      run: npx prettier --check --ignore-unknown {staged_files}
+    - name: lint
+      glob: '*.{js,cjs,mjs,ts,tsx}'
+      run: npx eslint --max-warnings 0 --no-warn-ignored {staged_files}
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: npx commitlint --edit {1}
