@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  HireSignal API: one Lambda behind a Function URL (ADR 0004). Code is pre-bundled by esbuild into
+  apps/api/dist, so SAM only zips that folder (SPEC §21 risk 8). Deployed by .github/workflows/deploy.yml.
+
+Parameters:
+  GitSha:
+    Type: String
+    Description: Commit being deployed; reported by GET /api/health.
+  LlmMode:
+    Type: String
+    AllowedValues: [live, record, replay]
+    Default: live
+    Description: Which LLM adapter the API uses (SPEC §9.8).
+  AllowedOrigin:
+    Type: String
+    AllowedPattern: '^https://[a-z0-9.-]+$'
+    Description: Web origin allowed by CORS (the Amplify main branch URL).
+
+Resources:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: hiresignal-api
+      Description: HireSignal HTTP API (Hono).
+      CodeUri: ../apps/api/dist
+      Handler: lambda.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 1024
+      Timeout: 60
+      LoggingConfig:
+        LogGroup: !Ref ApiLogGroup
+      Environment:
+        Variables:
+          GIT_SHA: !Ref GitSha
+          LLM_MODE: !Ref LlmMode
+          # Map bundle stack traces back to TypeScript sources in the logs.
+          NODE_OPTIONS: --enable-source-maps
+      # The Function URL owns CORS; the app adds no CORS headers (SPEC §10).
+      FunctionUrlConfig:
+        AuthType: NONE
+        Cors:
+          AllowOrigins:
+            - !Ref AllowedOrigin
+          AllowMethods: [GET, POST]
+          AllowHeaders: [content-type]
+          ExposeHeaders: [x-request-id]
+          MaxAge: 600
+
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/hiresignal-api
+      RetentionInDays: 7
+
+Outputs:
+  ApiUrl:
+    Description: Function URL of the API (VITE_API_BASE_URL for the web build).
+    Value: !GetAtt ApiFunctionUrl.FunctionUrl

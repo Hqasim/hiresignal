@@ -1,0 +1,265 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  HireSignal bootstrap (deployed once, by hand, with an admin profile). Creates the GitHub OIDC
+  trust, a least-privilege deploy role for GitHub Actions, the Amplify app that hosts the SPA, and
+  a $1/month budget alarm. See infra/README.md and SPEC §16.
+
+Parameters:
+  GitHubOwner:
+    Type: String
+    Description: GitHub user or organization that owns the repository.
+  RepoName:
+    Type: String
+    Default: hiresignal
+    Description: Repository name.
+  DeployEnvironment:
+    Type: String
+    Default: production
+    Description: GitHub Environment whose jobs may assume the deploy role.
+  CreateOidcProvider:
+    Type: String
+    AllowedValues: ['true', 'false']
+    Default: 'true'
+    Description: >-
+      Set to false if the account already has the token.actions.githubusercontent.com OIDC
+      provider (an account can have only one).
+  BudgetEmail:
+    Type: String
+    AllowedPattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    Description: Address that receives the budget alerts.
+  ApiStackName:
+    Type: String
+    Default: hiresignal-api
+    Description: Name of the SAM stack the deploy role may manage.
+
+Conditions:
+  ShouldCreateOidcProvider: !Equals [!Ref CreateOidcProvider, 'true']
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: ShouldCreateOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+
+  # Assumed by .github/workflows/deploy.yml via OIDC. No long-lived keys exist anywhere.
+  # The role name deliberately does not match the hiresignal-api-* pattern it may manage,
+  # so it can never edit itself.
+  DeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: hiresignal-github-deploy
+      Description: GitHub Actions deploy role for HireSignal (production environment only).
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                # Only jobs running in the GitHub Environment. The environment's deployment
+                # branch policy restricts it to main.
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOwner}/${RepoName}:environment:${DeployEnvironment}
+      Policies:
+        - PolicyName: deploy-hiresignal
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ManageApiAndSamManagedStacks
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:GetTemplate
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:ListChangeSets
+                  - cloudformation:ListStackResources
+                  - cloudformation:UpdateStack
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${ApiStackName}/*
+                  - !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/aws-sam-cli-managed-default/*
+              - Sid: UseSamTransform
+                Effect: Allow
+                Action: cloudformation:CreateChangeSet
+                Resource: !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:aws:transform/Serverless-2016-10-31
+              - Sid: TemplateChecksHaveNoResourceScope
+                Effect: Allow
+                Action:
+                  - cloudformation:ValidateTemplate
+                Resource: '*'
+              - Sid: SamManagedArtifactBucket
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetBucketLocation
+                  - s3:GetBucketPolicy
+                  - s3:GetBucketPublicAccessBlock
+                  - s3:GetBucketTagging
+                  - s3:GetBucketVersioning
+                  - s3:GetEncryptionConfiguration
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketTagging
+                  - s3:PutBucketVersioning
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::aws-sam-cli-managed-default-samclisourcebucket-*
+                  - !Sub arn:${AWS::Partition}:s3:::aws-sam-cli-managed-default-samclisourcebucket-*/*
+              - Sid: ManageApiFunction
+                Effect: Allow
+                Action:
+                  - lambda:AddPermission
+                  - lambda:CreateFunction
+                  - lambda:CreateFunctionUrlConfig
+                  - lambda:DeleteFunction
+                  - lambda:DeleteFunctionUrlConfig
+                  - lambda:Get*
+                  - lambda:List*
+                  - lambda:PublishVersion
+                  - lambda:PutFunctionRecursionConfig
+                  - lambda:PutRuntimeManagementConfig
+                  - lambda:RemovePermission
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:UpdateFunctionUrlConfig
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ApiStackName}*
+              - Sid: ManageApiExecutionRole
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:ListAttachedRolePolicies
+                  - iam:ListRolePolicies
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:UpdateAssumeRolePolicy
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ApiStackName}-*
+              # The execution role may only ever carry the basic logging policy, so the deploy
+              # role can't escalate privileges by creating a powerful role and passing it to Lambda.
+              - Sid: AttachOnlyBasicExecutionPolicy
+                Effect: Allow
+                Action:
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ApiStackName}-*
+                Condition:
+                  ArnEquals:
+                    iam:PolicyARN: !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+              - Sid: PassExecutionRoleToLambdaOnly
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${ApiStackName}-*
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: lambda.amazonaws.com
+              - Sid: ManageApiLogGroup
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:DeleteRetentionPolicy
+                  - logs:ListTagsForResource
+                  - logs:PutRetentionPolicy
+                  - logs:TagResource
+                  - logs:UntagResource
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ApiStackName}*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ApiStackName}*:*
+              - Sid: DescribeLogGroups
+                Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*
+              - Sid: DeployWebToTheOneAmplifyApp
+                Effect: Allow
+                Action:
+                  - amplify:CreateDeployment
+                  - amplify:GetJob
+                  - amplify:ListJobs
+                  - amplify:StartDeployment
+                # This app and its branches and jobs only.
+                Resource:
+                  - !GetAtt WebApp.Arn
+                  - !Sub ${WebApp.Arn}/*
+
+  # Static SPA hosting with no repository connection: CI uploads the built files (ADR 0017).
+  WebApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: hiresignal
+      Description: HireSignal web app (static SPA, deployed from GitHub Actions).
+      Platform: WEB
+      CustomRules:
+        # Serve index.html for client-side routes so deep links don't 404 (SPEC §21 risk 11).
+        - Source: </^[^.]+$|\.(?!(css|gif|ico|jpg|jpeg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>
+          Target: /index.html
+          Status: '200'
+
+  WebBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !GetAtt WebApp.AppId
+      BranchName: main
+      Stage: PRODUCTION
+      EnableAutoBuild: false
+
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: hiresignal-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: 1
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetEmail
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref BudgetEmail
+
+Outputs:
+  DeployRoleArn:
+    Description: GitHub variable AWS_DEPLOY_ROLE_ARN.
+    Value: !GetAtt DeployRole.Arn
+  AmplifyAppId:
+    Description: GitHub variable AMPLIFY_APP_ID.
+    Value: !GetAtt WebApp.AppId
+  AmplifyDefaultDomain:
+    Description: Amplify default domain.
+    Value: !GetAtt WebApp.DefaultDomain
+  WebOrigin:
+    Description: GitHub variable ALLOWED_ORIGIN (the main branch URL).
+    Value: !Sub https://${WebBranch.BranchName}.${WebApp.DefaultDomain}
