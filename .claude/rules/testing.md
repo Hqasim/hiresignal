@@ -26,7 +26,7 @@ paths:
 - **Integration tests** run against Postgres + pgvector: Docker locally, a service container in CI.
   - Each test file starts from a freshly migrated schema and cleans up after itself.
   - Use deterministic unit vectors for vector tests.
-- **LLM fixtures** in `apps/api/fixtures/llm/` are written only by `pnpm seed:record` or `pnpm llm:smoke`.
+- **LLM fixtures** in `apps/api/fixtures/llm/` are written only by `npm run seed:record` or `npm run llm:smoke`.
   - Never edit them by hand.
   - A missing fixture must fail with a message telling the developer to re-record.
 - **Property-based tests (fast-check) for redaction:**

@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| Version | 1.1 (Claude Code files moved into `.claude/`; manual steps and layer rules clarified) |
+| Version | 1.3 (npm workspaces; Node 24.21.0; Claude Code files in `.claude/`; manual steps and layer rules clarified) |
 | Date | 2026-10-08 |
 | Owner | Hamzah Qasim |
 | Status | Approved for build |
@@ -167,7 +167,7 @@ Engineering showcase: enforced hexagonal boundaries (dependency-cruiser), shared
 ```mermaid
 flowchart LR
   user([Recruiter / Reviewer]) -->|HTTPS| web["Web SPA<br/>Vite + React + TS<br/>AWS Amplify Hosting"]
-  web -->|JSON / HTTPS| api["API<br/>Hono on AWS Lambda (arm64, Node 22)<br/>Lambda Function URL"]
+  web -->|JSON / HTTPS| api["API<br/>Hono on AWS Lambda (arm64, Node 24)<br/>Lambda Function URL"]
   api -->|SQL / TLS| db[("Neon Postgres<br/>+ pgvector")]
   api -->|generate · embed| gem["Gemini API (free key)<br/>Flash-Lite · Flash · gemini-embedding-001"]
   dev([Developer]) -->|git push| gha[GitHub Actions]
@@ -263,6 +263,7 @@ sequenceDiagram
 Rules enforced by `.dependency-cruiser.cjs` in CI:
 
 - No circular dependencies.
+- Every import resolves and is declared in the importing workspace's own `package.json` (`not-to-unresolvable`, `no-non-package-json`). npm hoists packages to the root, so this rule is what stops undeclared imports.
 - `@google/genai` and `pg` may be imported only under `infrastructure/`.
 - `interfaces/` must not import `infrastructure/`; it receives use cases from `main/`.
 - `apps/web` may import `@hiresignal/contracts` but nothing from `apps/api`.
@@ -596,7 +597,7 @@ Return cosine similarity alongside the fused rank for the floor check. Note in t
 
 - Fixture key: `sha256(canonicalJson({ kind, model, request }))`, with stable key ordering and transport fields excluded.
 - Fixtures: `apps/api/fixtures/llm/<task>/<hash>.json` → `{ key, task, model, recordedAt, response, usage }`. They contain only redacted synthetic text, so they're safe to commit.
-- `replay` with a missing fixture throws `FixtureMissingError`: "No recorded response for <task>. Run `pnpm seed:record` (needs GEMINI_API_KEY)."
+- `replay` with a missing fixture throws `FixtureMissingError`: "No recorded response for <task>. Run `npm run seed:record` (needs GEMINI_API_KEY)."
 - Changing a prompt or model ID changes the keys. Re-record and commit the fixtures in the same commit as the prompt change.
 - Replay needs the same model IDs that were recorded. The defaults in `.env.example` and the `GEMINI_MODEL_*` values used by CI and `seed-demo` must match the committed fixtures.
 - Production is seeded in replay mode: zero Gemini calls, identical data to CI.
@@ -756,7 +757,7 @@ apps/web/src/
 
 - 0001 Record architecture decisions
 - 0002 Hexagonal architecture with enforced boundaries
-- 0003 TypeScript monorepo with pnpm workspaces and a contracts package
+- 0003 TypeScript monorepo with npm workspaces and a contracts package
 - 0004 Single Lambda behind a Function URL
 - 0005 Neon Postgres + pgvector as the only datastore
 - 0006 node-postgres everywhere
@@ -810,7 +811,7 @@ apps/web/src/
 
 **Coverage gates:** `domain/` ≥ 90% lines and branches; `application/` ≥ 80%.
 
-**Evals** (`pnpm eval`, replay mode, offline):
+**Evals** (`npm run eval`, replay mode, offline):
 
 | Suite | Metrics | Initial gate |
 |---|---|---|
@@ -829,10 +830,10 @@ Output goes to a console table, to `$GITHUB_STEP_SUMMARY` (markdown), and to `do
 
 | Job | Steps |
 |---|---|
-| `quality` | `pnpm install --frozen-lockfile` → format check → lint → typecheck → depcruise |
+| `quality` | `npm ci` → format check → lint → typecheck → depcruise |
 | `unit` | Vitest with coverage gates; upload coverage artifact |
 | `integration` | Service container `pgvector/pgvector:pg17` → migrate → integration tests |
-| `evals` | Service container → migrate → `pnpm seed` (replay) → `pnpm eval` → job summary |
+| `evals` | Service container → migrate → `npm run seed` (replay) → `npm run eval` → job summary |
 | `e2e` | Service container → migrate → seed → start API (replay) + web preview → Playwright + axe; upload report |
 | `build` | esbuild API bundle + Vite build; `sam validate --lint` |
 
@@ -840,7 +841,7 @@ Output goes to a console table, to `$GITHUB_STEP_SUMMARY` (markdown), and to `do
 
 1. Configure AWS credentials via OIDC (`id-token: write`).
 2. Build the API bundle → `sam deploy` with secrets passed as `NoEcho` parameter overrides.
-3. `pnpm db:migrate` against Neon (`DATABASE_MIGRATION_URL`).
+3. `npm run db:migrate` against Neon (`DATABASE_MIGRATION_URL`).
 4. Build the web app with `VITE_API_BASE_URL` set from the stack output.
 5. Amplify manual deploy: `create-deployment` → upload zip → `start-deployment` → poll until `SUCCEED`.
 6. Smoke test: `curl --fail` on `/api/health`, then Playwright `@smoke` against the live URL.
@@ -862,7 +863,7 @@ Output goes to a console table, to `$GITHUB_STEP_SUMMARY` (markdown), and to `do
 
 | Resource | How | Cost |
 |---|---|---|
-| Lambda (arm64, Node 22, 1024 MB, 60 s) + Function URL | `infra/template.yaml` (SAM), code from `apps/api/dist` | Always-free allowance (1M requests and 400k GB-s per month); Function URLs add no charge |
+| Lambda (arm64, `nodejs24.x`, 1024 MB, 60 s) + Function URL | `infra/template.yaml` (SAM), code from `apps/api/dist` | Always-free allowance (1M requests and 400k GB-s per month); Function URLs add no charge |
 | CloudWatch log group, 7-day retention | SAM | Within the free allowance at demo volume |
 | SAM artifact bucket | `sam deploy --resolve-s3` | Fractions of a cent (tiny zip) |
 | Amplify app + `main` branch + SPA rewrite | `infra/bootstrap.yaml` | Free during the account's first 12 months; afterwards cents per month for storage and transfer (no builds, no SSR) |
@@ -956,8 +957,8 @@ hiresignal/
 ├── docs/{SPEC.md, PROGRESS.md, architecture.md, threat-model.md, responsible-ai.md, evals.md, runbook.md, adr/}
 ├── docker-compose.yml           # pgvector/pgvector:pg17 on localhost:5433
 ├── .dependency-cruiser.cjs  eslint.config.js  .prettierrc  lefthook.yml  commitlint.config.js
-├── pnpm-workspace.yaml  package.json  tsconfig.base.json
-└── .nvmrc (22)  .gitattributes (LF)  .editorconfig  .env.example  LICENSE (MIT)
+├── package.json (workspaces)  package-lock.json  .npmrc  tsconfig.base.json
+└── .nvmrc (24.21.0)  .gitattributes (LF)  .editorconfig  .env.example  LICENSE (MIT)
 ```
 
 ---
@@ -986,8 +987,10 @@ Each phase is one Claude Code session: `/clear`, then `/phase N`. Claude present
 **Goal:** a "hello world" deployed through the real pipeline, with every quality gate wired.
 
 1. Root setup:
-   - pnpm workspace, root scripts (see `.claude/CLAUDE.md`), `tsconfig.base.json` (§13.1 flags)
-   - `.nvmrc`, `.gitattributes` (`* text=auto eol=lf`), `.editorconfig`, `.gitignore`, `.env.example`, MIT `LICENSE`
+   - npm workspaces (`apps/*`, `packages/*`, `e2e`), root scripts (see `.claude/CLAUDE.md`; `dev` runs api and web together with `concurrently`), `tsconfig.base.json` (§13.1 flags)
+   - `.npmrc` with `save-exact=true` (exact dependency pins) and `engine-strict=true`
+   - Node 24.21.0: `.nvmrc` (`24.21.0`), root `package.json` `"engines": { "node": ">=24.21.0 <25", "npm": ">=11.19.0" }`; `@types/node` on the 24.x line
+   - `.gitattributes` (`* text=auto eol=lf`), `.editorconfig`, `.gitignore`, `.env.example`, MIT `LICENSE`
    - Prettier, ESLint flat config, `.dependency-cruiser.cjs` with the §7.1 rules
    - lefthook and commitlint (Should)
 2. `packages/contracts` with `HealthResponseSchema` and `ProblemSchema`.
@@ -995,7 +998,7 @@ Each phase is one Claude Code session: `/clear`, then `/phase N`. Claude present
    - layer folders, each with a README
    - `config/env.ts`, a Hono app with `/api/health` (DB check stubbed until Phase 1)
    - problem+json error middleware skeleton
-   - `main/local-server.ts`, `main/lambda.ts` (`hono/aws-lambda`), `scripts/bundle.mjs` (esbuild → `dist/lambda.mjs`, ESM, `pg-native` external)
+   - `main/local-server.ts`, `main/lambda.ts` (`hono/aws-lambda`), `scripts/bundle.mjs` (esbuild → `dist/lambda.mjs`, ESM, target `node24`, `pg-native` external)
    - Vitest config, one unit test and one route test
 4. `apps/web`: Vite React TS, Tailwind, shadcn init, router, TanStack Query, `api-client.ts` validating with contracts, a home page showing API health, and one component test.
 5. `docker-compose.yml` (pgvector on 5433).
@@ -1005,14 +1008,14 @@ Each phase is one Claude Code session: `/clear`, then `/phase N`. Claude present
 
 **Hamzah does by hand:**
 
-- Toolchain: Node 22 (`nvm install 22; nvm use 22`), `corepack enable` (pnpm), AWS SAM CLI, `aws configure` with an admin profile for the bootstrap stack, `gh auth login`, Docker Desktop running.
+- Toolchain: Node 24.21.0 (`nvm install 24.21.0; nvm use 24.21.0`), npm 11.19.0+ (bundled with Node), AWS SAM CLI, `aws configure` with an admin profile for the bootstrap stack, `gh auth login`, Docker Desktop running.
 - Deploy the bootstrap stack, create the GitHub environment, secrets and variables, and push.
 
 Claude prints the exact commands.
 
 **DoD:**
 
-- `pnpm verify` is green locally.
+- `npm run verify` is green locally.
 - CI is green on GitHub.
 - The deploy workflow succeeds.
 - The live web page shows "API: healthy" from the live Lambda.
@@ -1040,10 +1043,10 @@ Claude prints the exact commands.
 3. `GeminiLlmClient` (tools, response JSON schema, usage including cached tokens, timeout) and `GeminiEmbedder` (batch, task types, 768 dims, normalize). Read the `@google/genai` docs first.
 4. Decorators `withRouting`, `withFallback`, `withRetry`, `withCallLogging`, each tested with a fake inner client.
 5. Record/replay (§9.8): canonical hashing, fixture store, `RecordingLlmClient`, `ReplayLlmClient`, `FixtureMissingError`; `LLM_MODE` wiring in `main/container.ts`.
-6. `config/ai.ts` (§7.5); `pnpm llm:smoke` CLI (one structured generate and one embedding, recorded).
+6. `config/ai.ts` (§7.5); `npm run llm:smoke` CLI (one structured generate and one embedding, recorded).
 7. ADRs 0007 (embedding part), 0009, 0010.
 
-**Hamzah does by hand:** put `GEMINI_API_KEY` and the model IDs in `.env`, then run `pnpm llm:smoke` once.
+**Hamzah does by hand:** put `GEMINI_API_KEY` and the model IDs in `.env`, then run `npm run llm:smoke` once.
 
 **DoD:** smoke succeeds live and its fixtures replay offline in a test; decorator and routing tests are green.
 
@@ -1066,9 +1069,9 @@ Claude prints the exact commands.
 4. `main/cli/seed.ts`: `--mode replay|record|live`, `--reset`, throttling between live calls, a progress log and a final outcome table.
 5. Integration test: seeding in replay mode produces the guard outcomes in §12.
 
-**Hamzah does by hand:** run `pnpm seed:record` once, then commit the fixtures.
+**Hamzah does by hand:** run `npm run seed:record` once, then commit the fixtures.
 
-**DoD:** `pnpm db:up && pnpm db:migrate && pnpm seed` works offline in under 30 s; outcomes match §12.
+**DoD:** `npm run db:up && npm run db:migrate && npm run seed` works offline in under 30 s; outcomes match §12.
 
 ### Phase 5 — Screening agent and scorecards
 
@@ -1080,7 +1083,7 @@ Claude prints the exact commands.
 6. Routes: candidates list and detail, shortlist, screen (capped); contracts and mappers; route tests.
 7. ADRs 0011, 0012.
 
-**Hamzah does by hand:** run `pnpm seed:record` to record the screening fixtures, then commit them.
+**Hamzah does by hand:** run `npm run seed:record` to record the screening fixtures, then commit them.
 
 **DoD:**
 
@@ -1096,7 +1099,7 @@ Claude prints the exact commands.
 4. Tests: happy path, insufficient-evidence path (no LLM call), rejected injected question, escalation routing.
 5. ADR 0008 (include `EXPLAIN` notes).
 
-**Hamzah does by hand:** run `pnpm seed:record` (extended in this phase to also record the 20 golden questions and the E2E ask question), then commit the fixtures.
+**Hamzah does by hand:** run `npm run seed:record` (extended in this phase to also record the 20 golden questions and the E2E ask question), then commit the fixtures.
 
 **DoD:** all 20 golden questions replay offline; recall@5 is measured and recorded in PROGRESS.
 
@@ -1164,7 +1167,7 @@ Total ≈ −2h 20m.
 | 5 | Implicit cache misses | Byte-stable prefix test; size above the minimum; report the measured ratio honestly |
 | 6 | `gemini-embedding-001` at 768 dims isn't normalized | `normalize()` in `domain/vectors` with tests |
 | 7 | HNSW with filters on tiny data | Planner may seq-scan (fine); document `EXPLAIN` and iterative scans |
-| 8 | SAM + pnpm workspaces | Pre-bundle with esbuild; SAM packages only `apps/api/dist` |
+| 8 | SAM + npm workspaces | Pre-bundle with esbuild; SAM packages only `apps/api/dist` |
 | 9 | `pg` in an ESM bundle | Mark `pg-native` external; output `.mjs`; smoke-test the bundle locally with a Function URL event fixture |
 | 10 | Double CORS headers | CORS only in the Function URL config |
 | 11 | Amplify deep links 404 | SPA rewrite rule in the bootstrap stack |
@@ -1172,6 +1175,8 @@ Total ≈ −2h 20m.
 | 13 | Windows development machine | LF endings, cross-platform scripts, Docker Desktop with WSL 2, repo outside Google Drive/OneDrive |
 | 14 | Shared state in the public demo (shortlists) | `seed-demo` reset workflow (Could: nightly) |
 | 15 | Ethics and legal perception of AI hiring tools | Responsible-AI doc, blind screening, human decision, synthetic data |
+| 16 | Local Node (24.21.0) differs from Lambda's AWS-managed `nodejs24.x` patch level | Pin 24.21.0 locally and in CI; use no APIs newer than 24.21.0; async handlers only (`nodejs24.x` drops callback handlers); the deploy smoke test runs against the real runtime |
+| 17 | npm hoisting lets a workspace import a package it never declared | dependency-cruiser `no-non-package-json` and `not-to-unresolvable` in `npm run verify` and CI |
 
 ---
 

@@ -35,7 +35,7 @@ Outputs: role ARN, Amplify app ID, Amplify default domain.
 ## `infra/template.yaml` (SAM)
 
 - One function:
-  - `nodejs22.x`, `arm64`, 1024 MB, 60 s timeout
+  - `nodejs24.x`, `arm64`, 1024 MB, 60 s timeout
   - `CodeUri: apps/api/dist`, pre-built; no SAM build method
   - Function URL with `AuthType: NONE` and CORS limited to the Amplify origin (GET and POST, `content-type`)
 - An explicit log group with 7-day retention.
@@ -46,7 +46,8 @@ Outputs: role ARN, Amplify app ID, Amplify default domain.
 
 - Set least-privilege `permissions:` per workflow and job. Only deploy jobs get `id-token: write`.
 - Pin GitHub and AWS official actions to a major version. Pin any other action to a full commit SHA with a version comment. Dependabot keeps them current.
-- Use `concurrency` so deploys never overlap. Install with `pnpm install --frozen-lockfile` and cache the pnpm store.
+- Use `concurrency` so deploys never overlap. Install with `npm ci`.
+- Set up Node with `actions/setup-node`, `node-version-file: .nvmrc` (24.21.0) and `cache: npm`. Never hard-code a Node version in a workflow.
 - No long-lived AWS keys anywhere. Deploys assume the OIDC role inside the `production` environment.
 - CI never needs `GEMINI_API_KEY`.
 - Make every step that could fail silently explicit:

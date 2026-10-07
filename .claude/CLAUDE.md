@@ -19,7 +19,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 1. **Spec first.** If a request conflicts with `docs/SPEC.md`, or the spec looks wrong, stop and ask. When we change direction, update the spec and add an ADR in the same commit.
 2. **No live LLM calls in tests or CI.**
    - Tests use hand-written fakes or the replay adapter (`LLM_MODE=replay`).
-   - Only `pnpm seed:record` and `pnpm llm:smoke` touch the live Gemini API, and only when I run them.
+   - Only `npm run seed:record` and `npm run llm:smoke` touch the live Gemini API, and only when I run them.
 3. **PII never reaches a model.**
    - Resume text reaches the embedder (`embedDocuments`), the classifier and every prompt builder only as `RedactedText`.
    - Never widen these types to `string`.
@@ -32,7 +32,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
    - No `any`, no `@ts-ignore`, no non-null `!`.
    - `@ts-expect-error` is allowed only in tests, with a reason.
    - `eslint-disable` needs a same-line justification.
-7. **Boundaries are enforced.** Follow the layer rules below; `pnpm depcruise` must pass.
+7. **Boundaries are enforced.** Follow the layer rules below; `npm run depcruise` must pass.
 8. **$0 infrastructure.** Add no AWS resource, SaaS or paid tier beyond SPEC §16 without asking me.
 9. **Don't guess external APIs.**
    - Before writing integration code, check the official docs. This covers `@google/genai`, Hono, AWS SAM, Amplify, Neon, pgvector, Vite, TanStack Query, shadcn/ui and Playwright.
@@ -47,7 +47,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
    - anything I must do by hand
    - risks and open questions
 3. Build in small vertical steps. For pure logic in `domain/`, write the failing test first.
-4. After each step, run `pnpm verify` and fix everything before continuing.
+4. After each step, run `npm run verify` and fix everything before continuing.
 5. Commit each logical step with Conventional Commits, for example:
    - `feat(api): add hybrid retrieval`
    - `test(domain): cover redaction edge cases`
@@ -70,24 +70,26 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 
 | Command | Purpose |
 |---|---|
-| `pnpm install` | Install the workspace (Node 22, pnpm via corepack) |
-| `pnpm db:up` / `pnpm db:down` | Start or stop local Postgres + pgvector (Docker, `localhost:5433`) |
-| `pnpm db:migrate` | Apply `db/migrations/*.sql` using `DATABASE_MIGRATION_URL` |
-| `pnpm seed` | Load synthetic data and precomputed results from fixtures (replay, offline) |
-| `pnpm seed:record` | Run the pipeline against live Gemini and record fixtures (I run this) |
-| `pnpm llm:smoke` | One live structured call and one embedding to check key and model IDs (I run this) |
-| `pnpm dev` | API on `:3000` and web on `:5173` (Vite proxies `/api`) |
-| `pnpm verify` | Format check, lint, typecheck, depcruise, unit tests. Run after every step. |
-| `pnpm test:integration` | Integration tests against local Postgres (needs `pnpm db:up`) |
-| `pnpm test:e2e` | Playwright against the local stack in replay mode |
-| `pnpm eval` | Eval suites with thresholds; `pnpm eval --write` updates `docs/evals.md` |
-| `pnpm build` | esbuild API bundle (`apps/api/dist/lambda.mjs`) and Vite web build |
+| `npm ci` | Install the workspace exactly from `package-lock.json` (Node 24.21.0 from `.nvmrc`, npm 11.19.0+). Add a dependency with `npm install <pkg> -w <workspace>`. |
+| `npm run db:up` / `npm run db:down` | Start or stop local Postgres + pgvector (Docker, `localhost:5433`) |
+| `npm run db:migrate` | Apply `db/migrations/*.sql` using `DATABASE_MIGRATION_URL` |
+| `npm run seed` | Load synthetic data and precomputed results from fixtures (replay, offline) |
+| `npm run seed:record` | Run the pipeline against live Gemini and record fixtures (I run this) |
+| `npm run llm:smoke` | One live structured call and one embedding to check key and model IDs (I run this) |
+| `npm run dev` | API on `:3000` and web on `:5173` (Vite proxies `/api`) |
+| `npm run verify` | Format check, lint, typecheck, depcruise, unit tests. Run after every step. |
+| `npm run test:integration` | Integration tests against local Postgres (needs `npm run db:up`) |
+| `npm run test:e2e` | Playwright against the local stack in replay mode |
+| `npm run eval` | Eval suites with thresholds; `npm run eval -- --write` updates `docs/evals.md` |
+| `npm run build` | esbuild API bundle (`apps/api/dist/lambda.mjs`) and Vite web build |
 
 Phase 0 creates these scripts. Keep this table accurate if any of them change.
 
+npm passes arguments to a script only after `--`, for example `npm run eval -- --write` or `npm run seed -- --reset`. Without the `--`, npm silently drops the flag.
+
 ## Architecture
 
-The repo is a pnpm-workspaces monorepo:
+The repo is an npm-workspaces monorepo (`"workspaces"` in the root `package.json`):
 
 | Path | What it holds |
 |---|---|
@@ -145,8 +147,10 @@ Layers in `apps/api/src`:
 - **LLM response schemas:** Gemini supports a subset of JSON Schema, so keep schemas flat (objects, arrays, enums, strings, numbers). Always re-validate with Zod.
 - **Database driver:** use `pg` everywhere (local, CI, Lambda). The Neon HTTP driver can't reach local Postgres.
 - **CORS:** the Lambda Function URL owns CORS. Don't add CORS middleware in Hono.
-- **API bundle:** pre-bundle with esbuild to `apps/api/dist/lambda.mjs` (ESM, `pg-native` external). SAM only packages `dist/`.
+- **API bundle:** pre-bundle with esbuild to `apps/api/dist/lambda.mjs` (ESM, `pg-native` external, target `node24`). SAM only packages `dist/`.
+- **Node version:** Node 24 LTS everywhere. Local and CI use exactly `24.21.0` (`.nvmrc`, `engines`, `actions/setup-node` with `node-version-file`). Lambda runs `nodejs24.x`, whose patch version AWS manages, so don't rely on anything newer than 24.21.0. The `nodejs24.x` runtime has no callback-style handlers; handlers must be `async`. npm ships with Node; no corepack.
 - **Amplify:** it needs the SPA rewrite rule, and `VITE_API_BASE_URL` is baked in at build time.
+- **npm workspaces:** npm hoists every package to the root `node_modules`, so code can import a package its own `package.json` doesn't declare. dependency-cruiser's `no-non-package-json` and `not-to-unresolvable` rules catch this; keep them on. Link workspace packages with `"@hiresignal/contracts": "*"` (npm has no `workspace:` protocol). Commit only `package-lock.json`. Never use `--legacy-peer-deps` or `--force`; resolve peer conflicts with `overrides` in the root `package.json` and say why in the commit message.
 - **Windows:** the developer machine runs Windows.
   - Keep LF line endings.
   - Keep package scripts cross-platform (no bash-only syntax).
