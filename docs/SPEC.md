@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| Version | 1.3 (npm workspaces; Node 24.21.0; Claude Code files in `.claude/`; manual steps and layer rules clarified) |
+| Version | 1.4 (deploy workflow and package scripts grow phase by phase; Lambda adapter is `@hono/aws-lambda`) |
 | Date | 2026-10-08 |
 | Owner | Hamzah Qasim |
 | Status | Approved for build |
@@ -987,7 +987,7 @@ Each phase is one Claude Code session: `/clear`, then `/phase N`. Claude present
 **Goal:** a "hello world" deployed through the real pipeline, with every quality gate wired.
 
 1. Root setup:
-   - npm workspaces (`apps/*`, `packages/*`, `e2e`), root scripts (see `.claude/CLAUDE.md`; `dev` runs api and web together with `concurrently`), `tsconfig.base.json` (§13.1 flags)
+   - npm workspaces (`apps/*`, `packages/*`, `e2e`), root scripts (see `.claude/CLAUDE.md`; `dev` runs api and web together with `concurrently`; each later phase adds the scripts its code needs, such as `db:migrate` in Phase 1), `tsconfig.base.json` (§13.1 flags)
    - `.npmrc` with `save-exact=true` (exact dependency pins) and `engine-strict=true`
    - Node 24.21.0: `.nvmrc` (`24.21.0`), root `package.json` `"engines": { "node": ">=24.21.0 <25", "npm": ">=11.19.0" }`; `@types/node` on the 24.x line
    - `.gitattributes` (`* text=auto eol=lf`), `.editorconfig`, `.gitignore`, `.env.example`, MIT `LICENSE`
@@ -998,12 +998,12 @@ Each phase is one Claude Code session: `/clear`, then `/phase N`. Claude present
    - layer folders, each with a README
    - `config/env.ts`, a Hono app with `/api/health` (DB check stubbed until Phase 1)
    - problem+json error middleware skeleton
-   - `main/local-server.ts`, `main/lambda.ts` (`hono/aws-lambda`), `scripts/bundle.mjs` (esbuild → `dist/lambda.mjs`, ESM, target `node24`, `pg-native` external)
+   - `main/local-server.ts`, `main/lambda.ts` (`@hono/aws-lambda`, which replaces the deprecated `hono/aws-lambda`), `scripts/bundle.mjs` (esbuild → `dist/lambda.mjs`, ESM, target `node24`, `pg-native` external)
    - Vitest config, one unit test and one route test
 4. `apps/web`: Vite React TS, Tailwind, shadcn init, router, TanStack Query, `api-client.ts` validating with contracts, a home page showing API health, and one component test.
 5. `docker-compose.yml` (pgvector on 5433).
 6. Infrastructure: `infra/bootstrap.yaml` and `infra/template.yaml` per §16.
-7. Workflows: `ci.yml` (quality, unit, build), `deploy.yml` (full flow), `dependabot.yml`, PR template.
+7. Workflows: `ci.yml` (quality, unit, build), `deploy.yml`, `dependabot.yml`, PR template. Phase 0's deploy flow is OIDC → SAM deploy → API smoke test → web build → Amplify deploy → web smoke test. Phase 1 adds migrations, Phase 2 the Gemini secret and model IDs, Phase 9 the Playwright `@smoke` step (§15 is the end state).
 8. Docs: README stub, `docs/adr/README.md`, ADRs 0001–0004, 0016, 0017; `docs/PROGRESS.md` updated.
 
 **Hamzah does by hand:**
@@ -1045,8 +1045,9 @@ Claude prints the exact commands.
 5. Record/replay (§9.8): canonical hashing, fixture store, `RecordingLlmClient`, `ReplayLlmClient`, `FixtureMissingError`; `LLM_MODE` wiring in `main/container.ts`.
 6. `config/ai.ts` (§7.5); `npm run llm:smoke` CLI (one structured generate and one embedding, recorded).
 7. ADRs 0007 (embedding part), 0009, 0010.
+8. Production wiring: `GeminiApiKey` (`NoEcho`) and model-ID parameters in `infra/template.yaml`, passed by `deploy.yml` (§16).
 
-**Hamzah does by hand:** put `GEMINI_API_KEY` and the model IDs in `.env`, then run `npm run llm:smoke` once.
+**Hamzah does by hand:** put `GEMINI_API_KEY` and the model IDs in `.env`, then run `npm run llm:smoke` once. Add the `GEMINI_API_KEY` secret and the `GEMINI_MODEL_*` and `DAILY_LLM_CALL_CAP` variables to the `production` environment.
 
 **DoD:** smoke succeeds live and its fixtures replay offline in a test; decorator and routing tests are green.
 
@@ -1125,7 +1126,7 @@ Claude prints the exact commands.
 ### Phase 9 — Evals, E2E and CI hardening
 
 1. Eval runner with the four suites and ablations; thresholds file; summary output; `--write` to `docs/evals.md`.
-2. Playwright journeys (§14) and axe; `@smoke` tag.
+2. Playwright journeys (§14) and axe; `@smoke` tag; `deploy.yml` runs the `@smoke` subset against production.
 3. CI jobs `evals` and `e2e`; coverage gates enforced; artifacts uploaded.
 4. Runbook section on branch protection.
 

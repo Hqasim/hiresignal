@@ -83,7 +83,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 | `npm run eval` | Eval suites with thresholds; `npm run eval -- --write` updates `docs/evals.md` |
 | `npm run build` | esbuild API bundle (`apps/api/dist/lambda.mjs`) and Vite web build |
 
-Phase 0 creates these scripts. Keep this table accurate if any of them change.
+Each phase adds the scripts its code needs: Phase 0 created `dev`, `verify`, `build`, `db:up`/`db:down` and `test:integration`; `db:migrate` arrives in Phase 1, `llm:smoke` in Phase 2, `seed`/`seed:record` in Phase 4, `eval` and `test:e2e` in Phase 9. Keep this table accurate if any of them change.
 
 npm passes arguments to a script only after `--`, for example `npm run eval -- --write` or `npm run seed -- --reset`. Without the `--`, npm silently drops the flag.
 
@@ -150,7 +150,7 @@ Layers in `apps/api/src`:
 - **API bundle:** pre-bundle with esbuild to `apps/api/dist/lambda.mjs` (ESM, `pg-native` external, target `node24`). SAM only packages `dist/`.
 - **Node version:** Node 24 LTS everywhere. Local and CI use exactly `24.21.0` (`.nvmrc`, `engines`, `actions/setup-node` with `node-version-file`). Lambda runs `nodejs24.x`, whose patch version AWS manages, so don't rely on anything newer than 24.21.0. The `nodejs24.x` runtime has no callback-style handlers; handlers must be `async`. npm ships with Node; no corepack.
 - **Amplify:** it needs the SPA rewrite rule, and `VITE_API_BASE_URL` is baked in at build time.
-- **npm workspaces:** npm hoists every package to the root `node_modules`, so code can import a package its own `package.json` doesn't declare. dependency-cruiser's `no-non-package-json` and `not-to-unresolvable` rules catch this; keep them on. Link workspace packages with `"@hiresignal/contracts": "*"` (npm has no `workspace:` protocol). Commit only `package-lock.json`. Never use `--legacy-peer-deps` or `--force`; resolve peer conflicts with `overrides` in the root `package.json` and say why in the commit message.
+- **npm workspaces:** npm hoists every package to the root `node_modules`, so code can import a package its own `package.json` doesn't declare. dependency-cruiser's `no-non-package-json` and `not-to-unresolvable` rules catch this; keep them on. Link workspace packages with `"@hiresignal/contracts": "*"` (npm has no `workspace:` protocol). Commit only `package-lock.json`. Never use `--legacy-peer-deps` or `--force`; resolve peer conflicts with `overrides` in the root `package.json` and say why in the commit message. npm 11 asks before running install scripts: review new ones with `npm install-scripts ls` and record the decision in `allowScripts` (lefthook and esbuild are denied because their binaries work without them). After `npm install <pkg> -w <workspace>`, check that the workspace `package.json` gained the entry; npm sometimes drops it on a brand-new workspace, and then just rerun the install.
 - **Windows:** the developer machine runs Windows.
   - Keep LF line endings.
   - Keep package scripts cross-platform (no bash-only syntax).
