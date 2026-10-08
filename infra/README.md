@@ -13,7 +13,7 @@ The deploy role can't be created by the pipeline that uses it, and it must not b
 
 ## Deploy role guardrails
 
-- Trusted only for `repo:<owner>/hiresignal:environment:production`. The `production` environment's branch policy allows only `main`.
+- Trusted only for the immutable OIDC subject `repo:<owner>@<owner-id>/hiresignal@<repo-id>:environment:production`, so a renamed or re-created repository can't assume it. The `production` environment's branch policy allows only `main`.
 - May create only roles named `hiresignal-api-*`, attach only `AWSLambdaBasicExecutionRole` to them, and pass them only to Lambda. It can't create a powerful role.
 - Amplify permissions cover only the one app.
 

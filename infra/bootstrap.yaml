@@ -8,10 +8,20 @@ Parameters:
   GitHubOwner:
     Type: String
     Description: GitHub user or organization that owns the repository.
+  GitHubOwnerId:
+    Type: String
+    AllowedPattern: '^[0-9]+$'
+    Description: >-
+      Numeric ID of the owner. GitHub's immutable OIDC subject includes it; read it with
+      `gh api repos/<owner>/<repo>/actions/oidc/customization/sub`.
   RepoName:
     Type: String
     Default: hiresignal
     Description: Repository name.
+  RepoId:
+    Type: String
+    AllowedPattern: '^[0-9]+$'
+    Description: Numeric ID of the repository (part of the immutable OIDC subject).
   DeployEnvironment:
     Type: String
     Default: production
@@ -63,9 +73,11 @@ Resources:
             Condition:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
-                # Only jobs running in the GitHub Environment. The environment's deployment
-                # branch policy restricts it to main.
-                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOwner}/${RepoName}:environment:${DeployEnvironment}
+                # Only jobs running in the GitHub Environment; its deployment branch policy
+                # restricts it to main. The repository uses GitHub's immutable subject format
+                # (owner@id/repo@id), so a renamed or re-created repository with the same name
+                # can't assume this role.
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOwner}@${GitHubOwnerId}/${RepoName}@${RepoId}:environment:${DeployEnvironment}
       Policies:
         - PolicyName: deploy-hiresignal
           PolicyDocument:

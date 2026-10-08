@@ -10,7 +10,7 @@ The live system needs a few secrets: the Gemini API key from Phase 2, and Neon c
 ## Decision
 
 - **Where values live:** secrets and settings are stored in the GitHub Environment `production`, as encrypted secrets and plain variables (SPEC §16). Its deployment branch policy allows only `main`.
-- **AWS access:** the deploy job in [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) is the only job bound to that environment. It assumes AWS credentials through GitHub OIDC; [`infra/bootstrap.yaml`](../../infra/bootstrap.yaml) trusts only `repo:<owner>/hiresignal:environment:production`. No AWS access keys exist anywhere.
+- **AWS access:** the deploy job in [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) is the only job bound to that environment. It assumes AWS credentials through GitHub OIDC; [`infra/bootstrap.yaml`](../../infra/bootstrap.yaml) trusts only the immutable OIDC subject `repo:<owner>@<owner-id>/hiresignal@<repo-id>:environment:production`. No AWS access keys exist anywhere.
 - **Into Lambda:** secrets are passed to `sam deploy` as `NoEcho` CloudFormation parameters and become Lambda environment variables. The API reads and validates them once at cold start ([`config/env.ts`](../../apps/api/src/config/env.ts)). Validation errors name the variable, never its value.
 - **CI:** `ci.yml` has read-only permissions and no access to environment secrets.
 - **Local development:** uses a git-ignored `.env` based on the committed `.env.example`.
