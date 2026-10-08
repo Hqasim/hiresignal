@@ -8,6 +8,10 @@ import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
 import type { RoutedLlmClient } from '../application/ports/routed-llm-client';
 import {
+  createCheckLlmPlatform,
+  type LlmPlatformReport,
+} from '../application/smoke/check-llm-platform';
+import {
   ASK_ESCALATION_CANDIDATES,
   ASK_ESCALATION_CONTEXT_TOKENS,
   EMBEDDING_BATCH_SIZE,
@@ -16,12 +20,15 @@ import {
   LLM_RETRY_BASE_DELAY_MS,
   LLM_RETRY_MAX_DELAY_MS,
   LLM_TIMEOUT_MS,
+  SMOKE_MAX_OUTPUT_TOKENS,
 } from '../config/ai';
+import type { ModelTier } from '../domain/routing/llm-task';
 import {
   withCallLogging,
   withEmbeddingCallLogging,
 } from '../infrastructure/llm/decorators/with-call-logging';
 import { withFallback } from '../infrastructure/llm/decorators/with-fallback';
+import { withPinnedRoute } from '../infrastructure/llm/decorators/with-pinned-route';
 import { withRetry } from '../infrastructure/llm/decorators/with-retry';
 import { type ModelsByTier, withRouting } from '../infrastructure/llm/decorators/with-routing';
 import { createGeminiClients } from '../infrastructure/llm/gemini/create-gemini-clients';
@@ -142,4 +149,31 @@ export function createLlm(
     inputFormat: GEMINI_EMBEDDING_INPUT_FORMAT,
   });
   return { llm, embedder };
+}
+
+/**
+ * The smoke check over the provider clients, with one client pinned to each tier. It skips the
+ * routing policy (it checks both models directly) and the call log (it needs no database). The
+ * live CLI and the replay test both build it here, so they send byte-identical requests.
+ *
+ * @example
+ * const check = createSmokeCheck(createProviderClients(settings, deps), settings.models);
+ */
+export function createSmokeCheck(
+  provider: ProviderClients,
+  models: ModelsByTier,
+): () => Promise<LlmPlatformReport> {
+  const pinned = (tier: ModelTier) =>
+    withPinnedRoute(provider.llm, {
+      tier,
+      model: models[tier],
+      reason: 'default',
+      isFallback: false,
+    });
+  return createCheckLlmPlatform({
+    lite: pinned('lite'),
+    flash: pinned('flash'),
+    embedder: provider.embedder,
+    maxOutputTokens: SMOKE_MAX_OUTPUT_TOKENS,
+  });
 }

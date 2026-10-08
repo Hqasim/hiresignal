@@ -5,7 +5,8 @@ import type { Hono } from 'hono';
 import type { Embedder } from '../application/ports/embedder';
 import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
-import { type Env, parseEnv, parseMigrationEnv } from '../config/env';
+import type { LlmPlatformReport } from '../application/smoke/check-llm-platform';
+import { type Env, parseEnv, parseMigrationEnv, parseSmokeEnv } from '../config/env';
 import { systemClock } from '../infrastructure/clock/system-clock';
 import { createJsonConsoleLogger } from '../infrastructure/logging/json-console-logger';
 import { createPool, type DbPool } from '../infrastructure/postgres/create-pool';
@@ -14,7 +15,7 @@ import { createPgDatabaseProbe } from '../infrastructure/postgres/pg-database-pr
 import { createPgLlmCallRepository } from '../infrastructure/postgres/pg-llm-call-repository';
 import { createApp } from '../interfaces/http/app';
 import type { AppBindings } from '../interfaces/http/app-bindings';
-import { createLlm, type LlmSettings } from './llm-wiring';
+import { createLlm, createProviderClients, createSmokeCheck, type LlmSettings } from './llm-wiring';
 
 /** The wired application, shared by every entry point. */
 export interface Container {
@@ -92,4 +93,34 @@ export function createMigrationRunner(
     run: async () => migrate(pool, await readMigrations(MIGRATIONS_DIRECTORY)),
     close: () => pool.end(),
   };
+}
+
+/** The smoke CLI's dependencies (`npm run llm:smoke`). */
+export interface LlmSmokeRunner {
+  logger: Logger;
+  run(): Promise<LlmPlatformReport>;
+}
+
+/**
+ * Wires the smoke check in `record` mode: live Gemini calls whose responses are saved as
+ * fixtures, so a test can replay them offline (SPEC §20 Phase 2). Needs no database.
+ *
+ * @throws Error if `GEMINI_API_KEY` or a model ID is missing.
+ */
+export function createLlmSmokeRunner(
+  source: Readonly<Record<string, string | undefined>>,
+): LlmSmokeRunner {
+  const env = parseSmokeEnv(source);
+  const logger = createJsonConsoleLogger({ clock: systemClock });
+  const models = { lite: env.GEMINI_MODEL_LITE, flash: env.GEMINI_MODEL_FLASH };
+  const provider = createProviderClients(
+    {
+      mode: 'record',
+      apiKey: env.GEMINI_API_KEY,
+      models,
+      embeddingModel: env.GEMINI_EMBEDDING_MODEL,
+    },
+    { clock: systemClock, logger },
+  );
+  return { logger, run: createSmokeCheck(provider, models) };
 }
