@@ -17,6 +17,13 @@ Parameters:
     Type: String
     AllowedPattern: '^https://[a-z0-9.-]+$'
     Description: Web origin allowed by CORS (the Amplify main branch URL).
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+    AllowedPattern: '^postgres(ql)?://.+'
+    Description: >-
+      Runtime connection string for the least-privilege hiresignal_app role on Neon's pooled
+      endpoint, with sslmode=verify-full (ADR 0006). Comes from the DATABASE_URL secret (ADR 0016).
 
 Resources:
   ApiFunction:
@@ -36,6 +43,7 @@ Resources:
         Variables:
           GIT_SHA: !Ref GitSha
           LLM_MODE: !Ref LlmMode
+          DATABASE_URL: !Ref DatabaseUrl
           # Map bundle stack traces back to TypeScript sources in the logs.
           NODE_OPTIONS: --enable-source-maps
       # The Function URL owns CORS; the app adds no CORS headers (SPEC §10).

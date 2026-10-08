@@ -1,6 +1,7 @@
 # Deploys main to production after CI passes (SPEC §15).
-# Phase 0 flow: OIDC → SAM deploy → API smoke test → web build → Amplify deploy → web smoke test.
-# Phase 1 adds database migrations; Phase 9 adds the Playwright @smoke suite.
+# Flow: OIDC → migrate Neon → SAM deploy → API smoke test → web build → Amplify deploy → web smoke test.
+# Migrations run before the code deploy, so they must be additive (ADR 0018).
+# Phase 2 adds the Gemini secret and model IDs; Phase 9 adds the Playwright @smoke suite.
 name: Deploy
 
 on:
@@ -37,13 +38,19 @@ jobs:
       GIT_SHA: ${{ github.event.workflow_run.head_sha }}
       STACK_NAME: hiresignal-api
     steps:
-      - name: Check required environment variables
+      - name: Check required environment variables and secrets
         env:
           AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
         run: |
           missing=0
           for name in AWS_DEPLOY_ROLE_ARN AWS_REGION AMPLIFY_APP_ID AMPLIFY_BRANCH ALLOWED_ORIGIN; do
             if [ -z "${!name}" ]; then echo "::error::Variable $name is not set in the production environment"; missing=1; fi
+          done
+          # Only emptiness is checked; secret values are never printed.
+          for name in DATABASE_URL DATABASE_MIGRATION_URL; do
+            if [ -z "${!name}" ]; then echo "::error::Secret $name is not set in the production environment"; missing=1; fi
           done
           exit "$missing"
 
@@ -71,7 +78,16 @@ jobs:
           npm run build -w @hiresignal/api
           npm run smoke:bundle -w @hiresignal/api
 
+      # Before the code deploy: the version still running must work with the new schema, so
+      # migrations are additive (expand first, contract in a later release). ADR 0018.
+      - name: Migrate the database (Neon, owner role, direct endpoint)
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: npm run db:migrate
+
       - name: Deploy API (SAM)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           sam deploy \
             --template-file infra/template.yaml \
@@ -81,7 +97,8 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --parameter-overrides "GitSha=$GIT_SHA" "LlmMode=live" "AllowedOrigin=$ALLOWED_ORIGIN"
+            --parameter-overrides "GitSha=$GIT_SHA" "LlmMode=live" "AllowedOrigin=$ALLOWED_ORIGIN" \
+              "DatabaseUrl=$DATABASE_URL"
 
       - name: Read the API URL from the stack outputs
         id: api
@@ -101,7 +118,7 @@ jobs:
           curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 \
             "$API_URL/api/health" -o health.json
           cat health.json
-          jq -e --arg sha "$GIT_SHA" '.status == "ok" and .gitSha == $sha' health.json > /dev/null
+          jq -e --arg sha "$GIT_SHA" '.status == "ok" and .db == "up" and .gitSha == $sha' health.json > /dev/null
 
       - name: Build the web app
         env:
