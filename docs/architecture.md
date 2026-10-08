@@ -1,6 +1,6 @@
 # Architecture
 
-How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-08 (Phase 1) it covers the system context, the API layers and the data model.
+How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-09 (Phase 2) it covers the system context, the API layers, the LLM platform and the data model.
 
 ## System context
 
@@ -9,7 +9,7 @@ flowchart LR
   user([Recruiter / Reviewer]) -->|HTTPS| web["Web SPA<br/>Vite + React + TS<br/>AWS Amplify Hosting"]
   web -->|JSON / HTTPS| api["API<br/>Hono on AWS Lambda (arm64, Node 24)<br/>Lambda Function URL"]
   api -->|"SQL / TLS · hiresignal_app · pooled"| db[("Neon Postgres<br/>+ pgvector")]
-  api -->|generate · embed| gem["Gemini API (free key)<br/>Flash-Lite · Flash · gemini-embedding-001"]
+  api -->|generate · embed| gem["Gemini API (free key)<br/>Flash-Lite · Flash · gemini-embedding-2"]
   dev([Developer]) -->|git push| gha[GitHub Actions]
   gha -->|"migrations · owner · direct"| db
   gha -->|"OIDC → SAM deploy"| api
@@ -18,7 +18,7 @@ flowchart LR
 
 - **One Lambda behind a Function URL** serves the whole API ([ADR 0004](adr/0004-single-lambda-behind-a-function-url.md)). The web app is a static SPA on Amplify ([ADR 0017](adr/0017-static-spa-on-amplify-with-ci-deploys.md)).
 - **One Postgres database** holds the relational data, the JSONB documents, the vectors and the full-text indexes ([ADR 0005](adr/0005-neon-postgres-pgvector-only-datastore.md)). The Lambda connects as the least-privilege `hiresignal_app` role through Neon's pooler. Migrations run as the owner on the direct endpoint, **before** each code deploy ([ADR 0018](adr/0018-forward-only-migrations-before-deploy.md)).
-- **The Gemini API** is wired in Phase 2.
+- **The Gemini API** is reached only through the [LLM platform](#llm-platform): Flash-Lite and Flash for generation, `gemini-embedding-2` for embeddings ([ADR 0007](adr/0007-embedding-model-dimensions-and-normalization.md)). CI and tests replay recorded responses and never call it ([ADR 0009](adr/0009-record-replay-llm-adapter.md)).
 
 ## API layers
 
@@ -28,13 +28,14 @@ The API is hexagonal ([ADR 0002](adr/0002-hexagonal-architecture-with-enforced-b
 flowchart TD
   main["main/<br/>composition root, entry points, CLIs"] --> interfaces
   main --> infrastructure
-  main --> config["config/<br/>env parsing (Zod)"]
+  main --> config["config/<br/>env parsing (Zod), AI tunables"]
   interfaces["interfaces/http/<br/>Hono routes, problem+json"] --> application
-  infrastructure["infrastructure/<br/>postgres, logging, clock"] --> application
+  infrastructure["infrastructure/<br/>postgres, llm, logging, clock"] --> application
   application["application/<br/>use cases, ports"] --> domain["domain/<br/>entities, branded types, schemas"]
   interfaces --> domain
   infrastructure --> domain
   infrastructure -.->|only layer allowed| pg[(pg)]
+  infrastructure -.->|only layer allowed| genai[("@google/genai")]
 ```
 
 Persistence follows ports and adapters ([ADR 0006](adr/0006-node-postgres-everywhere.md)):
@@ -49,6 +50,31 @@ Persistence follows ports and adapters ([ADR 0006](adr/0006-node-postgres-everyw
 | `DatabaseProbe`             | `pg-database-probe.ts`               | `ping` (used by `GET /api/health`)                                                            |
 
 Every row read back is parsed with a Zod schema (`*-rows.ts`) before it becomes a domain type, so JSONB that drifts from the code fails loudly at the boundary.
+
+## LLM platform
+
+Every model call goes through two ports in `application/ports/`: `LlmClient` for generation and `Embedder` for embeddings. Use cases name a task (`guard.classify`, `screen.agent`, …), never a model. [`main/llm-wiring.ts`](../apps/api/src/main/llm-wiring.ts) composes the chain once ([ADR 0010](adr/0010-rule-based-routing-with-tier-fallback.md)):
+
+```mermaid
+flowchart TD
+  uc["Use case<br/>LlmClient.generate({ task, … })"] --> routing
+  routing["withRouting<br/>pure policy → tier, model, reason"] -->|RoutedLlmRequest| fallback
+  fallback["withFallback<br/>switch tier once → LlmUnavailableError"] --> retry
+  retry["withRetry<br/>1 retry · 429 retryDelay ≤ 10 s · backoff + jitter"] --> logging
+  logging["withCallLogging<br/>one llm_calls row per attempt"] --> mode{LLM_MODE}
+  mode -->|live| gemini["GeminiLlmClient<br/>@google/genai"]
+  mode -->|record| recording["RecordingLlmClient<br/>Gemini + write fixture"]
+  mode -->|replay| replay["ReplayLlmClient<br/>fixtures/llm/&lt;task&gt;/&lt;hash&gt;.json"]
+  recording --> gemini
+```
+
+- **Routing is a pure function** ([`domain/routing/policy.ts`](../apps/api/src/domain/routing/policy.ts)). Each task has a default tier; only `ask.answer` escalates to Flash, on comparative intent, candidate count or context size. The reason is stored with every call.
+- **Two client types:** use cases hold an `LlmClient`. Only `withRouting` produces the `RoutedLlmRequest` that every inner decorator and provider client requires, so an unrouted call can't compile.
+- **Failures are provider-neutral.** Adapters translate SDK errors into `LlmCallError` (`rate_limited`, `unavailable`, `timeout`, `rejected`), and the decorators decide what to retry from that.
+- **Model turns are opaque.** `LlmResponse.content` is the provider's turn as JSON, appended unchanged to the next request, which Gemini 3 needs for thought signatures in tool loops.
+- **Structured output** goes through [`generateStructured`](../apps/api/src/application/llm/generate-structured.ts): Zod schema → JSON Schema → reply → Zod parse, with one repair turn.
+- **Embeddings** get call logging and record/replay, but no retry or fallback: there is no second embedding tier. [`GeminiEmbedder`](../apps/api/src/infrastructure/llm/gemini/gemini-embedder.ts) sends one `Content` per text with retrieval prefixes, checks one 768-d vector per input, and normalizes.
+- **Record/replay** keys each fixture by `sha256` of the model and everything that decides the answer ([ADR 0009](adr/0009-record-replay-llm-adapter.md)). `npm run llm:smoke` records one structured call per tier and one embedding; a unit test replays them offline.
 
 ## Data model
 

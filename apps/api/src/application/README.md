@@ -3,10 +3,11 @@
 Use cases and the ports they depend on.
 
 - **What belongs here:**
-  - use cases as factory functions (`create<UseCase>(deps)`)
-  - ports (`ports/`): interfaces for everything outside the process (LLM, embedder, repositories, clock, logger)
+  - use cases as factory functions (`create<UseCase>(deps)`), such as `smoke/check-llm-platform.ts`
+  - ports (`ports/`): interfaces for everything outside the process (`LlmClient`, `RoutedLlmClient`, `Embedder`, repositories, clock, logger)
   - typed errors (`errors/`)
-  - prompt builders and LLM output schemas (from Phase 2)
-- **Allowed imports:** `domain/` and `zod` (dependency-cruiser `application-depends-on-domain-only`).
+  - LLM helpers (`llm/`): `generateStructured` (Zod schema → JSON Schema → parse, one repair turn), `LlmCallError`, JSON types
+  - prompt builders (`prompts/`), each exporting `PROMPT_VERSION`
+- **Allowed imports:** `domain/` and `zod` (dependency-cruiser `application-depends-on-domain-only`). Tunables from `config/` arrive as parameters.
 - **Tests:** with hand-written fakes from `test/fakes/`; coverage gate ≥ 80%.
-- **Entry points:** `errors/index.ts` (`AppError` and subclasses), `ports/` (repositories, `DatabaseProbe`, `Clock`, `Logger`).
+- **Entry points:** `ports/llm-client.ts`, `llm/generate-structured.ts`, `errors/index.ts` (`AppError` and subclasses).

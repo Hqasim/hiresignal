@@ -5,8 +5,7 @@ How to run, deploy and operate HireSignal. Commands are for Windows PowerShell u
 Sections still to come, each with its phase:
 
 - reseed (Phase 4)
-- re-record fixtures (Phases 2, 4)
-- rotate the Gemini key (Phase 2)
+- re-record the seed fixtures (Phase 4)
 - quota exhausted (Phase 7)
 - branch protection (Phase 9)
 
@@ -29,6 +28,8 @@ npm run verify            # format, lint, typecheck, boundaries, unit tests
 npm run test:integration  # repositories and hybrid search against the local database
 npm run dev               # API on http://localhost:3000, web on http://localhost:5173
 ```
+
+The defaults in `.env` run the API in `LLM_MODE=replay`, which needs no Gemini key: model calls are answered from `apps/api/fixtures/llm/`.
 
 Open http://localhost:5173. The card should say **API: healthy**. If it says **API: degraded**, the database isn't reachable: run `npm run db:up`.
 
@@ -135,6 +136,54 @@ gh secret set DATABASE_MIGRATION_URL --env production
 gh secret list --env production
 ```
 
+## Gemini setup
+
+You do this once. The key is only needed to call Gemini live: `npm run llm:smoke`, `npm run seed:record` and the production Lambda. Tests and CI never get it ([ADR 0009](adr/0009-record-replay-llm-adapter.md), [ADR 0016](adr/0016-secrets-via-github-environments.md)).
+
+**1. Create a key** in [Google AI Studio](https://aistudio.google.com/apikey) on the free tier. Check on the rate-limits page that the three models in `.env.example` have free-tier limits for your key. Free-tier prompts may be used by Google to improve its products, which is why every resume in this repo is synthetic.
+
+**2. Add it to `.env`**, which git ignores. Keep the model IDs from `.env.example`: the committed fixtures were recorded with them.
+
+```
+GEMINI_API_KEY=<your key>
+```
+
+**3. Run the smoke check** once. It makes three live calls (one structured generation per tier and one embedding) and writes their fixtures:
+
+```powershell
+npm run llm:smoke
+```
+
+Success ends with an `llm.smoke_passed` log line. A `llm.smoke_failed` line names the task and HTTP status: 400 or 403 usually means a bad key, 404 a wrong model ID, and 429 a free-tier limit (wait a minute and retry). Commit the new files under `apps/api/fixtures/llm/`.
+
+**4. Give production the key and the model IDs:**
+
+```powershell
+gh secret set GEMINI_API_KEY --env production   # paste at the prompt; the value isn't echoed
+gh variable set GEMINI_MODEL_LITE      --env production --body "gemini-3.5-flash-lite"
+gh variable set GEMINI_MODEL_FLASH     --env production --body "gemini-3.5-flash"
+gh variable set GEMINI_EMBEDDING_MODEL --env production --body "gemini-embedding-2"
+gh variable set DAILY_LLM_CALL_CAP     --env production --body "300"
+```
+
+The deploy fails fast if any of them is missing.
+
+## Re-record fixtures
+
+Replay keys cover the model ID, the prompt and its version, the schema, the tools and the token limit, so changing any of them makes replay miss with `FixtureMissingError`, whose message names the command to run. With the key in `.env`:
+
+```powershell
+npm run llm:smoke      # the smoke fixtures (platform.smoke, embed.query)
+```
+
+`npm run seed:record` re-records the seed fixtures from Phase 4. Then:
+
+1. Delete fixtures that nothing requests any more. Check with `git status`: re-recorded files are new, stale ones are untouched.
+2. Run `npm run verify`; replay tests must pass offline.
+3. Commit the fixtures in the same commit as the prompt or model change ([ADR 0009](adr/0009-record-replay-llm-adapter.md)).
+
+To change a model ID, change it in `.env.example` and `.env`, re-record, then update the matching `GEMINI_MODEL_*` variable in the `production` environment before pushing.
+
 ## Deploy
 
 Every push to `main` that passes CI deploys automatically (`.github/workflows/deploy.yml`):
@@ -167,3 +216,14 @@ On the free plan, Neon suspends the compute after 5 minutes without queries. The
 3. Redeploy: `gh run rerun <latest Deploy run id>`. Until it finishes, the running Lambda fails to connect and health reports `degraded`.
 
 To rotate the owner's password, reset it in the Neon Console and update `DATABASE_MIGRATION_URL` the same way. The running API doesn't use it.
+
+## Rotate the Gemini key
+
+Rotate without downtime by keeping the old key until the new one is live:
+
+1. In [Google AI Studio](https://aistudio.google.com/apikey), create a new key.
+2. Update the secret: `gh secret set GEMINI_API_KEY --env production`.
+3. Redeploy: `gh run rerun <latest Deploy run id>`, and wait for it to pass.
+4. Delete the old key in AI Studio, and update `GEMINI_API_KEY` in your local `.env`.
+
+If the old key leaked, delete it first instead. Until the redeploy finishes, live model calls fail with a 500 problem (Gemini rejects the key, and the call is not retried); health and read-only pages keep working, because they make no model calls.
