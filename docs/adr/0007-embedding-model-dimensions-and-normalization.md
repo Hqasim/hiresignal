@@ -30,7 +30,7 @@ Embed with **`gemini-embedding-2` at 768 dimensions**. Code that sends the reque
   - documents are sent as `title: none | text: {context header + chunk}`
   - queries are sent as `task: search result | query: {question}`
 
-  The adapter adds the prefixes, so callers pass plain text. They're part of the request, so they're part of the record/replay fixture key ([ADR 0009](0009-record-replay-llm-adapter.md)).
+  The adapter adds the prefixes, so callers pass plain text. The prefixes are versioned as `GEMINI_EMBEDDING_INPUT_FORMAT`, and that version is part of every embedding fixture key, so changing a prefix forces a re-record ([ADR 0009](0009-record-replay-llm-adapter.md)).
 
 - **One `Content` per text:** batches send one `Content` object per input. The adapter checks that the response holds exactly one 768-dimension vector per input, and throws otherwise, so a merged embedding can't be stored silently.
 - **Normalize anyway:** every vector goes through `normalize()` before it becomes a `UnitVector`. On embedding-2 output it's a no-op. It keeps the unit-length invariant true even if the model ID changes, and it's cheap.

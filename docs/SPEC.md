@@ -610,8 +610,8 @@ Return cosine similarity alongside the fused rank for the floor check. Note in t
 
 ### 9.8 Record/replay
 
-- Fixture key: `sha256(canonicalJson({ kind, model, request }))`, with stable key ordering and transport fields excluded.
-- Fixtures: `apps/api/fixtures/llm/<task>/<hash>.json` → `{ key, task, model, recordedAt, response, usage }`. They contain only redacted synthetic text, so they're safe to commit.
+- Fixture key: `sha256(canonicalJson({ kind, model, request }))`, with stable key ordering and transport fields excluded (request id, routing context, and the route's tier, reason and fallback flag). Embedding keys include the adapter's input-format version, which stands for its prefixes (ADR 0007, ADR 0009).
+- Fixtures: `apps/api/fixtures/llm/<task>/<hash>.json` → `{ kind, key, task, model, recordedAt, response, usage }`. They contain only redacted synthetic text, so they're safe to commit.
 - `replay` with a missing fixture throws `FixtureMissingError`: "No recorded response for <task>. Run `npm run seed:record` (needs GEMINI_API_KEY)."
 - Changing a prompt or model ID changes the keys. Re-record and commit the fixtures in the same commit as the prompt change.
 - Replay needs the same model IDs that were recorded. The defaults in `.env.example` and the `GEMINI_MODEL_*` values used by CI and `seed-demo` must match the committed fixtures.
