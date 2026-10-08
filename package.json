@@ -27,6 +27,7 @@
     "build": "npm run build -w @hiresignal/api && npm run build -w @hiresignal/web",
     "db:up": "docker compose up --detach --wait",
     "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate -w @hiresignal/api",
     "prepare": "lefthook install"
   },
   "devDependencies": {

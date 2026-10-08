@@ -11,6 +11,9 @@ const event = JSON.parse(
 
 process.env.GIT_SHA = 'smoke-test';
 process.env.LLM_MODE = 'replay';
+// Nothing listens on port 1, so the health route's database ping fails fast and the response
+// shows the bundle loaded and ran node-postgres (SPEC §21 risk 9).
+process.env.DATABASE_URL = 'postgres://smoke:smoke@127.0.0.1:1/smoke';
 const { handler } = await import(pathToFileURL(`${root}dist/lambda.mjs`).href);
 
 const result = await handler(event, { awsRequestId: 'smoke' });
