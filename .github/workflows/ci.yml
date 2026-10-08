@@ -60,7 +60,7 @@ jobs:
     # The same image as docker-compose.yml, so CI and local runs see the same Postgres and pgvector.
     services:
       postgres:
-        image: pgvector/pgvector:pg17
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_USER: hiresignal
           POSTGRES_PASSWORD: hiresignal

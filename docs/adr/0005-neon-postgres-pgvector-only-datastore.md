@@ -24,7 +24,7 @@ One Postgres database holds everything, with the `pgvector` extension. The schem
 - **Full text:** a generated `tsvector` column (`content_tsv`) with a GIN index.
 - **Hybrid search:** one SQL statement in [`pg-chunk-repository.ts`](../../apps/api/src/infrastructure/postgres/pg-chunk-repository.ts) ranks both arms and fuses them with reciprocal rank fusion (ADR 0008).
 
-Production runs on **Neon's free plan** in AWS `us-east-1`, the same region as the Lambda. Local development and CI run `pgvector/pgvector:pg17` in Docker ([`docker-compose.yml`](../../docker-compose.yml) and the CI service container).
+Production runs on **Neon's free plan** in AWS `us-east-1`, the same region as the Lambda. Local development and CI run `pgvector/pgvector:pg18` in Docker, the same major version as Neon (Postgres 18) ([`docker-compose.yml`](../../docker-compose.yml) and the CI service container).
 
 Access is split across two roles ([`0002_app_role_grants.sql`](../../db/migrations/0002_app_role_grants.sql)):
 

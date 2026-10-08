@@ -100,7 +100,7 @@ gh run watch
 
 You do this once, before the first deploy that runs migrations ([ADR 0005](adr/0005-neon-postgres-pgvector-only-datastore.md), [ADR 0006](adr/0006-node-postgres-everywhere.md)).
 
-**1. Create the project** in the Neon Console: name `hiresignal`, Postgres 17, region **AWS US East 1 (N. Virginia)**, the same region as the Lambda.
+**1. Create the project** in the Neon Console: name `hiresignal`, Postgres 18, region **AWS US East 1 (N. Virginia)**, the same region as the Lambda.
 
 **2. Create the runtime role with SQL, not in the Console.** Roles created in the Console, CLI or API join `neon_superuser`. A role created with `CREATE ROLE` gets only what the migrations grant it. Generate a password locally (48 hex characters, 192 bits; Neon requires at least 60 bits of entropy):
 

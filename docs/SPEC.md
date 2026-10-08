@@ -837,7 +837,7 @@ Output goes to a console table, to `$GITHUB_STEP_SUMMARY` (markdown), and to `do
 |---|---|
 | `quality` | `npm ci` → format check → lint → typecheck → depcruise |
 | `unit` | Vitest with coverage gates; upload coverage artifact |
-| `integration` | Service container `pgvector/pgvector:pg17` → migrate → integration tests |
+| `integration` | Service container `pgvector/pgvector:pg18` → migrate → integration tests |
 | `evals` | Service container → migrate → `npm run seed` (replay) → `npm run eval` → job summary |
 | `e2e` | Service container → migrate → seed → start API (replay) + web preview → Playwright + axe; upload report |
 | `build` | esbuild API bundle + Vite build; `sam validate --lint` |
@@ -960,7 +960,7 @@ hiresignal/
 ├── e2e/
 ├── infra/{bootstrap.yaml, template.yaml}
 ├── docs/{SPEC.md, PROGRESS.md, architecture.md, threat-model.md, responsible-ai.md, evals.md, runbook.md, adr/}
-├── docker-compose.yml           # pgvector/pgvector:pg17 on localhost:5433
+├── docker-compose.yml           # pgvector/pgvector:pg18 on localhost:5433
 ├── .dependency-cruiser.cjs  eslint.config.js  .prettierrc  lefthook.yml  commitlint.config.js
 ├── package.json (workspaces)  package-lock.json  .npmrc  tsconfig.base.json
 └── .nvmrc (24.21.0)  .gitattributes (LF)  .editorconfig  .env.example  LICENSE (MIT)
