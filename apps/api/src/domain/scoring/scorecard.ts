@@ -73,9 +73,14 @@ export const ScorecardModelsSchema = z.object({
 /** See {@link ScorecardModelsSchema}. */
 export type ScorecardModels = z.infer<typeof ScorecardModelsSchema>;
 
+/** Database id of a scorecard. */
+export const ScorecardIdSchema = z.uuid().brand<'ScorecardId'>();
+/** See {@link ScorecardIdSchema}. */
+export type ScorecardId = z.infer<typeof ScorecardIdSchema>;
+
 /** A persisted screening result for one candidate. Re-screening adds a new scorecard. */
 export interface Scorecard {
-  id: string;
+  id: ScorecardId;
   candidateId: CandidateId;
   /** 0–100, computed in code from the ratings (SPEC §9.6). */
   score: number;
