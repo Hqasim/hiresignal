@@ -1,17 +1,19 @@
 import { HealthResponseSchema, PROBLEM_CONTENT_TYPE, ProblemSchema } from '@hiresignal/contracts';
 import { describe, expect, it } from 'vitest';
 
+import { FakeDatabaseProbe } from '../../../test/fakes/fake-database-probe';
 import { RecordingLogger } from '../../../test/fakes/recording-logger';
 import { createApp } from './app';
 
 function setup() {
   const logger = new RecordingLogger();
-  const app = createApp({ logger, health: { llmMode: 'replay', gitSha: 'abc1234' } });
-  return { app, logger };
+  const database = new FakeDatabaseProbe();
+  const app = createApp({ logger, health: { llmMode: 'replay', gitSha: 'abc1234', database } });
+  return { app, logger, database };
 }
 
 describe('GET /api/health', () => {
-  it('reports the LLM mode and git SHA in the health contract', async () => {
+  it('reports the database up, the LLM mode and the git SHA in the health contract', async () => {
     const { app } = setup();
 
     const response = await app.request('/api/health');
@@ -19,10 +21,40 @@ describe('GET /api/health', () => {
     expect(response.status).toBe(200);
     expect(HealthResponseSchema.parse(await response.json())).toEqual({
       status: 'ok',
-      db: 'unchecked',
+      db: 'up',
       llmMode: 'replay',
       gitSha: 'abc1234',
     });
+  });
+
+  it('pings the database on every call, which also wakes Neon from scale-to-zero', async () => {
+    const { app, database } = setup();
+
+    await app.request('/api/health');
+    await app.request('/api/health');
+
+    expect(database.pings).toBe(2);
+  });
+
+  it('stays 200 but reports degraded when the database is unreachable, and logs why', async () => {
+    const { app, database, logger } = setup();
+    database.failure = new Error('connect ECONNREFUSED 127.0.0.1:5433');
+
+    const response = await app.request('/api/health', { headers: { 'x-request-id': 'req-db' } });
+
+    expect(response.status).toBe(200);
+    expect(HealthResponseSchema.parse(await response.json())).toMatchObject({
+      status: 'degraded',
+      db: 'down',
+    });
+    expect(logger.entries).toEqual([
+      {
+        level: 'error',
+        event: 'health.db_unreachable',
+        error: database.failure,
+        fields: { requestId: 'req-db' },
+      },
+    ]);
   });
 
   it('tags every response with an x-request-id', async () => {

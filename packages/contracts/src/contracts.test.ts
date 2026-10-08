@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { HealthResponseSchema, ProblemSchema } from './index';
 
 describe('HealthResponseSchema', () => {
-  it('accepts a healthy response before the database is wired', () => {
+  it('accepts a healthy response with the database up', () => {
     const result = HealthResponseSchema.safeParse({
       status: 'ok',
-      db: 'unchecked',
+      db: 'up',
       llmMode: 'replay',
       gitSha: 'abc1234',
     });
@@ -18,6 +18,10 @@ describe('HealthResponseSchema', () => {
     ['an unknown LLM mode', { status: 'ok', db: 'up', llmMode: 'mock', gitSha: 'abc' }],
     ['an empty git SHA', { status: 'ok', db: 'up', llmMode: 'live', gitSha: '' }],
     ['a missing db status', { status: 'ok', llmMode: 'live', gitSha: 'abc' }],
+    [
+      'the retired unchecked db status',
+      { status: 'ok', db: 'unchecked', llmMode: 'live', gitSha: 'abc' },
+    ],
   ])('rejects %s', (_label, payload) => {
     expect(HealthResponseSchema.safeParse(payload).success).toBe(false);
   });

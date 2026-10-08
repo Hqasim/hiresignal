@@ -10,7 +10,7 @@ import { HealthStatus } from './health-status';
 
 const healthy: HealthResponse = {
   status: 'ok',
-  db: 'unchecked',
+  db: 'up',
   llmMode: 'replay',
   gitSha: 'abc1234def',
 };
@@ -59,5 +59,17 @@ describe('HealthStatus', () => {
 
     expect(await screen.findByText('API: unreachable')).toBeInTheDocument();
     expect(screen.getByText('The API returned data in an unexpected shape.')).toBeInTheDocument();
+  });
+
+  it('shows "API: degraded" when the API is up but its database is not', async () => {
+    server.use(
+      http.get('*/api/health', () =>
+        HttpResponse.json({ ...healthy, status: 'degraded', db: 'down' }),
+      ),
+    );
+
+    renderWithQueryClient(<HealthStatus />);
+
+    expect(await screen.findByText('API: degraded')).toBeInTheDocument();
   });
 });

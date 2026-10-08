@@ -19,7 +19,13 @@ const { handler } = await import(pathToFileURL(`${root}dist/lambda.mjs`).href);
 const result = await handler(event, { awsRequestId: 'smoke' });
 const body = JSON.parse(result.body);
 
-if (result.statusCode !== 200 || body.status !== 'ok' || body.gitSha !== 'smoke-test') {
+// The database is unreachable on purpose: 'down' proves node-postgres was bundled and ran.
+if (
+  result.statusCode !== 200 ||
+  body.status !== 'degraded' ||
+  body.db !== 'down' ||
+  body.gitSha !== 'smoke-test'
+) {
   console.error('Bundle smoke test failed:', result.statusCode, result.body);
   process.exit(1);
 }

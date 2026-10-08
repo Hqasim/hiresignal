@@ -9,7 +9,8 @@ import { type HealthRouteDeps, healthRoutes } from './routes/health';
 /** Everything the HTTP layer needs. `main/container.ts` builds it; tests pass fakes. */
 export interface AppDeps {
   logger: Logger;
-  health: HealthRouteDeps;
+  /** The health route gets the app logger; everything else it needs comes from here. */
+  health: Omit<HealthRouteDeps, 'logger'>;
 }
 
 /** Longest client-supplied `x-request-id` we accept; longer ones are replaced with a fresh UUID. */
@@ -26,7 +27,7 @@ export function createApp(deps: AppDeps): Hono<AppBindings> {
   app.onError(createErrorHandler(deps.logger));
   app.notFound(notFoundHandler);
 
-  app.route('/api', healthRoutes(deps.health));
+  app.route('/api', healthRoutes({ ...deps.health, logger: deps.logger }));
 
   return app;
 }

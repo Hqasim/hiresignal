@@ -4,11 +4,8 @@ import { z } from 'zod';
 export const LlmModeSchema = z.enum(['live', 'record', 'replay']);
 export type LlmMode = z.infer<typeof LlmModeSchema>;
 
-/**
- * Database reachability as seen by the API.
- * `unchecked` means the API has no database wired yet (Phase 0); Phase 1 replaces it with a real ping.
- */
-export const DbStatusSchema = z.enum(['up', 'down', 'unchecked']);
+/** Database reachability as seen by the API: the result of a `select 1` on each health call. */
+export const DbStatusSchema = z.enum(['up', 'down']);
 export type DbStatus = z.infer<typeof DbStatusSchema>;
 
 /**

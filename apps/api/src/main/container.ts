@@ -6,8 +6,9 @@ import type { Logger } from '../application/ports/logger';
 import { type Env, parseEnv, parseMigrationEnv } from '../config/env';
 import { systemClock } from '../infrastructure/clock/system-clock';
 import { createJsonConsoleLogger } from '../infrastructure/logging/json-console-logger';
-import { createPool } from '../infrastructure/postgres/create-pool';
+import { createPool, type DbPool } from '../infrastructure/postgres/create-pool';
 import { migrate, type MigrationResult, readMigrations } from '../infrastructure/postgres/migrator';
+import { createPgDatabaseProbe } from '../infrastructure/postgres/pg-database-probe';
 import { createApp } from '../interfaces/http/app';
 import type { AppBindings } from '../interfaces/http/app-bindings';
 
@@ -16,6 +17,8 @@ export interface Container {
   env: Env;
   logger: Logger;
   app: Hono<AppBindings>;
+  /** The process-wide connection pool. Entry points that exit (the local server) end it. */
+  pool: DbPool;
 }
 
 /**
@@ -27,11 +30,17 @@ export interface Container {
 export function createContainer(source: Readonly<Record<string, string | undefined>>): Container {
   const env = parseEnv(source);
   const logger = createJsonConsoleLogger({ clock: systemClock });
+  // One pool per process. Connecting is lazy, so a cold start pays nothing until the first query.
+  const pool = createPool({ connectionString: env.DATABASE_URL, logger });
   const app = createApp({
     logger,
-    health: { llmMode: env.LLM_MODE, gitSha: env.GIT_SHA },
+    health: {
+      llmMode: env.LLM_MODE,
+      gitSha: env.GIT_SHA,
+      database: createPgDatabaseProbe(pool),
+    },
   });
-  return { env, logger, app };
+  return { env, logger, app, pool };
 }
 
 /** `db/migrations/` at the repository root. Used by the migrate CLI, never by the Lambda bundle. */
