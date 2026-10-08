@@ -1,4 +1,5 @@
 import type { RedactedText } from '../redaction/redacted-text';
+import type { UnitVector } from '../vectors/unit-vector';
 
 /**
  * One retrievable piece of a redacted resume: a role or a section, small enough to embed
@@ -16,4 +17,9 @@ export interface ResumeChunk {
   startOffset: number;
   endOffset: number;
   tokenEstimate: number;
+}
+
+/** A chunk ready to store: the chunk plus the embedding of `contextHeader + content`. */
+export interface EmbeddedChunk extends ResumeChunk {
+  embedding: UnitVector;
 }
