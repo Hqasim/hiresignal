@@ -9,4 +9,4 @@ Use cases and the ports they depend on.
   - prompt builders and LLM output schemas (from Phase 2)
 - **Allowed imports:** `domain/` and `zod` (dependency-cruiser `application-depends-on-domain-only`).
 - **Tests:** with hand-written fakes from `test/fakes/`; coverage gate ≥ 80%.
-- **Entry points:** `errors/index.ts` (`AppError` and subclasses), `ports/`.
+- **Entry points:** `errors/index.ts` (`AppError` and subclasses), `ports/` (repositories, `DatabaseProbe`, `Clock`, `Logger`).

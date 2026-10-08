@@ -271,6 +271,7 @@ Rules enforced by `.dependency-cruiser.cjs` in CI:
 ### 7.2 Ports (application/ports)
 
 ```ts
+// ModelTier and LlmTask live in domain/routing/llm-task.ts (the routing policy in domain/ needs them).
 export type ModelTier = 'lite' | 'flash';
 export type LlmTask =
   | 'guard.classify' | 'screen.agent' | 'screen.synthesize' | 'screen.repair' | 'ask.answer';
@@ -283,13 +284,16 @@ export interface Embedder {
   embedDocuments(texts: readonly RedactedText[]): Promise<UnitVector[]>;
   embedQuery(text: string): Promise<UnitVector>;
 }
-export interface JobRepository { /* findBySlug, list, upsert */ }
-export interface CandidateRepository { /* listRanked, getDetail, insertIngested, shortlist */ }
-export interface ChunkRepository { /* insertMany, hybridSearch, getSection, getByRefs */ }
+export interface JobRepository { /* upsert, findBySlug, list */ }
+export interface CandidateRepository { /* insertIngested (candidate + chunks, one transaction), findById, listRanked, shortlist */ }
+export interface ChunkRepository { /* hybridSearch, getSection, getByRefs */ }
 export interface ScorecardRepository { /* save, latestFor */ }
-export interface LlmCallRepository { /* record, countLiveSince, summary, recent */ }
+export interface LlmCallRepository { /* record, countLiveSince; summary and recent arrive in Phase 7 */ }
+export interface DatabaseProbe { ping(): Promise<void> }
 export interface Clock { now(): Date }
 ```
+
+Candidate detail is composed by the use case from `CandidateRepository.findById` and `ScorecardRepository.latestFor`. Chunks are written only by `insertIngested`, so a candidate and its chunks are stored atomically (§9.5 step 7).
 
 `LlmRequest` contains: `task`, optional `tier` (set by the router), `promptVersion`, `system`, `contents` (turns), optional `tools`, optional `responseSchema` (JSON Schema), `maxOutputTokens`, `temperature`. `LlmResponse` contains: `content` (provider turn, kept opaque so it can be appended unchanged), `text`, `functionCalls`, `usage` (`inputTokens`, `outputTokens`, `cachedTokens`), `model`, `latencyMs`.
 
@@ -436,7 +440,7 @@ create index llm_calls_created_at on llm_calls (created_at desc);
 
 `db/migrations/0002_app_role_grants.sql` grants the least-privilege runtime role `hiresignal_app` `select, insert, update` on all tables and `usage` on sequences, with default privileges for future tables. It is wrapped in `DO $$ … IF EXISTS (select 1 from pg_roles where rolname = 'hiresignal_app') … $$` so it is a no-op locally. Migrations run as the owner role (`DATABASE_MIGRATION_URL`); the Lambda connects as `hiresignal_app` (`DATABASE_URL`).
 
-The migration runner (`main/cli/migrate.ts`) applies `db/migrations/*.sql` in order, each in a transaction, and records them in `schema_migrations(version, applied_at)`.
+The migration runner (`main/cli/migrate.ts`, logic in `infrastructure/postgres/migrator.ts`) applies `db/migrations/*.sql` in order, each in a transaction, under a session advisory lock, and records them in `schema_migrations(version, checksum, applied_at)`. It refuses to run if an applied file was edited or deleted. Migrations are forward-only and additive, because the deploy runs them before the new code (ADR 0018).
 
 ---
 
@@ -772,6 +776,7 @@ apps/web/src/
 - 0015 Precomputed results and a daily call cap
 - 0016 Secrets via GitHub Environments → Lambda env vars
 - 0017 Static SPA on Amplify with CI-driven deploys
+- 0018 Forward-only SQL migrations, run before the code deploy
 
 ### 13.3 README shape
 
@@ -840,8 +845,8 @@ Output goes to a console table, to `$GITHUB_STEP_SUMMARY` (markdown), and to `do
 **`.github/workflows/deploy.yml`** runs on push to `main`, after CI succeeds, in environment `production`, with `concurrency: deploy-production`:
 
 1. Configure AWS credentials via OIDC (`id-token: write`).
-2. Build the API bundle → `sam deploy` with secrets passed as `NoEcho` parameter overrides.
-3. `npm run db:migrate` against Neon (`DATABASE_MIGRATION_URL`).
+2. `npm run db:migrate` against Neon (`DATABASE_MIGRATION_URL`). Migrations run before the code deploy, so each one must be additive (ADR 0018).
+3. Build the API bundle → `sam deploy` with secrets passed as `NoEcho` parameter overrides.
 4. Build the web app with `VITE_API_BASE_URL` set from the stack output.
 5. Amplify manual deploy: `create-deployment` → upload zip → `start-deployment` → poll until `SUCCEED`.
 6. Smoke test: `curl --fail` on `/api/health`, then Playwright `@smoke` against the live URL.
@@ -1030,11 +1035,11 @@ Claude prints the exact commands.
 3. Health route pings the DB.
 4. Integration tests: migrations apply cleanly twice; each repository round-trips; hybrid search returns the expected order on deterministic vectors; quarantined candidates are excluded.
 5. CI `integration` job with the service container; the deploy job runs migrations.
-6. ERD in `docs/architecture.md`; ADRs 0005, 0006.
+6. ERD in `docs/architecture.md`; ADRs 0005, 0006, 0018.
 
 **Hamzah does by hand:** create the Neon project in AWS `us-east-1`; create the `hiresignal_app` role **before** the first migration runs against Neon (otherwise `0002` grants nothing); set the `DATABASE_URL` (app role, pooled) and `DATABASE_MIGRATION_URL` (owner, direct) secrets.
 
-**DoD:** integration tests pass locally and in CI; Neon is migrated by the deploy workflow; health reports `db: ok` live.
+**DoD:** integration tests pass locally and in CI; Neon is migrated by the deploy workflow; health reports `db: up` live.
 
 ### Phase 2 — LLM platform
 

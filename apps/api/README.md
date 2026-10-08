@@ -20,4 +20,5 @@ dependency-cruiser enforces these rules (`npm run depcruise`); see [ADR 0002](..
 | `npm run dev -w @hiresignal/api`              | Local server on `:3000` with reload; reads the root `.env` |
 | `npm run build -w @hiresignal/api`            | esbuild bundle to `dist/lambda.mjs` (ESM, `node24`)        |
 | `npm run test:unit -w @hiresignal/api`        | Unit and route tests with coverage gates                   |
-| `npm run test:integration -w @hiresignal/api` | Integration tests against local Postgres (from Phase 1)    |
+| `npm run test:integration -w @hiresignal/api` | Integration tests against local Postgres (`npm run db:up`) |
+| `npm run db:migrate -w @hiresignal/api`       | Apply `db/migrations/*.sql` using `DATABASE_MIGRATION_URL` |
