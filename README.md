@@ -5,7 +5,7 @@
 [![CI](https://github.com/Hqasim/hiresignal/actions/workflows/ci.yml/badge.svg)](https://github.com/Hqasim/hiresignal/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Live demo:** _coming with the first deploy_ · **Status:** walking skeleton (Phase 0 of 10). See [`docs/PROGRESS.md`](docs/PROGRESS.md).
+**Live demo:** [main.dcq94s69atcgh.amplifyapp.com](https://main.dcq94s69atcgh.amplifyapp.com) · **Status:** walking skeleton, Phase 0 of 10 done as of 2026-10-08. See [`docs/PROGRESS.md`](docs/PROGRESS.md).
 
 ## Try it in 60 seconds
 
