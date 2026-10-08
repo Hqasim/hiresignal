@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 
 import type { Hono } from 'hono';
 
+import type { Embedder } from '../application/ports/embedder';
+import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
 import { type Env, parseEnv, parseMigrationEnv } from '../config/env';
 import { systemClock } from '../infrastructure/clock/system-clock';
@@ -9,8 +11,10 @@ import { createJsonConsoleLogger } from '../infrastructure/logging/json-console-
 import { createPool, type DbPool } from '../infrastructure/postgres/create-pool';
 import { migrate, type MigrationResult, readMigrations } from '../infrastructure/postgres/migrator';
 import { createPgDatabaseProbe } from '../infrastructure/postgres/pg-database-probe';
+import { createPgLlmCallRepository } from '../infrastructure/postgres/pg-llm-call-repository';
 import { createApp } from '../interfaces/http/app';
 import type { AppBindings } from '../interfaces/http/app-bindings';
+import { createLlm, type LlmSettings } from './llm-wiring';
 
 /** The wired application, shared by every entry point. */
 export interface Container {
@@ -19,6 +23,10 @@ export interface Container {
   app: Hono<AppBindings>;
   /** The process-wide connection pool. Entry points that exit (the local server) end it. */
   pool: DbPool;
+  /** Routed, retried, logged generation client for use cases (SPEC §7.3). */
+  llm: LlmClient;
+  /** Logged embedder for ingestion and search (ADR 0007). */
+  embedder: Embedder;
 }
 
 /**
@@ -32,6 +40,11 @@ export function createContainer(source: Readonly<Record<string, string | undefin
   const logger = createJsonConsoleLogger({ clock: systemClock });
   // One pool per process. Connecting is lazy, so a cold start pays nothing until the first query.
   const pool = createPool({ connectionString: env.DATABASE_URL, logger });
+  const { llm, embedder } = createLlm(llmSettingsFrom(env), {
+    clock: systemClock,
+    logger,
+    calls: createPgLlmCallRepository(pool),
+  });
   const app = createApp({
     logger,
     health: {
@@ -40,7 +53,17 @@ export function createContainer(source: Readonly<Record<string, string | undefin
       database: createPgDatabaseProbe(pool),
     },
   });
-  return { env, logger, app, pool };
+  return { env, logger, app, pool, llm, embedder };
+}
+
+/** The LLM part of the environment, in the shape the wiring expects. */
+function llmSettingsFrom(env: Env): LlmSettings {
+  return {
+    mode: env.LLM_MODE,
+    apiKey: env.GEMINI_API_KEY,
+    models: { lite: env.GEMINI_MODEL_LITE, flash: env.GEMINI_MODEL_FLASH },
+    embeddingModel: env.GEMINI_EMBEDDING_MODEL,
+  };
 }
 
 /** `db/migrations/` at the repository root. Used by the migrate CLI, never by the Lambda bundle. */

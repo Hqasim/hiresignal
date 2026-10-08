@@ -11,6 +11,10 @@ const event = JSON.parse(
 
 process.env.GIT_SHA = 'smoke-test';
 process.env.LLM_MODE = 'replay';
+// Replay mode needs the model IDs (they key the fixtures) but no Gemini key; health makes no LLM call.
+process.env.GEMINI_MODEL_LITE = 'smoke-lite';
+process.env.GEMINI_MODEL_FLASH = 'smoke-flash';
+process.env.GEMINI_EMBEDDING_MODEL = 'smoke-embedding';
 // Nothing listens on port 1, so the health route's database ping fails fast and the response
 // shows the bundle loaded and ran node-postgres (SPEC §21 risk 9).
 process.env.DATABASE_URL = 'postgres://smoke:smoke@127.0.0.1:1/smoke';

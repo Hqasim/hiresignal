@@ -1,7 +1,8 @@
 # Deploys main to production after CI passes (SPEC §15).
 # Flow: OIDC → migrate Neon → SAM deploy → API smoke test → web build → Amplify deploy → web smoke test.
 # Migrations run before the code deploy, so they must be additive (ADR 0018).
-# Phase 2 adds the Gemini secret and model IDs; Phase 9 adds the Playwright @smoke suite.
+# The Gemini key and model IDs reach the Lambda as SAM parameters (ADR 0016). Phase 9 adds the
+# Playwright @smoke suite.
 name: Deploy
 
 on:
@@ -43,13 +44,19 @@ jobs:
           AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL_LITE: ${{ vars.GEMINI_MODEL_LITE }}
+          GEMINI_MODEL_FLASH: ${{ vars.GEMINI_MODEL_FLASH }}
+          GEMINI_EMBEDDING_MODEL: ${{ vars.GEMINI_EMBEDDING_MODEL }}
+          DAILY_LLM_CALL_CAP: ${{ vars.DAILY_LLM_CALL_CAP }}
         run: |
           missing=0
-          for name in AWS_DEPLOY_ROLE_ARN AWS_REGION AMPLIFY_APP_ID AMPLIFY_BRANCH ALLOWED_ORIGIN; do
+          for name in AWS_DEPLOY_ROLE_ARN AWS_REGION AMPLIFY_APP_ID AMPLIFY_BRANCH ALLOWED_ORIGIN \
+            GEMINI_MODEL_LITE GEMINI_MODEL_FLASH GEMINI_EMBEDDING_MODEL DAILY_LLM_CALL_CAP; do
             if [ -z "${!name}" ]; then echo "::error::Variable $name is not set in the production environment"; missing=1; fi
           done
           # Only emptiness is checked; secret values are never printed.
-          for name in DATABASE_URL DATABASE_MIGRATION_URL; do
+          for name in DATABASE_URL DATABASE_MIGRATION_URL GEMINI_API_KEY; do
             if [ -z "${!name}" ]; then echo "::error::Secret $name is not set in the production environment"; missing=1; fi
           done
           exit "$missing"
@@ -88,6 +95,11 @@ jobs:
       - name: Deploy API (SAM)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL_LITE: ${{ vars.GEMINI_MODEL_LITE }}
+          GEMINI_MODEL_FLASH: ${{ vars.GEMINI_MODEL_FLASH }}
+          GEMINI_EMBEDDING_MODEL: ${{ vars.GEMINI_EMBEDDING_MODEL }}
+          DAILY_LLM_CALL_CAP: ${{ vars.DAILY_LLM_CALL_CAP }}
         run: |
           sam deploy \
             --template-file infra/template.yaml \
@@ -98,7 +110,9 @@ jobs:
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --parameter-overrides "GitSha=$GIT_SHA" "LlmMode=live" "AllowedOrigin=$ALLOWED_ORIGIN" \
-              "DatabaseUrl=$DATABASE_URL"
+              "DatabaseUrl=$DATABASE_URL" "GeminiApiKey=$GEMINI_API_KEY" \
+              "GeminiModelLite=$GEMINI_MODEL_LITE" "GeminiModelFlash=$GEMINI_MODEL_FLASH" \
+              "GeminiEmbeddingModel=$GEMINI_EMBEDDING_MODEL" "DailyLlmCallCap=$DAILY_LLM_CALL_CAP"
 
       - name: Read the API URL from the stack outputs
         id: api

@@ -24,6 +24,28 @@ Parameters:
     Description: >-
       Runtime connection string for the least-privilege hiresignal_app role on Neon's pooled
       endpoint, with sslmode=verify-full (ADR 0006). Comes from the DATABASE_URL secret (ADR 0016).
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+    MinLength: 1
+    Description: Gemini API key for live calls. Comes from the GEMINI_API_KEY secret (ADR 0016).
+  GeminiModelLite:
+    Type: String
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]*$'
+    Description: Flash-Lite model ID (GEMINI_MODEL_LITE variable). Must match the replay fixtures.
+  GeminiModelFlash:
+    Type: String
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]*$'
+    Description: Flash model ID (GEMINI_MODEL_FLASH variable). Must match the replay fixtures.
+  GeminiEmbeddingModel:
+    Type: String
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]*$'
+    Description: Embedding model ID (GEMINI_EMBEDDING_MODEL variable, ADR 0007).
+  DailyLlmCallCap:
+    Type: Number
+    MinValue: 0
+    Default: 300
+    Description: Live LLM calls allowed per UTC day across the demo (SPEC §7.5).
 
 Resources:
   ApiFunction:
@@ -44,6 +66,11 @@ Resources:
           GIT_SHA: !Ref GitSha
           LLM_MODE: !Ref LlmMode
           DATABASE_URL: !Ref DatabaseUrl
+          GEMINI_API_KEY: !Ref GeminiApiKey
+          GEMINI_MODEL_LITE: !Ref GeminiModelLite
+          GEMINI_MODEL_FLASH: !Ref GeminiModelFlash
+          GEMINI_EMBEDDING_MODEL: !Ref GeminiEmbeddingModel
+          DAILY_LLM_CALL_CAP: !Ref DailyLlmCallCap
           # Map bundle stack traces back to TypeScript sources in the logs.
           NODE_OPTIONS: --enable-source-maps
       # The Function URL owns CORS; the app adds no CORS headers (SPEC §10).
