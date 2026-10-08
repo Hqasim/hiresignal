@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 /**
  * Every kind of model generation the app makes (SPEC §7.2). A use case names its task; the
- * routing policy, not the use case, picks the model.
+ * routing policy, not the use case, picks the model. `platform.smoke` is the live check run by
+ * `npm run llm:smoke`.
  */
 export const LlmTaskSchema = z.enum([
   'guard.classify',
@@ -10,6 +11,7 @@ export const LlmTaskSchema = z.enum([
   'screen.synthesize',
   'screen.repair',
   'ask.answer',
+  'platform.smoke',
 ]);
 /** See {@link LlmTaskSchema}. */
 export type LlmTask = z.infer<typeof LlmTaskSchema>;

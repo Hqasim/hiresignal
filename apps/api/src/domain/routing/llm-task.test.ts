@@ -3,13 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { EmbeddingTaskSchema, LlmTaskSchema, ModelTierSchema } from './llm-task';
 
 describe('LLM task names', () => {
-  it('cover every generation the app makes (SPEC §9.1)', () => {
+  it('cover every generation the app makes, plus the platform smoke check (SPEC §9.1)', () => {
     expect(LlmTaskSchema.options).toEqual([
       'guard.classify',
       'screen.agent',
       'screen.synthesize',
       'screen.repair',
       'ask.answer',
+      'platform.smoke',
     ]);
   });
 
