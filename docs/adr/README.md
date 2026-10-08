@@ -10,7 +10,7 @@ Decisions that shape HireSignal, in Nygard format ([ADR 0001](0001-record-archit
 | 0004 | [Single Lambda behind a Function URL](0004-single-lambda-behind-a-function-url.md)                              | Accepted          |
 | 0005 | [Neon Postgres + pgvector as the only datastore](0005-neon-postgres-pgvector-only-datastore.md)                 | Accepted          |
 | 0006 | [node-postgres everywhere](0006-node-postgres-everywhere.md)                                                    | Accepted          |
-| 0007 | Embedding model, dimensions and normalization                                                                   | Planned (Phase 2) |
+| 0007 | [Embedding model, dimensions and normalization](0007-embedding-model-dimensions-and-normalization.md)           | Accepted          |
 | 0008 | Hybrid retrieval with RRF                                                                                       | Planned (Phase 6) |
 | 0009 | Record/replay LLM adapter                                                                                       | Planned (Phase 2) |
 | 0010 | Rule-based routing with tier fallback                                                                           | Planned (Phase 2) |

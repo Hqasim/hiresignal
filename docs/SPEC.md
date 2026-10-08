@@ -148,7 +148,7 @@ The README must reproduce this table with links to the real files once they exis
 | Tool / function calling | Screening agent tools `search_resume` and `read_section`; Zod-validated arguments; parallel calls | `apps/api/src/application/screening/agent-tools.ts` |
 | Structured outputs | Guard classifier verdict, scorecard draft, ask answer: Zod → JSON Schema → model → Zod parse, with one repair retry | `apps/api/src/application/*/schemas.ts` |
 | RAG | Ask the talent pool; the agent's evidence retrieval; citations verified against stored text | `apps/api/src/application/ask/`, `infrastructure/postgres/pg-chunk-repository.ts` |
-| Embeddings | `gemini-embedding-001`, task types, 768 dims, L2-normalized, batched | `infrastructure/llm/gemini-embedder.ts`, `domain/vectors/` |
+| Embeddings | `gemini-embedding-2`, retrieval prefixes, 768 dims, L2-normalized, batched | `infrastructure/llm/gemini/gemini-embedder.ts`, `domain/vectors/` |
 | pgvector | `vector(768)`, HNSW cosine index, filtered search, hybrid SQL with RRF | `db/migrations/`, `pg-chunk-repository.ts` |
 | Agentic workflows | Bounded tool loop → structured synthesis → code verification → repair once → human checkpoint | `apps/api/src/application/screening/` |
 | PII redaction | Deterministic detectors, consistent tokens, branded `RedactedText` type, so PII to a model is a compile error | `apps/api/src/domain/redaction/` |
@@ -169,7 +169,7 @@ flowchart LR
   user([Recruiter / Reviewer]) -->|HTTPS| web["Web SPA<br/>Vite + React + TS<br/>AWS Amplify Hosting"]
   web -->|JSON / HTTPS| api["API<br/>Hono on AWS Lambda (arm64, Node 24)<br/>Lambda Function URL"]
   api -->|SQL / TLS| db[("Neon Postgres<br/>+ pgvector")]
-  api -->|generate · embed| gem["Gemini API (free key)<br/>Flash-Lite · Flash · gemini-embedding-001"]
+  api -->|generate · embed| gem["Gemini API (free key)<br/>Flash-Lite · Flash · gemini-embedding-2"]
   dev([Developer]) -->|git push| gha[GitHub Actions]
   gha -->|"OIDC → SAM deploy"| api
   gha -->|static deploy| web
@@ -234,7 +234,7 @@ sequenceDiagram
   participant R as ChunkRepository
   participant LLM as LlmClient (routed)
   UC->>UC: guard rules on the question (reject high severity)
-  UC->>E: embed query (RETRIEVAL_QUERY)
+  UC->>E: embed query (query prefix)
   UC->>R: hybrid search across the job (quarantined excluded)
   alt best similarity < SIMILARITY_FLOOR
     UC-->>UC: insufficientEvidence (no LLM call)
@@ -530,7 +530,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
 3. Run L1 and L2 on the redacted text, then the L3 classifier, then the policy.
 4. If quarantined, store the candidate with the redacted text and verdict, and stop.
 5. Otherwise chunk section by section. `##` headings are sections and `###` headings are roles. A chunk is one role or section, split between bullets so it stays at or under `CHUNK_MAX_TOKENS`. Each chunk gets a context header, and the offsets of `content` within `redacted_resume` are recorded.
-6. Embed `context_header + content` in batches with task type `RETRIEVAL_DOCUMENT`, at 768 dimensions, then L2-normalize.
+6. Embed `context_header + content` in batches, as `title: none | text: …` with one `Content` per chunk, at 768 dimensions, then L2-normalize (ADR 0007).
 7. Persist the candidate and chunks in one transaction. Ingestion is idempotent on `(job_id, source_hash)`.
 
 ### 9.6 Screening agent (`application/screening/`)
@@ -569,7 +569,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
 ### 9.7 Ask the talent pool (`application/ask/`)
 
 1. Validate the question (≤ 500 chars). Run L0–L2 rules on it. High severity → `InjectionRejectedError` (422).
-2. Embed the question (`RETRIEVAL_QUERY`) and run hybrid search across the job, excluding quarantined candidates, keeping the top `ASK_TOP_K`.
+2. Embed the question (`embedQuery`, which sends it as `task: search result | query: …`) and run hybrid search across the job, excluding quarantined candidates, keeping the top `ASK_TOP_K`.
 3. If the best cosine similarity < `SIMILARITY_FLOOR`, return `insufficientEvidence: true` with no LLM call.
 4. Route the call (§9.1), then generate with the `AskAnswer` schema `{ answer (plain text, ≤ 1,200 chars), citations: { ref, quote }[], insufficientEvidence: boolean }`.
 5. Verify citations (same verifier), drop invalid ones, and map refs to candidate alias, section and span.
@@ -875,7 +875,7 @@ Output goes to a console table, to `$GITHUB_STEP_SUMMARY` (markdown), and to `do
 | GitHub OIDC provider + deploy role | `infra/bootstrap.yaml` | Free |
 | AWS Budget ($1/month, email alert) | `infra/bootstrap.yaml` | Free |
 | Neon Postgres | Free plan: 1 GB per project, 100 CU-hours per month, scales to zero after 5 minutes | $0 |
-| Gemini API | Free key: Flash-Lite, Flash, embeddings | $0 (free-tier prompts may be used by Google to improve products, so data is synthetic only) |
+| Gemini API | Free key: Flash-Lite, Flash, `gemini-embedding-2` (free-tier availability checked by `npm run llm:smoke`) | $0 (free-tier prompts may be used by Google to improve products, so data is synthetic only) |
 
 **The deploy role** (least privilege) can manage:
 
@@ -1045,10 +1045,10 @@ Claude prints the exact commands.
 
 1. Ports and types (§7.2); `domain/vectors` (L2 normalize, cosine) with tests.
 2. `domain/routing/policy.ts` (§9.1) with table-driven tests.
-3. `GeminiLlmClient` (tools, response JSON schema, usage including cached tokens, timeout) and `GeminiEmbedder` (batch, task types, 768 dims, normalize). Read the `@google/genai` docs first.
+3. `GeminiLlmClient` (tools, response JSON schema, usage including cached tokens, timeout) and `GeminiEmbedder` (batch with one `Content` per text, retrieval prefixes, 768 dims, normalize). Read the `@google/genai` docs first.
 4. Decorators `withRouting`, `withFallback`, `withRetry`, `withCallLogging`, each tested with a fake inner client.
 5. Record/replay (§9.8): canonical hashing, fixture store, `RecordingLlmClient`, `ReplayLlmClient`, `FixtureMissingError`; `LLM_MODE` wiring in `main/container.ts`.
-6. `config/ai.ts` (§7.5); `npm run llm:smoke` CLI (one structured generate and one embedding, recorded).
+6. `config/ai.ts` (§7.5); `npm run llm:smoke` CLI (one structured generate on each tier and one embedding, recorded), so every model ID is checked live before a later phase depends on it.
 7. ADRs 0007 (embedding part), 0009, 0010.
 8. Production wiring: `GeminiApiKey` (`NoEcho`) and model-ID parameters in `infra/template.yaml`, passed by `deploy.yml` (§16).
 
@@ -1171,7 +1171,7 @@ Total ≈ −2h 20m.
 | 3 | Gemini 3 thought signatures in tool loops | Append the returned content unchanged; test the loop with recorded multi-turn fixtures |
 | 4 | Response schema supports a JSON Schema subset | Flat schemas (objects, arrays, enums, strings, numbers); Zod re-validation; repair once |
 | 5 | Implicit cache misses | Byte-stable prefix test; size above the minimum; report the measured ratio honestly |
-| 6 | `gemini-embedding-001` at 768 dims isn't normalized | `normalize()` in `domain/vectors` with tests |
+| 6 | Embedding model behaviour changes (normalization, batch semantics, prefixes) | `normalize()` in `domain/vectors` on every vector; the adapter checks one 768-d vector per input; the model ID lives in env (ADR 0007) |
 | 7 | HNSW with filters on tiny data | Planner may seq-scan (fine); document `EXPLAIN` and iterative scans |
 | 8 | SAM + npm workspaces | Pre-bundle with esbuild; SAM packages only `apps/api/dist` |
 | 9 | `pg` in an ESM bundle | Mark `pg-native` external; output `.mjs`; smoke-test the bundle locally with a Function URL event fixture |

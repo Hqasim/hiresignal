@@ -75,7 +75,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 | `npm run db:migrate` | Apply `db/migrations/*.sql` using `DATABASE_MIGRATION_URL` |
 | `npm run seed` | Load synthetic data and precomputed results from fixtures (replay, offline) |
 | `npm run seed:record` | Run the pipeline against live Gemini and record fixtures (I run this) |
-| `npm run llm:smoke` | One live structured call and one embedding to check key and model IDs (I run this) |
+| `npm run llm:smoke` | One live structured call per tier and one embedding to check key and model IDs (I run this) |
 | `npm run dev` | API on `:3000` and web on `:5173` (Vite proxies `/api`) |
 | `npm run verify` | Format check, lint, typecheck, depcruise, unit tests. Run after every step. |
 | `npm run test:integration` | Integration tests against local Postgres (needs `npm run db:up`) |
@@ -142,7 +142,7 @@ Layers in `apps/api/src`:
 ## Gotchas
 
 - **Gemini 3 function calling:** append the model's returned `content` to history unchanged (thought signatures). Never rebuild it from parts.
-- **Embeddings:** `gemini-embedding-001` at 768 dimensions must be L2-normalized. Use the task types `RETRIEVAL_DOCUMENT` and `RETRIEVAL_QUERY`.
+- **Embeddings:** `gemini-embedding-2` at 768 dimensions (ADR 0007). It takes no task types: the adapter prefixes queries with `task: search result | query: ` and documents with `title: none | text: `. Send each text as its own `Content` object (plain strings in one request merge into a single embedding). Normalize anyway, with `normalize()` from `domain/vectors`.
 - **Implicit prompt caching** only hits a byte-identical prefix above the model's minimum size. Keep timestamps, ids and candidate data out of the prefix.
 - **LLM response schemas:** Gemini supports a subset of JSON Schema, so keep schemas flat (objects, arrays, enums, strings, numbers). Always re-validate with Zod.
 - **Database driver:** use `pg` everywhere (local, CI, Lambda). The Neon HTTP driver can't reach local Postgres.

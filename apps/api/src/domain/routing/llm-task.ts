@@ -14,7 +14,7 @@ export const LlmTaskSchema = z.enum([
 /** See {@link LlmTaskSchema}. */
 export type LlmTask = z.infer<typeof LlmTaskSchema>;
 
-/** Embedding calls, logged alongside generations. Documents and queries use different task types. */
+/** Embedding calls, logged alongside generations. Documents and queries use different prompt prefixes (ADR 0007). */
 export const EmbeddingTaskSchema = z.enum(['embed.documents', 'embed.query']);
 /** See {@link EmbeddingTaskSchema}. */
 export type EmbeddingTask = z.infer<typeof EmbeddingTaskSchema>;

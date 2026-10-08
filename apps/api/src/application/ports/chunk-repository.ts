@@ -30,7 +30,7 @@ export interface HybridSearchQuery {
   jobId: JobId;
   /** Restricts the search to one candidate (the screening agent); `null` searches the whole job. */
   candidateId: CandidateId | null;
-  /** Embedding of the query (task type `RETRIEVAL_QUERY`). */
+  /** Embedding of the query, from `Embedder.embedQuery` (ADR 0007). */
   queryVector: UnitVector;
   /** The query as typed; parsed with `websearch_to_tsquery`, so it is never SQL. */
   queryText: string;
