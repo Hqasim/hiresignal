@@ -280,6 +280,10 @@ export interface LlmClient {
   /** Generates one model turn. The routing decorator resolves the model from `task`. */
   generate(request: LlmRequest): Promise<LlmResponse>;
 }
+/** The inner decorator chain and the provider clients: requests already carry their route. */
+export interface RoutedLlmClient {
+  generate(request: LlmRequest & { route: LlmRoute }): Promise<LlmResponse>;
+}
 export interface Embedder {
   embedDocuments(texts: readonly RedactedText[]): Promise<UnitVector[]>;
   embedQuery(text: string): Promise<UnitVector>;
@@ -295,16 +299,18 @@ export interface Clock { now(): Date }
 
 Candidate detail is composed by the use case from `CandidateRepository.findById` and `ScorecardRepository.latestFor`. Chunks are written only by `insertIngested`, so a candidate and its chunks are stored atomically (§9.5 step 7).
 
-`LlmRequest` contains: `task`, optional `tier` (set by the router), `promptVersion`, `system`, `contents` (turns), optional `tools`, optional `responseSchema` (JSON Schema), `maxOutputTokens`, `temperature`. `LlmResponse` contains: `content` (provider turn, kept opaque so it can be appended unchanged), `text`, `functionCalls`, `usage` (`inputTokens`, `outputTokens`, `cachedTokens`), `model`, `latencyMs`.
+`LlmRequest` contains: `task`, `promptVersion`, `system`, `contents` (turns: user text, an unchanged model turn, or tool results), optional `tools`, optional `responseSchema` (JSON Schema), `maxOutputTokens` (it includes Gemini 3 thinking tokens), optional `temperature` (left unset: Google recommends the default 1.0 for Gemini 3), optional `routingContext` (escalation signals for the policy) and optional `requestId`. `LlmResponse` contains: `content` (provider turn, kept opaque so it can be appended unchanged), `text`, `functionCalls`, `usage` (`inputTokens`, `outputTokens` including thinking, `cachedTokens`), `model`, `latencyMs`, `finishReason` (`stop`, `max_tokens`, `safety`, `other`).
+
+Use cases depend on `LlmClient`. Only `withRouting` turns an `LlmRequest` into a routed one (`route: { tier, model, reason, isFallback }`), and every inner decorator and provider client implements `RoutedLlmClient`, so an unrouted request can't reach a provider (ADR 0010). Provider failures are thrown as a provider-neutral `LlmCallError` (`rate_limited`, `unavailable`, `timeout`, `rejected`) with an optional server-requested `retryAfterMs`.
 
 ### 7.3 LLM decorator chain
 
 Composed only in `main/container.ts`, outermost first:
 
 ```
-withRouting(policy)          → sets tier/model from task + escalation context; records routedReason
+withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model from task + routingContext; records routedReason
   withFallback()             → on retryable failure after retries, switch tier once; isFallback=true
-    withRetry({ max: 1 })    → exponential backoff + jitter; honours Retry-After; 429/500/503/timeout only
+    withRetry({ max: 1 })    → backoff + jitter; honours the 429 retryDelay up to LLM_RETRY_MAX_DELAY_MS; 429/5xx/timeout only
       withCallLogging(repo)  → one llm_calls row per attempt (tokens, cached tokens, latency, status, source)
         GeminiLlmClient | RecordingLlmClient(Gemini) | ReplayLlmClient
 ```
@@ -335,6 +341,11 @@ withRouting(policy)          → sets tier/model from task + escalation context;
 | `CLASSIFIER_QUARANTINE_CONFIDENCE` | 0.7 | Minimum confidence for a "malicious" verdict to quarantine |
 | `DAILY_LLM_CALL_CAP` | 300 (env) | Live calls per UTC day across the demo |
 | `LLM_TIMEOUT_MS` | 25000 | Per attempt |
+| `LLM_MAX_RETRIES` | 1 | Retries per tier before falling back |
+| `LLM_RETRY_BASE_DELAY_MS` | 1000 | First backoff delay, before jitter |
+| `LLM_RETRY_MAX_DELAY_MS` | 10000 | Longest wait honoured; a longer 429 `retryDelay` goes straight to the fallback tier |
+| `EMBEDDING_BATCH_SIZE` | 16 | Documents per embedding request, under the 8,192-token input limit |
+| `SMOKE_MAX_OUTPUT_TOKENS` | 2048 | Output budget for `npm run llm:smoke`, with headroom for thinking tokens |
 
 Model IDs come from env (`GEMINI_MODEL_LITE`, `GEMINI_MODEL_FLASH`, `GEMINI_EMBEDDING_MODEL`). Verify current free-tier IDs in Google AI Studio on build day; Pro models are not on the free tier.
 

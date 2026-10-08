@@ -13,7 +13,7 @@ Decisions that shape HireSignal, in Nygard format ([ADR 0001](0001-record-archit
 | 0007 | [Embedding model, dimensions and normalization](0007-embedding-model-dimensions-and-normalization.md)           | Accepted          |
 | 0008 | Hybrid retrieval with RRF                                                                                       | Planned (Phase 6) |
 | 0009 | Record/replay LLM adapter                                                                                       | Planned (Phase 2) |
-| 0010 | Rule-based routing with tier fallback                                                                           | Planned (Phase 2) |
+| 0010 | [Rule-based routing with tier fallback](0010-rule-based-routing-with-tier-fallback.md)                          | Accepted          |
 | 0011 | Prompt caching via byte-stable prefixes                                                                         | Planned (Phase 5) |
 | 0012 | Deterministic scoring with verified citations                                                                   | Planned (Phase 5) |
 | 0013 | Layered injection defense and quarantine policy                                                                 | Planned (Phase 3) |
