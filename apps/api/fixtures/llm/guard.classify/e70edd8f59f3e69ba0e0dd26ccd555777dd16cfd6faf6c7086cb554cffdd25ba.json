@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "e70edd8f59f3e69ba0e0dd26ccd555777dd16cfd6faf6c7086cb554cffdd25ba",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T09:56:33.761Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text is a standard, professional resume detailing work experience, projects, and skills without any attempts to manipulate or instruct an AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TuDavFBjTy9H+lNyS5rnbJYoc5UbEmgXRJCPQCMZvY2m14+UXsMpc0CGOWb7yk4m4aebsguFfLKYQvliglKGmBdA8D7L9d3xmhuOYPlr/aPiBalIArLOcSjk="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text is a standard, professional resume detailing work experience, projects, and skills without any attempts to manipulate or instruct an AI screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1351
+  },
+  "usage": {
+    "inputTokens": 899,
+    "outputTokens": 58,
+    "cachedTokens": 0
+  }
+}

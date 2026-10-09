@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "12ffe5d601131d6969409b02c34cf005d29297555e705f494a581da3fe24b290",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T09:56:45.762Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"verdict\": \"benign\", \"confidence\": 1.0, \"rationale\": \"The resume describes legitimate professional experience in AI platform engineering, including the implementation of guardrails and prompt-injection defenses, without any attempt to manipulate the automated screener.\"}",
+          "thoughtSignature": "EmAKXgFpFH0TssFOyGASjFvoFWM2DO4Z8ZfuLYgLYdJczrvaz2zo2CmbqX0pcWNfwg6OFwqb+N4hioPl8+pjVCNBr+iuTcapVqjO1//2LFypez9ymtZeIauaD9HttDcZ6rY="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"verdict\": \"benign\", \"confidence\": 1.0, \"rationale\": \"The resume describes legitimate professional experience in AI platform engineering, including the implementation of guardrails and prompt-injection defenses, without any attempt to manipulate the automated screener.\"}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1350
+  },
+  "usage": {
+    "inputTokens": 849,
+    "outputTokens": 55,
+    "cachedTokens": 0
+  }
+}
