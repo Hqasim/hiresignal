@@ -8,7 +8,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | --- | ------------------------------------------- | ------------- | ---------- | -------------------------------------------------------------------------------- |
 | 0   | Foundations and walking skeleton            | ☑ Done        | 2026-10-08 | CI and deploy green; the live web page shows "API: healthy" from the live Lambda |
 | 1   | Database and persistence                    | ☑ Done        | 2026-10-08 | Neon migrated by the deploy workflow; live health reports `db: up`               |
-| 2   | LLM platform                                | ☐ Not started |            |                                                                                  |
+| 2   | LLM platform                                | ☑ Done        | 2026-10-09 | Live smoke passed on both tiers and embeddings; its fixtures replay in CI        |
 | 3   | Safety layer: redaction and injection guard | ☐ Not started |            |                                                                                  |
 | 4   | Synthetic data and ingestion                | ☐ Not started |            |                                                                                  |
 | 5   | Screening agent and scorecards              | ☐ Not started |            |                                                                                  |
@@ -28,6 +28,35 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+
+## Phase 2 evidence (2026-10-09)
+
+- **`npm run llm:smoke` succeeded live** (run by Hamzah, 2026-10-09 06:58 UTC). It recorded 3 fixtures and ended with `llm.smoke_passed`:
+
+  | Call                       | Model                   | Attempts | Input tokens | Output tokens           | Latency        |
+  | -------------------------- | ----------------------- | -------- | ------------ | ----------------------- | -------------- |
+  | structured generate, lite  | `gemini-3.5-flash-lite` | 1        | 43           | 20                      | 1,310 ms       |
+  | structured generate, flash | `gemini-3.5-flash`      | 1        | 43           | 288 (thinking included) | 1,959 ms       |
+  | query embedding            | `gemini-embedding-2`    | 1        | –            | –                       | 768 dimensions |
+
+- **The fixtures replay offline:** `src/main/cli/llm-smoke.replay.test.ts` (2 tests) runs the same `createSmokeCheck` wiring in replay mode, with model IDs read from `.env.example`. It passes locally and in CI, which has no Gemini key.
+- **Decorator and routing tests are green:**
+  - routing policy: 25 table-driven cases, including hard negatives ("versatile", "bestseller", "Frank")
+  - decorators: 31 (routing, pinned route, fallback, retry, call logging)
+  - record/replay: 29
+  - Gemini adapters: 39, against fake SDK objects
+- **`npm run verify` is green locally:**
+  - 277 unit tests: contracts 9, api 264, web 4
+  - 0 dependency-cruiser violations (190 modules); `@google/genai` is imported only under `infrastructure/llm/gemini/`
+  - the domain ≥ 90% and application ≥ 80% coverage gates pass
+- **CI is green:** run [37896854739](https://github.com/Hqasim/hiresignal/actions/runs/37896854739) on `6f59638`. Quality, unit, integration and build all passed, including `sam validate --lint` on the new template.
+- **The deploy succeeded:** run [37896932650](https://github.com/Hqasim/hiresignal/actions/runs/37896932650).
+  - The variables-and-secrets check now covers `GEMINI_API_KEY`, the three `GEMINI_MODEL_*` and `DAILY_LLM_CALL_CAP`.
+  - The Lambda's environment has the names `GEMINI_API_KEY`, `GEMINI_MODEL_LITE`, `GEMINI_MODEL_FLASH`, `GEMINI_EMBEDDING_MODEL` and `DAILY_LLM_CALL_CAP` (checked with `keys(Environment.Variables)`; no values printed).
+- **Live:**
+  - `GET /api/health` → `200 {"status":"ok","db":"up","llmMode":"live","gitSha":"6f59638…"}`, with `x-request-id`
+  - 0 `http.unhandled_error`, `db.pool_error`, `health.db_unreachable` or `llm.call_log_failed` events in the 20 minutes after the deploy
+  - one cold start: 573 ms init plus 129 ms for the first request; Phase 1 was 304 ms init (see Known issues)
 
 ## Phase 1 evidence (2026-10-08)
 
@@ -83,9 +112,41 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - [0004 Single Lambda behind a Function URL](adr/0004-single-lambda-behind-a-function-url.md)
 - [0005 Neon Postgres + pgvector as the only datastore](adr/0005-neon-postgres-pgvector-only-datastore.md)
 - [0006 node-postgres everywhere](adr/0006-node-postgres-everywhere.md)
+- [0007 Embedding model, dimensions and normalization](adr/0007-embedding-model-dimensions-and-normalization.md)
+- [0009 Record/replay LLM adapter](adr/0009-record-replay-llm-adapter.md)
+- [0010 Rule-based routing with tier fallback](adr/0010-rule-based-routing-with-tier-fallback.md)
 - [0016 Secrets via GitHub Environments → Lambda env vars](adr/0016-secrets-via-github-environments.md)
 - [0017 Static SPA on Amplify with CI-driven deploys](adr/0017-static-spa-on-amplify-with-ci-deploys.md)
 - [0018 Forward-only SQL migrations, run before the code deploy](adr/0018-forward-only-migrations-before-deploy.md)
+
+Phase 2 changes agreed with Hamzah (2026-10-08/09) and recorded in SPEC:
+
+- **Embeddings use `gemini-embedding-2`,** not `gemini-embedding-001` (ADR 0007).
+  - It takes retrieval prefixes (`task: search result | query: …`, `title: none | text: …`) instead of task types.
+  - It needs one `Content` per text; plain strings merge into a single embedding.
+  - It normalizes 768-d output itself; we normalize again anyway.
+  - SPEC §6.1, §9.5, §9.7, §16, §21 and CLAUDE.md were updated.
+- **`npm run llm:smoke` checks both generation tiers** plus one embedding (SPEC §20).
+- **Model IDs:** `gemini-3.5-flash-lite` and `gemini-3.5-flash` (Hamzah's choice from Google's stable list on 2026-10-09), in `.env.example` and the `production` variables.
+- **§7.2/§7.3 as built** (ADR 0010):
+  - Use cases get `LlmClient`. Only `withRouting` produces the `RoutedLlmRequest` that the inner chain requires; this replaces the optional `tier` field.
+  - `LlmResponse` gains `finishReason`.
+  - Provider failures are `LlmCallError`.
+  - `withRetry` honours Gemini's `RetryInfo.retryDelay` (the SDK drops headers, so there is no `Retry-After`) up to `LLM_RETRY_MAX_DELAY_MS`, and longer waits go straight to fallback.
+- **§7.5 gains** `LLM_MAX_RETRIES`, `LLM_RETRY_BASE_DELAY_MS`, `LLM_RETRY_MAX_DELAY_MS`, `EMBEDDING_BATCH_SIZE` and `SMOKE_MAX_OUTPUT_TOKENS`.
+- **§9.8:** fixtures carry `kind`. Embedding keys include the adapter's input-format version (`GEMINI_EMBEDDING_INPUT_FORMAT`), because the prefixes are applied inside the adapter.
+- **`platform.smoke` joins the `LlmTask` union** (routed to lite). `llm_calls.task` is `text`, so no migration was needed.
+
+Phase 2 choices recorded in commit messages and ADRs:
+
+- **`@google/genai` 2.28.0.** Its preinstall (an `echo` no-op) and protobufjs's postinstall (a version warning) are denied in `allowScripts`.
+- **The Gemini adapters take the SDK's `models` object as a parameter,** so unit tests use fakes and never touch the network. Text and function calls are read from the parts, because the SDK's `text` getter writes console warnings.
+- **`outputTokens` = candidates + thinking tokens:** both are billed and both count toward `maxOutputTokens`. `temperature` is left unset, as Google recommends for Gemini 3.
+- **A failed `llm_calls` write is logged (`llm.call_log_failed`) and doesn't fail the model call.**
+- **Embeddings get call logging and record/replay, but no retry or fallback:** there's no second embedding tier.
+- **The smoke CLI pins each tier (`withPinnedRoute`) and needs no database.** It records fixtures and logs metadata only.
+- **Fixtures are pretty-printed JSON with number arrays on one line** (one line per vector), and are excluded from Prettier.
+- **The production secret and variables were set by Claude with Hamzah's approval.** The key was piped from `.env` to `gh secret set` through stdin, never printed.
 
 Phase 1 changes agreed with Hamzah (2026-10-08) and recorded in SPEC:
 
@@ -117,19 +178,27 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 
 ## Deferred and cut-list items
 
-- **`GEMINI_API_KEY` secret, model-ID variables and the SAM parameters:** Phase 2 (SPEC §20).
+- **Seed fixtures (classifier, agent, synthesis, ask, document embeddings):** recorded by `npm run seed:record` from Phase 4. The first batch `embedDocuments` call is the first live test of embedding-2 batching (ADR 0007).
+- **Enforcing `DAILY_LLM_CALL_CAP`:** Phase 7. The variable and the `countLiveSince` query exist now.
+- **A smaller cold start:** load `@google/genai` lazily on the first live call, if the cold start matters (see Known issues).
 - **Playwright `@smoke` step in `deploy.yml`:** Phase 9, because Playwright isn't installed yet. `curl --fail` smoke tests cover the API and web until then.
 - **`LlmCallRepository.summary` and `recent`:** Phase 7, with the ops DTOs they return.
 - **`EXPLAIN` output for hybrid search and notes on `hnsw.iterative_scan`:** ADR 0008 in Phase 6, once real data is seeded.
 - **A retry on stale connections in the health probe:** only if Lambda logs ever show `health.db_unreachable` after a thaw (ADR 0006).
 - **Scripts arriving with their phases:**
-  - `llm:smoke` (Phase 2)
   - `seed` and `seed:record` (Phase 4)
   - `eval` and `test:e2e` (Phase 9)
 - **`ValidationError` and the other `AppError` subclasses:** added by the phases that raise them (SPEC §7.4).
 - **No cut-list items used.**
 
 ## Known issues
+
+- **The Gemini SDK made the bundle and cold start heavier.**
+  - The bundle grew from 988 kB to 2.7 MB with `@google/genai` and its dependencies (google-auth-library, protobufjs, ws).
+  - As of 2026-10-09, Lambda init is 573 ms (Phase 1: 304 ms). The web app's health call on page load absorbs it.
+  - If it matters, the fix is a dynamic `import()` of the SDK on the first live call.
+- **Gemini 3 Flash spends output tokens on thinking:** 288 output tokens for a 20-token reply in the smoke check. Later phases must budget `maxOutputTokens` with this headroom.
+- **`npm run dev` now needs the three `GEMINI_MODEL_*` variables in `.env`.** Copy them from `.env.example`. Replay mode needs no key.
 
 - **Dependabot npm updates may fail for a few days.** Its default cooldown hides versions published in the last 3 days, and our exact pins (for example typescript-eslint 8.71.1) are newer than that. The error is `ETARGET … with a date before …`. It clears by itself.
 - **Dependabot PR #1 (`@types/node` 24 → 26) should be closed.** `dependabot.yml` now ignores `@types/node` majors, because the types must follow the Node 24 runtime.
@@ -162,9 +231,15 @@ Claude configured Neon with the Neon CLI, with Hamzah's approval:
 
 Local and CI moved to Postgres 18 to match Neon.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 2`. Before starting, have ready:
+**2026-10-09, Phase 2 done.** The LLM platform is complete and live:
 
-- a Gemini API key from Google AI Studio (free tier)
-- the current free-tier model IDs for Flash-Lite, Flash and `gemini-embedding-001`; Phase 2 reads them from `GEMINI_MODEL_LITE`, `GEMINI_MODEL_FLASH` and `GEMINI_EMBEDDING_MODEL`
+- `LlmClient` and `Embedder` ports
+- Gemini adapters
+- the routing → fallback → retry → call-logging chain
+- record/replay keyed by request hash
+- AI tunables
+- a smoke CLI
 
-Phase 2 ends with you running `npm run llm:smoke` once against the live API.
+The first live smoke passed on `gemini-3.5-flash-lite`, `gemini-3.5-flash` and `gemini-embedding-2`, and its fixtures replay in CI. Production now runs with the Gemini key and model IDs. No route calls a model yet.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 3` (safety layer: redaction and injection guard). Phase 3 is offline except for the classifier, whose fixtures are recorded in Phase 4 with the seed.
