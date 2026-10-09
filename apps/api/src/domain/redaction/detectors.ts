@@ -15,7 +15,8 @@ export interface PiiMatch extends TextSpan {
 // Every quantifier on a repeated group is bounded, so no input backtracks badly. Hard negatives for
 // each pattern live in `redact.test.ts`.
 
-const EMAIL = /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu;
+/** The local part allows every RFC 5322 `atext` character (`!#$%&'*+/=?^_\`{|}~`), not just the common ones. */
+const EMAIL = /[\p{L}\p{N}!#$%&'*+/=?^_`{|}~.-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.\p{L}{2,}/gu;
 
 /** Characters a URL may contain in running text. Brackets and quotes end it (Markdown links). */
 const URL_CHAR = String.raw`[^\s<>()\[\]"']`;

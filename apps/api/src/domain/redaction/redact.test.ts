@@ -14,6 +14,8 @@ describe('redact', () => {
     it.each([
       ['an email', 'Email: gabriel.silva@example.com', 'Email: [EMAIL_1]'],
       ['an email with a plus tag', 'jo+jobs@mail.example.com.', '[EMAIL_1].'],
+      // Found by the fast-check property test: RFC 5322 allows these in the local part.
+      ['an email with RFC 5322 symbols', 'Mail !#x{1}@a.aa now', 'Mail [EMAIL_1] now'],
       ['a US phone in parentheses', 'Call (415) 555-0142 today', 'Call [PHONE_1] today'],
       ['a dashed US phone', 'Tel 415-555-0142', 'Tel [PHONE_1]'],
       ['a dotted US phone', 'Tel 415.555.0142', 'Tel [PHONE_1]'],
