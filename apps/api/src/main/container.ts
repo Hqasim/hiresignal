@@ -8,6 +8,7 @@ import type { LlmCallTally } from '../application/llm/llm-call-tally';
 import type { Embedder } from '../application/ports/embedder';
 import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
+import type { PoolScreening } from '../application/screening/screen-pool';
 import type { LlmPlatformReport } from '../application/smoke/check-llm-platform';
 import { type Env, parseEnv, parseMigrationEnv, parseSeedEnv, parseSmokeEnv } from '../config/env';
 import { systemClock } from '../infrastructure/clock/system-clock';
@@ -103,8 +104,11 @@ export function createMigrationRunner(
 /** The seed CLI's dependencies (`npm run seed`). */
 export interface SeedRunner {
   logger: Logger;
-  /** Loads `data/` and seeds the demo job; returns the outcomes and a tally of model calls. */
-  run(): Promise<{ result: SeedJobResult; calls: LlmCallTally }>;
+  /**
+   * Loads `data/`, seeds the demo job and precomputes its scorecards; returns the ingestion
+   * outcomes, the screenings and a tally of model calls.
+   */
+  run(): Promise<{ result: SeedJobResult; screenings: PoolScreening[]; calls: LlmCallTally }>;
   close(): Promise<void>;
 }
 
@@ -134,7 +138,8 @@ export function createSeedRunner(
     logger,
     run: async () => {
       const result = await seeder.seed({ ...(await loadSeedDataset()), reset: args.reset });
-      return { result, calls: seeder.tally() };
+      const screenings = await seeder.screen(result.outcomes);
+      return { result, screenings, calls: seeder.tally() };
     },
     close: () => pool.end(),
   };

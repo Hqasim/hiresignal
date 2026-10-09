@@ -6,6 +6,8 @@ import { createSeedJob, type SeedJob } from '../application/ingest/seed-job';
 import { type LlmCallTally, withCallTally } from '../application/llm/llm-call-tally';
 import type { Clock } from '../application/ports/clock';
 import type { Logger } from '../application/ports/logger';
+import { createScreenCandidate } from '../application/screening/screen-candidate';
+import { createScreenPool, type ScreenPool } from '../application/screening/screen-pool';
 import {
   CHUNK_MAX_TOKENS,
   CLASSIFIER_MAX_OUTPUT_TOKENS,
@@ -17,9 +19,12 @@ import { type Dataset, readDataset } from '../infrastructure/dataset/fs-dataset'
 import { createThrottle } from '../infrastructure/llm/decorators/with-throttle';
 import type { DbPool } from '../infrastructure/postgres/create-pool';
 import { createPgCandidateRepository } from '../infrastructure/postgres/pg-candidate-repository';
+import { createPgChunkRepository } from '../infrastructure/postgres/pg-chunk-repository';
 import { createPgJobRepository } from '../infrastructure/postgres/pg-job-repository';
 import { createPgLlmCallRepository } from '../infrastructure/postgres/pg-llm-call-repository';
+import { createPgScorecardRepository } from '../infrastructure/postgres/pg-scorecard-repository';
 import { createLlm, type LlmSettings } from './llm-wiring';
+import { SCREENING_SETTINGS } from './screening-settings';
 
 /** `data/` at the repository root (SPEC §12). Read by the seed CLI, never by the Lambda bundle. */
 export const DATA_DIRECTORY = fileURLToPath(new URL('../../../../data/', import.meta.url));
@@ -37,21 +42,25 @@ export interface SeederDeps {
   sleep: (ms: number) => Promise<void>;
 }
 
-/** The wired seed use case and a tally of the model calls it made. */
+/** The wired seed use cases and a tally of the model calls they made. */
 export interface Seeder {
+  /** Loads the job and ingests its resumes. */
   seed: SeedJob;
+  /** Precomputes a scorecard for every ingested, non-quarantined candidate that has none. */
+  screen: ScreenPool;
   tally: () => LlmCallTally;
 }
 
 /**
- * Wires ingestion for seeding: the full LLM stack (calls logged to `llm_calls`, and throttled to
+ * Wires ingestion and screening for seeding: the full LLM stack (calls logged to `llm_calls`, and throttled to
  * `SEED_MIN_CALL_INTERVAL_MS` unless replaying), the L3 classifier, the Postgres repositories and
  * the AI tunables. The seed CLI and the seed integration test both build it here, so replay sends
  * byte-identical requests to the ones recorded.
  *
  * @example
- * const { seed, tally } = createSeeder(settings, { pool, clock, logger, sleep });
- * await seed({ ...(await loadSeedDataset()), reset: false });
+ * const { seed, screen, tally } = createSeeder(settings, { pool, clock, logger, sleep });
+ * const { outcomes } = await seed({ ...(await loadSeedDataset()), reset: false });
+ * await screen(outcomes);
  */
 export function createSeeder(settings: LlmSettings, deps: SeederDeps): Seeder {
   const { calls, tally } = withCallTally(createPgLlmCallRepository(deps.pool));
@@ -70,6 +79,8 @@ export function createSeeder(settings: LlmSettings, deps: SeederDeps): Seeder {
     ...(throttle !== undefined && { throttle }),
   });
   const candidates = createPgCandidateRepository(deps.pool);
+  const jobs = createPgJobRepository(deps.pool);
+  const scorecards = createPgScorecardRepository(deps.pool);
   const ingest = createIngestResume({
     classify: createClassifyInjection({ llm, maxOutputTokens: CLASSIFIER_MAX_OUTPUT_TOKENS }),
     embedder,
@@ -77,14 +88,23 @@ export function createSeeder(settings: LlmSettings, deps: SeederDeps): Seeder {
     thresholds: { quarantineConfidence: CLASSIFIER_QUARANTINE_CONFIDENCE },
     chunkMaxTokens: CHUNK_MAX_TOKENS,
   });
-  const seed = createSeedJob({
-    jobs: createPgJobRepository(deps.pool),
-    candidates,
-    ingest,
+  const seed = createSeedJob({ jobs, candidates, ingest, logger: deps.logger, clock: deps.clock });
+  const screen = createScreenPool({
+    screen: createScreenCandidate({
+      llm,
+      embedder,
+      jobs,
+      candidates,
+      chunks: createPgChunkRepository(deps.pool),
+      scorecards,
+      clock: deps.clock,
+      settings: SCREENING_SETTINGS,
+    }),
+    scorecards,
     logger: deps.logger,
     clock: deps.clock,
   });
-  return { seed, tally };
+  return { seed, screen, tally };
 }
 
 /**

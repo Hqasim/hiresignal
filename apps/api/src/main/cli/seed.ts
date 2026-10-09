@@ -1,9 +1,10 @@
 import { formatOutcomeTable } from '../../application/ingest/outcome-table';
+import { formatRankingTable } from '../../application/screening/ranking-table';
 import { createSeedRunner } from '../container';
 import { parseSeedArgs, type SeedArgs } from './seed-args';
 
 // `npm run seed`: loads the demo job and its ten resumes through ingestion (SPEC §9.5, §20
-// Phase 4). Replay mode (the default) reads recorded fixtures and needs no key; `seed:record`
+// Phase 4), then precomputes a scorecard for every non-quarantined candidate (§9.6, Phase 5). Replay mode (the default) reads recorded fixtures and needs no key; `seed:record`
 // (`--mode record --reset`) calls Gemini and records them, and only Hamzah runs it (CLAUDE.md
 // rule 2). Logs metadata only; the final table holds aliases, statuses and counts, never text.
 const args = parseArgsOrExit(process.argv.slice(2));
@@ -19,12 +20,14 @@ function parseArgsOrExit(argv: readonly string[]): SeedArgs {
 
 const runner = createSeedRunner(process.env, args);
 try {
-  const { result, calls } = await runner.run();
+  const { result, screenings, calls } = await runner.run();
   runner.logger.info('seed.llm_calls', { mode: args.mode, ...calls });
   process.stdout.write(
     [
       '',
       formatOutcomeTable(result.outcomes),
+      '',
+      formatRankingTable(screenings),
       '',
       `Model calls: ${String(calls.attempts)} (live ${String(calls.live)}, fallbacks ${String(calls.fallbacks)}, failed ${String(calls.failed)})`,
       '',
