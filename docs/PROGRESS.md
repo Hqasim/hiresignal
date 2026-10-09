@@ -11,7 +11,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | 2   | LLM platform                                | ☑ Done        | 2026-10-09 | Live smoke passed on both tiers and embeddings; its fixtures replay in CI        |
 | 3   | Safety layer: redaction and injection guard | ☑ Done        | 2026-10-09 | Redaction and guard ≥ 95% covered; every rule has attack and hard-negative cases |
 | 4   | Synthetic data and ingestion                | ☑ Done        | 2026-10-09 | Offline replay seed in 2.5 s; all ten guard outcomes match SPEC §12              |
-| 5   | Screening agent and scorecards              | ☐ Not started |            |                                                                                  |
+| 5   | Screening agent and scorecards              | ☑ Done        | 2026-10-09 | 8 scorecards, 73/73 citations verified; C01 and C02 rank first; replay in 2.1 s  |
 | 6   | Ask the talent pool (hybrid RAG)            | ☐ Not started |            |                                                                                  |
 | 7   | API hardening and ops endpoints             | ☐ Not started |            |                                                                                  |
 | 8   | Frontend                                    | ☐ Not started |            |                                                                                  |
@@ -28,6 +28,66 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+
+## Phase 5 evidence (2026-10-09)
+
+Phase 5's DoD is local: every non-quarantined candidate has a scorecard, 100% of citations are valid, and the ranking matches §12.
+
+- **Fixtures recorded live:** Hamzah ran `npm run seed:record` on 2026-10-09.
+  - 105 calls: 105 live, 0 fallbacks, 0 failed.
+  - New fixtures:
+    - 24 `screen.agent` turns: 3 per candidate, so every agent stopped well inside `MAX_AGENT_STEPS`
+    - 8 `screen.synthesize` replies
+    - 0 `screen.repair` calls: every first draft verified
+    - 48 query embeddings
+  - The 9 `guard.classify` fixtures were re-recorded under the same keys. C07 is now `malicious` 1.00 (it was 0.99). The `embed.documents` re-recording differed only in `recordedAt`, so it wasn't committed.
+  - A grep of the fixtures found no resume name, email, phone or profile link.
+- **The ranking matches §12.** The replay table is identical to the recording:
+
+  | #   | Alias | Score | Must-haves | Ratings (S/P/N/U) | Citations |
+  | --- | ----- | ----- | ---------- | ----------------- | --------- |
+  | 1   | C01   | 100   | 4/4        | 7/0/0/0           | 10        |
+  | 2   | C02   | 100   | 4/4        | 7/0/0/0           | 11        |
+  | 3   | C10   | 100   | 4/4        | 7/0/0/0           | 12        |
+  | 4   | C05   | 69    | 4/4        | 3/4/0/0           | 8         |
+  | 5   | C09   | 58    | 2/4        | 4/1/2/0           | 6         |
+  | 6   | C03   | 50    | 4/4        | 0/7/0/0           | 13        |
+  | 7   | C04   | 50    | 2/4        | 3/1/3/0           | 8         |
+  | 8   | C08   | 27    | 2/4        | 0/3/4/0           | 5         |
+  | 9   | C06   | –     | –          | quarantined       | –         |
+  | 10  | C07   | –     | –          | quarantined       | –         |
+  - C01 and C02 are at the top (C10, the strong match with heavy PII, ties them at 100; ties sort by alias).
+  - C03 is penalized for claims without evidence: every requirement is `partial`, and nothing is `strong`.
+  - C05 (Projects evidence) is mid-high, C04 and C09 are mid, and C08 is low.
+
+- **Implicit caching works on both tiers** (from `llm_calls` of the recording run):
+  - `screen.agent` on `gemini-3.5-flash-lite`: 93,166 of 170,447 input tokens cached (55%). Google doesn't document Flash-Lite's minimum, so this answers ADR 0011's open question.
+  - `screen.synthesize` on `gemini-3.5-flash`: 18,728 of 44,681 (42%).
+  - Synthesis used 32,731 output tokens over 8 calls (about 4,100 each, thinking included), half of `SYNTHESIS_MAX_OUTPUT_TOKENS`.
+- **Offline seed on a fresh volume:** `docker compose down --volumes`, `npm run db:up`, `npm run db:migrate` (2 applied), then `npm run seed -- --reset` with `GEMINI_API_KEY` empty:
+  - `seed --reset` took 2.1 s, and an idempotent re-run 1.5 s
+  - `Model calls: 105 (live 0, fallbacks 0, failed 0)`, and 0 calls on the re-run
+- **`npm run test:integration` passes:** 74 tests in 5 files (Phase 4: 62). `test/integration/seed.test.ts` replays the fixtures and asserts:
+  - a scorecard for each of the 8 non-quarantined candidates, and none for C06 and C07
+  - all 73 citations equal the resume text at their spans, inside the cited chunk, with refs owned by the candidate
+  - every strong or partial rating has a citation
+  - C01 and C02 rank first, and the quarantined candidates last
+  - C03 is below C01, C02 and C05, with nothing strong
+  - prompt version `screening@1` and both models are stored
+  - a second run screens nobody and calls no model
+- **`npm run verify` is green:**
+  - 901 unit tests: contracts 21, api 876, web 4. Phase 4 had 705.
+  - 0 dependency-cruiser violations (306 modules)
+  - every coverage gate passes
+- **Routes checked by hand** against the local server in replay mode:
+  - `GET /api/jobs` lists the job.
+  - `GET /api/jobs/senior-fullstack-ai/candidates` ranks as above, with every `displayName` null.
+  - `GET /api/candidates/:id` (C01) returns score 100, and the first citation's span selects exactly its quote.
+  - `POST …/shortlist` reveals "Priya Raman".
+  - A malformed id gets 400.
+  - `POST …/screen` on C06 gets a 409 `CANDIDATE_QUARANTINED` problem.
+- **The bundle builds and boots:** `npm run build`, then `npm run smoke:bundle` → 200.
+- **Not pushed yet.** CI and deploy aren't part of this phase's DoD. The 12 Phase 5 commits wait for Hamzah's approval to push.
 
 ## Phase 4 evidence (2026-10-09)
 
@@ -190,13 +250,38 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 - [0007 Embedding model, dimensions and normalization](adr/0007-embedding-model-dimensions-and-normalization.md)
 - [0009 Record/replay LLM adapter](adr/0009-record-replay-llm-adapter.md)
 - [0010 Rule-based routing with tier fallback](adr/0010-rule-based-routing-with-tier-fallback.md)
+- [0011 Prompt caching via byte-stable prefixes](adr/0011-prompt-caching-via-byte-stable-prefixes.md)
+- [0012 Deterministic scoring with verified citations](adr/0012-deterministic-scoring-with-verified-citations.md)
 - [0013 Layered injection defense and quarantine policy](adr/0013-layered-injection-defense-and-quarantine-policy.md)
 - [0014 One-way redaction with branded types](adr/0014-one-way-redaction-with-branded-types.md)
+- [0015 Precomputed results and a daily call cap](adr/0015-precomputed-results-and-a-daily-call-cap.md)
 - [0016 Secrets via GitHub Environments → Lambda env vars](adr/0016-secrets-via-github-environments.md)
 - [0017 Static SPA on Amplify with CI-driven deploys](adr/0017-static-spa-on-amplify-with-ci-deploys.md)
 - [0018 Forward-only SQL migrations, run before the code deploy](adr/0018-forward-only-migrations-before-deploy.md)
 
 - [0019 Section-aware chunking with exact offsets](adr/0019-section-aware-chunking-with-exact-offsets.md)
+- [0020 Evidence-gathering agent with a separate synthesis call](adr/0020-evidence-gathering-agent-with-separate-synthesis.md)
+
+Phase 5 changes agreed with Hamzah in the plan (2026-10-09) and recorded in SPEC:
+
+- **Strict downgrade** (§9.6, ADR 0012): after the one repair call, any requirement with a remaining citation error becomes `unclear` (`citation_failed`) and keeps only its valid citations. A requirement the model left out is added as `unclear`. If the repair reply never matches the schema, the first draft is downgraded.
+- **The daily-cap middleware moved forward from Phase 7** (§10, §20, ADR 0015), so `POST /screen` was capped from the start. The 429 problem carries `retryAfter` (seconds to UTC midnight), with a matching `Retry-After` header.
+- **`GET /api/jobs` and `GET /api/jobs/:slug` were built now,** next to the candidate routes (§20 Phase 5 step 6).
+- **Ports** (§7.2): `ChunkRepository.listOutline` (refs, sections and headers, never content) and `JobRepository.findById`.
+- **Errors** (§7.4): `CandidateQuarantinedError` (409, `AppErrorStatus` gained 409) and `ValidationError` (400, `VALIDATION_FAILED`) are built.
+- **§7.5 gains** `AGENT_MAX_OUTPUT_TOKENS` (2048), `SYNTHESIS_MAX_OUTPUT_TOKENS` (8192), `SEARCH_QUERY_MAX_CHARS` (200) and `CACHE_PREFIX_MARGIN` (0.1).
+- **§9.2:** one prefix serves the agent, synthesis and repair calls. The rubric adds that a bare Skills or Summary mention is at most `partial`. Resume text is spotlighted as `resume_outline` and `resume_chunk`.
+
+Phase 5 choices recorded in commit messages and ADRs:
+
+- **The worked examples use a fictional rubric (`E1`–`E5`) and candidate `X01`,** so the prefix works for any job and the alias test can forbid `C\d\d`. They make the prefix 5,239 estimated tokens (gate 4,506) with content, not padding.
+- **The draft schema uses only `enum` and `maxItems`,** which Gemini documents (checked 2026-10-09); `maxLength` isn't documented. Rationale (300) and summary (400) are capped in code by `capText`, now shared with the classifier.
+- **Tool results never include similarity scores,** so the conversation and its fixture keys depend only on which chunks were found.
+- **Calls on the agent's last allowed turn still run,** so their chunks join the evidence, but no further turn is sent.
+- **Evidence is deduplicated by ref and kept in resume order.** Synthesis runs in a fresh conversation, not the agent history (ADR 0020).
+- **`labelWithRef` and the `'\n\n'` separator** are the new derived `RedactedText` constructors (ADR 0014 update).
+- **Seeding and screening are separate use cases** (`createSeedJob`, `createScreenPool`), composed by `createSeeder` and the seed runner. The screening tunables live in `main/screening-settings.ts`, shared by the seed and the API.
+- **Route input** is validated with the contracts schemas (`parseRequest`). Names are hidden by the mappers until shortlisting. Shortlisting returns the full candidate detail.
 
 Phase 4 changes agreed with Hamzah in the plan (2026-10-09) and recorded in SPEC:
 
@@ -303,11 +388,12 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 
 ## Deferred and cut-list items
 
-- **Seed fixtures for screening, synthesis and ask:** Phases 5 and 6 extend `seed:record`. The classifier and document-embedding fixtures are recorded (Phase 4).
+- **Seed fixtures for ask:** Phase 6 extends `seed:record`. The classifier, document-embedding and screening fixtures are recorded (Phases 4 and 5).
+- **Measuring a live `POST /screen` on Lambda:** it hasn't run in production yet. The recording logs latencies that include the 6 s seed throttle, so they aren't model latencies. Measure after the next deploy (see Known issues).
 - **Seeding production** (`seed-demo` workflow, replay with `--reset` against Neon): Phase 10.
 - **The question guard for Ask** (L0–L2 on the question, `InjectionRejectedError`): Phase 6. Spotlight labels for questions and chunks arrive with their prompts (Phases 5–6).
 - **Classifier precision and recall, and the rules-only vs rules + classifier ablation:** the Phase 9 eval runner, over `data/evals/injection.jsonl`.
-- **Enforcing `DAILY_LLM_CALL_CAP`:** Phase 7. The variable and the `countLiveSince` query exist now.
+- **Phase 7 keeps** the body limit, logger serializer test, ops routes and contract tests for every route. The daily cap was built in Phase 5.
 - **A smaller cold start:** load `@google/genai` lazily on the first live call, if the cold start matters (see Known issues).
 - **Playwright `@smoke` step in `deploy.yml`:** Phase 9, because Playwright isn't installed yet. `curl --fail` smoke tests cover the API and web until then.
 - **`LlmCallRepository.summary` and `recent`:** Phase 7, with the ops DTOs they return.
@@ -325,6 +411,10 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
   - cross-script homoglyphs, external CSS, nested same-name tags
   - paraphrased social engineering, which only L3 catches
 - **C07 is quarantined only by the classifier** (`malicious` 0.99 on 2026-10-09); the rules alone would flag it. Changing the classifier prompt or model means re-recording, and the seed integration test catches a changed verdict.
+- **C03 meets 4/4 must-haves while scoring 50.** `mustHavesMet` counts `partial` as met (§9.6), and all seven of C03's ratings are `partial` (skills-list claims). The score reflects the gap, and the must-haves column alone overstates it. If the UI shows must-haves prominently, consider showing strong and partial separately (Phase 8).
+- **C01, C02 and C10 tie at 100,** so their order is by alias. The DoD holds (C01 and C02 first), but it rests on the tie-break.
+- **A live re-screen may approach the Lambda's 60 s timeout.** A screening is about 3 Flash-Lite agent turns, their query embeddings and one Flash synthesis that writes about 4,000 output tokens, thinking included. Measure it after a deploy. If it's too slow, cap the agent turns for live runs, or answer 202 and screen in the background.
+- **Changing any screening prompt** (a new `SCREENING_PROMPT_VERSION`) changes every screening fixture key: clear `screen.*` and run `npm run seed:record` (`docs/runbook.md`).
 - **Editing a resume or the classifier prompt changes fixture keys.** Clear `guard.classify` and `embed.documents`, then re-record (`docs/runbook.md`, Re-record fixtures).
 - **Windows Python writes CRLF.** One-off edit scripts must write LF, or `format:check` fails. Prefer Node or the editor tools.
 - **The Gemini SDK made the bundle and cold start heavier.**
@@ -400,10 +490,22 @@ Nothing calls the guard yet; Phase 4's ingest does. No live call and no deploy w
 
 Hamzah recorded the fixtures live (17 calls, 0 fallbacks). A replay seed takes 2.5 s. No deploy was needed. The 11 commits are local, waiting for Hamzah's approval to push.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 5` (screening agent and scorecards). Phase 5 builds:
+**2026-10-09, Phase 5 done.** Screening is complete and replays offline:
 
-- the screening prefix
-- the agent loop with `search_resume` and `read_section`
-- citation verification and deterministic scoring
+- the byte-stable screening prefix (ADR 0011)
+- a candidate-scoped, read-only agent with `search_resume` and `read_section`, then synthesis in a fresh conversation (ADR 0020)
+- citation verification with exact spans, one repair call, strict downgrade, and the score computed in code (ADR 0012)
+- seeding that precomputes scorecards, and the daily cap (ADR 0015)
+- job and candidate routes with contracts
 
-It also extends seeding to precompute scorecards. Hamzah runs `npm run seed:record` again to record the screening fixtures.
+Hamzah recorded the screening fixtures live (105 calls, 0 fallbacks, 0 repairs). The ranking matches §12, all 73 citations verify, and implicit caching hit 55% on Flash-Lite and 42% on Flash. No deploy was needed. The 12 commits are local, waiting for Hamzah's approval to push. Phases 4 and 5 are both unpushed, so the first CI run will cover both.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 6` (Ask the talent pool). Phase 6 builds:
+
+- the final hybrid SQL with cosine similarity, and a tuned `SIMILARITY_FLOOR`
+- the ask use case and route, behind the daily cap that already exists
+- the question guard
+- 20 golden questions in `data/evals/retrieval.jsonl`
+- ADR 0008
+
+Hamzah runs `npm run seed:record` again to record the ask fixtures.
