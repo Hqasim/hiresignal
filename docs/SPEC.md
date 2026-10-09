@@ -339,11 +339,11 @@ withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model 
 | `AGENT_MAX_OUTPUT_TOKENS` | 2048 | Output budget per `screen.agent` turn: a few function calls plus Gemini 3 thinking tokens |
 | `SYNTHESIS_MAX_OUTPUT_TOKENS` | 8192 | Output budget for `screen.synthesize` and `screen.repair`: about 2,500 tokens of scorecard JSON plus thinking |
 | `SEARCH_QUERY_MAX_CHARS` | 200 | Longest `search_resume` query; a longer one is returned to the model as an error |
-| `SIMILARITY_FLOOR` | 0.55 | Below this best cosine similarity, answer "insufficient evidence" (tune in Phase 6) |
+| `SIMILARITY_FLOOR` | 0.65 | Below this best cosine similarity, answer "insufficient evidence"; tuned on the golden questions (answerable ≥ 0.661, out of scope ≤ 0.639, ADR 0008) |
 | `CACHE_MIN_PREFIX_TOKENS` | 4096 | Implicit-cache minimum for current Flash models; the prefix test asserts ≥ this with margin |
 | `CACHE_PREFIX_MARGIN` | 0.1 | The prefix test demands 10% more than the minimum, because tokens are estimated |
 | `ASK_ESCALATION_CONTEXT_TOKENS` | 3000 | Escalate ask to Flash above this context size |
-| `ASK_ESCALATION_CANDIDATES` | 3 | Escalate when context spans more candidates than this |
+| `ASK_ESCALATION_CANDIDATES` | 6 | Escalate when context spans more candidates than this; at 3, every golden question escalated, because 12 chunks span 4–8 of the 8 clean candidates (ADR 0008) |
 | `CLASSIFIER_QUARANTINE_CONFIDENCE` | 0.7 | Minimum confidence for a "malicious" verdict to quarantine |
 | `CLASSIFIER_MAX_OUTPUT_TOKENS` | 1024 | Output budget for `guard.classify`: a short verdict plus Gemini 3 thinking tokens |
 | `DAILY_LLM_CALL_CAP` | 300 (env) | Live calls per UTC day across the demo |
@@ -594,7 +594,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
 ### 9.7 Ask the talent pool (`application/ask/`)
 
 1. Validate the question (≤ 500 chars). Run L0–L2 rules on it. High severity → `InjectionRejectedError` (422).
-2. Embed the question (`embedQuery`, which sends it as `task: search result | query: …`) and run hybrid search across the job, excluding quarantined candidates, keeping the top `ASK_TOP_K`.
+2. Embed the question (`embedQuery`, which sends it as `task: search result | query: …`) and run hybrid search across the job, excluding quarantined candidates, keeping the top `ASK_TOP_K`. Ask's keyword arm ORs the question's words (`ASK_KEYWORD_MATCH = 'any'`); the screening agent's short phrases keep `websearch_to_tsquery`'s AND (ADR 0008).
 3. If the best cosine similarity < `SIMILARITY_FLOOR`, return `insufficientEvidence: true` with no LLM call.
 4. Route the call (§9.1), then generate with the `AskAnswer` schema `{ answer (plain text, ≤ 1,200 chars), citations: { ref, quote }[], insufficientEvidence: boolean }`.
 5. Verify citations (same verifier), drop invalid ones, and map refs to candidate alias, section and span. If the model said `insufficientEvidence`, or no citation verifies, return `insufficientEvidence: true` with no citations: nothing reaches the recruiter without a checked quote.
@@ -620,7 +620,7 @@ from (select * from vec union all select * from kw) fused
 group by id order by rrf_score desc limit $7;
 ```
 
-Return cosine similarity alongside the fused rank for the floor check. Note in the ADR: on this tiny dataset the planner may prefer a sequential scan. Show `EXPLAIN` output, and mention pgvector iterative index scans (`hnsw.iterative_scan`) for filtered queries at scale.
+Return cosine similarity alongside the fused rank for the floor check. As built, `q` supplies the keyword query for the chosen match mode (`all`: `websearch_to_tsquery`; `any`: the question's lexemes ORed; `off`: none, for the vector-only ablation). On the seeded data the vector arm is an exact scan of the job's 53 chunks, in about 1 ms; ADR 0008 has the `EXPLAIN` output and what changes at scale (an index-friendly `ORDER BY embedding <=> $1` and `hnsw.iterative_scan`).
 
 ### 9.8 Record/replay
 

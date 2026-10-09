@@ -30,7 +30,8 @@ export const ASK_TOP_K = 12;
 /**
  * How ask's keyword arm matches the question (ADR 0008). `any` ORs the question's words, because
  * ANDing them needs every word of a natural question, "candidates" included, to be in one chunk.
- * A starting value, measured against `all` and vector-only on the golden questions in Phase 6.
+ * On the golden questions (2026-10-10), recall@5 was 1.000 with `any`, 0.983 with `all` and
+ * 0.958 vector-only (MRR 0.950, 1.000 and 0.938).
  */
 export const ASK_KEYWORD_MATCH = 'any';
 
@@ -70,9 +71,12 @@ export const SEARCH_QUERY_MAX_CHARS = 200;
 
 /**
  * Below this best cosine similarity, ask answers "insufficient evidence" without an LLM call.
- * A starting value, tuned on the seeded data in Phase 6.
+ * Tuned on the golden questions (ADR 0008; as of 2026-10-10): the lowest best similarity of an
+ * answerable question was 0.661 (Q14, Q15) and the highest of an out-of-scope one 0.639 (X02),
+ * so 0.65 splits all 23 correctly. The margin is narrow, so the floor only stops clear misses;
+ * the model's own insufficient-evidence flag handles the rest.
  */
-export const SIMILARITY_FLOOR = 0.55;
+export const SIMILARITY_FLOOR = 0.65;
 
 /**
  * Implicit-cache minimum for current Flash models. The screening-prefix test asserts the prefix
@@ -89,8 +93,13 @@ export const CACHE_PREFIX_MARGIN = 0.1;
 /** Ask escalates to Flash when the retrieved context is larger than this (SPEC §9.1). */
 export const ASK_ESCALATION_CONTEXT_TOKENS = 3000;
 
-/** Ask escalates to Flash when the context spans more candidates than this (SPEC §9.1). */
-export const ASK_ESCALATION_CANDIDATES = 3;
+/**
+ * Ask escalates to Flash when the context spans more candidates than this (SPEC §9.1). Twelve
+ * chunks from a pool of eight clean candidates span 4–8 of them for every golden question, so 3
+ * sent all 20 to Flash. At 6, a question whose evidence covers most of the pool escalates (Q12),
+ * and Flash-Lite answers 16 of 20 (as of 2026-10-10, ADR 0008).
+ */
+export const ASK_ESCALATION_CANDIDATES = 6;
 
 /** Minimum classifier confidence for a "malicious" verdict to quarantine a resume (SPEC §9.4). */
 export const CLASSIFIER_QUARANTINE_CONFIDENCE = 0.7;
