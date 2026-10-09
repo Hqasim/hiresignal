@@ -144,6 +144,46 @@ sequenceDiagram
 - **Idempotent.** A second run skips stored resumes before any model call. A fallback during recording would save a fixture under the wrong model, so the CLI reports fallbacks and fails if one happened.
 - **As of 2026-10-09,** a replay seed of the 10 resumes takes 2.5 s locally with 0 live calls. It yields 8 clean candidates with 53 chunks, and 2 quarantined candidates with none.
 
+## Screening and scorecards
+
+[`createScreenCandidate`](../apps/api/src/application/screening/screen-candidate.ts) screens one candidate in two stages behind one cacheable prefix (SPEC §9.6; [ADR 0011](adr/0011-prompt-caching-via-byte-stable-prefixes.md), [ADR 0012](adr/0012-deterministic-scoring-with-verified-citations.md), [ADR 0020](adr/0020-evidence-gathering-agent-with-separate-synthesis.md)):
+
+```mermaid
+sequenceDiagram
+  participant UC as createScreenCandidate
+  participant A as runScreeningAgent
+  participant LLM as LlmClient (routed)
+  participant T as screening tools (one candidate)
+  participant DB as Postgres
+  UC->>DB: candidate, job, outline (refs + headers)
+  Note over UC: quarantined → CandidateQuarantinedError, no model call
+  UC->>A: prefix (system) + tools + spotlighted outline
+  loop at most MAX_AGENT_STEPS turns
+    A->>LLM: screen.agent (Flash-Lite)
+    LLM-->>A: function calls, or DONE
+    A->>T: search_resume / read_section (Zod-validated)
+    T->>DB: embedQuery → hybrid search, or getSection, filtered to the candidate
+    T-->>A: spotlighted chunks with refs (no scores)
+    A->>LLM: model turn unchanged + tool results
+  end
+  A-->>UC: evidence set (deduplicated, resume order) + trace
+  UC->>LLM: screen.synthesize (Flash): same prefix, fresh conversation, evidence, ScorecardDraft schema
+  LLM-->>UC: draft
+  UC->>UC: verifyDraft (refs, quotes, coverage)
+  opt any error
+    UC->>LLM: screen.repair: the exact errors
+    UC->>UC: verify again
+  end
+  UC->>UC: finalizeAssessments (strict downgrade) → computeScore
+  UC->>DB: append scorecard (result, trace, prompt version, models)
+```
+
+- **The prefix is shared and byte-stable.** [`buildScreeningPrefix`](../apps/api/src/application/prompts/screening-prefix.ts) is the system instruction of every agent, synthesis and repair call for a job. A test pins it as identical across candidates, free of ids and dates, and at least 4,506 estimated tokens (it is 5,239).
+- **Tools can't leave the candidate.** The use case fixes the job and candidate ids; no argument can change them. Invalid arguments come back to the model as errors.
+- **The model never writes the score.** Code verifies every quote against the retrieved chunk content, and the stored spans come from code. A requirement that still fails after one repair becomes `unclear`, worth 0.
+- **Seeding precomputes.** [`createScreenPool`](../apps/api/src/application/screening/screen-pool.ts) screens every clean or flagged candidate after ingestion and skips any that already has a scorecard ([ADR 0015](adr/0015-precomputed-results-and-a-daily-call-cap.md)).
+- **HTTP.** `GET /api/jobs`, `/api/jobs/:slug`, `/api/jobs/:slug/candidates` and `GET /api/candidates/:id` serve stored data. `POST …/shortlist` reveals the name. `POST …/screen` re-runs screening live behind the daily-cap middleware (429 with `Retry-After`).
+
 ## Data model
 
 The schema is [`db/migrations/0001_init.sql`](../db/migrations/0001_init.sql). [`0002_app_role_grants.sql`](../db/migrations/0002_app_role_grants.sql) gives `hiresignal_app` `select`, `insert` and `update`, with no `delete` and no DDL.

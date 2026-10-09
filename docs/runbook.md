@@ -178,7 +178,7 @@ npm run seed               # skips resumes that are already stored
 npm run seed -- --reset    # deletes the job's candidates, then ingests all ten again
 ```
 
-It ends with a table of each candidate's guard status, signals, classifier verdict and chunk count, and a `Model calls:` line. In replay mode that line must say `live 0`. As of 2026-10-09, a replay seed takes about 2.5 s.
+It then precomputes a scorecard for every non-quarantined candidate that has none, and ends with two tables: each candidate's guard status, signals, classifier verdict and chunk count, then the ranking (score, must-haves, rating counts, citations, repairs). Last comes a `Model calls:` line. In replay mode that line must say `live 0`. As of 2026-10-09, a replay seed takes about 2.5 s.
 
 ## Re-record fixtures
 
@@ -188,12 +188,21 @@ Replay keys cover the model ID, the prompt and its version, the schema, the tool
 npm run llm:smoke      # the smoke fixtures (platform.smoke, embed.query)
 ```
 
-`npm run seed:record` re-records the seed fixtures (`guard.classify`, `embed.documents`). It always resets the job, so every resume is recorded, and it spaces live calls 6 s apart (`SEED_MIN_CALL_INTERVAL_MS`). Its fixture keys include the resume text, so editing a resume means re-recording. Clear the old seed fixtures first, so stale ones don't linger:
+`npm run seed:record` re-records the seed fixtures: `guard.classify` and `embed.documents` from ingestion, and `screen.agent`, `screen.synthesize`, `screen.repair` and `embed.query` from screening. It always resets the job, so every resume is recorded, and it spaces live calls 6 s apart (`SEED_MIN_CALL_INTERVAL_MS`). Its fixture keys include the resume text, so editing a resume means re-recording. Clear the old seed fixtures first, so stale ones don't linger:
 
 ```powershell
 Remove-Item -Recurse -Force apps/api/fixtures/llm/guard.classify, apps/api/fixtures/llm/embed.documents -ErrorAction SilentlyContinue
 npm run seed:record
 ```
+
+After a screening prompt change (a new `SCREENING_PROMPT_VERSION`), only the screening fixtures go stale. Leave `embed.query` in place, because it also holds the smoke query; stale query embeddings show up as untouched files in step 1 below.
+
+```powershell
+Remove-Item -Recurse -Force apps/api/fixtures/llm/screen.agent, apps/api/fixtures/llm/screen.synthesize, apps/api/fixtures/llm/screen.repair -ErrorAction SilentlyContinue
+npm run seed:record
+```
+
+A screening recording makes roughly 150 live calls (8 candidates × up to 8 agent turns, their query embeddings, 8 syntheses and a few repairs, plus ingestion), about 15–20 minutes at one call per 6 s.
 
 If its summary reports a fallback, the CLI exits with an error: that fixture was saved under the other tier's model, which replay never asks for. Run it again.
 

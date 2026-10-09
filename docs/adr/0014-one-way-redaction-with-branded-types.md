@@ -56,6 +56,16 @@ The brand is now produced in four places, all in `domain/redaction/`:
 
 `ResumeChunk.contextHeader` and `RetrievedChunk.contextHeader` are `RedactedText`, because the Phase 5 and 6 prompts spotlight them.
 
+## Update (2026-10-09, Phase 5)
+
+The screening prompts label chunks with their refs, so the derived constructors grew by one, still in `domain/redaction/`:
+
+- `joinRedactedText` also accepts the separator `'
+
+'`, used between a chunk's context header and its content in tool results and the evidence set.
+
+- `labelWithRef(ref, text)` prefixes redacted text with `[C04#3] `. A chunk ref, like an alias, is a generated label matched by its brand, so nothing raw can enter. The agent's outline lines are built this way.
+
 ## Alternatives considered
 
 - **A model-based or NER redactor (spaCy, Presidio, an LLM pass).** Rejected: the input to a PII remover would itself be the raw resume. An LLM pass would send PII to the very model we're protecting. A Python NER service would add a runtime and a deployment, against the $0 constraint. Deterministic detectors are testable, explainable and enough for synthetic resumes with known formats.
