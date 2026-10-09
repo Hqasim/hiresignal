@@ -59,7 +59,7 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
   - 565 unit tests: contracts 9, api 552, web 4. Phase 2 had 277.
   - 0 dependency-cruiser violations (218 modules)
   - every coverage gate passes
-- **Not pushed yet.** CI isn't part of this phase's DoD. The 14 Phase 3 commits wait for Hamzah's approval to push.
+- **Not pushed yet.** CI isn't part of this phase's DoD. The Phase 3 commits wait for Hamzah's approval to push.
 
 ## Phase 2 evidence (2026-10-09)
 
@@ -319,6 +319,6 @@ The first live smoke passed on `gemini-3.5-flash-lite`, `gemini-3.5-flash` and `
 - draft PII and injection eval sets
 - ADRs 0013 and 0014, a first threat model, and the safety-layer architecture section
 
-Nothing calls the guard yet; Phase 4's ingest does. No live call and no deploy were needed. The 14 commits are local, waiting for Hamzah's approval to push.
+Nothing calls the guard yet; Phase 4's ingest does. No live call and no deploy were needed. The commits are local, waiting for Hamzah's approval to push.
 
 **Suggested prompt for the next session:** `/clear`, then `/phase 4` (synthetic data and ingestion). Phase 4 writes the job and 10 resumes, wires the safety layer into ingestion, and needs Hamzah to run `npm run seed:record` once to record the classifier and embedding fixtures.
