@@ -3,11 +3,18 @@ import { fileURLToPath } from 'node:url';
 
 import type { Hono } from 'hono';
 
+import { createGetCandidateDetail } from '../application/candidates/get-candidate-detail';
+import { createListCandidates } from '../application/candidates/list-candidates';
+import { createShortlistCandidate } from '../application/candidates/shortlist-candidate';
 import type { SeedJobResult } from '../application/ingest/seed-job';
+import { createGetJob } from '../application/jobs/get-job';
+import { createListJobs } from '../application/jobs/list-jobs';
 import type { LlmCallTally } from '../application/llm/llm-call-tally';
 import type { Embedder } from '../application/ports/embedder';
 import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
+import { createCheckDailyCap } from '../application/quota/check-daily-cap';
+import { createScreenCandidate } from '../application/screening/screen-candidate';
 import type { PoolScreening } from '../application/screening/screen-pool';
 import type { LlmPlatformReport } from '../application/smoke/check-llm-platform';
 import { type Env, parseEnv, parseMigrationEnv, parseSeedEnv, parseSmokeEnv } from '../config/env';
@@ -15,12 +22,17 @@ import { systemClock } from '../infrastructure/clock/system-clock';
 import { createJsonConsoleLogger } from '../infrastructure/logging/json-console-logger';
 import { createPool, type DbPool } from '../infrastructure/postgres/create-pool';
 import { migrate, type MigrationResult, readMigrations } from '../infrastructure/postgres/migrator';
+import { createPgCandidateRepository } from '../infrastructure/postgres/pg-candidate-repository';
+import { createPgChunkRepository } from '../infrastructure/postgres/pg-chunk-repository';
 import { createPgDatabaseProbe } from '../infrastructure/postgres/pg-database-probe';
+import { createPgJobRepository } from '../infrastructure/postgres/pg-job-repository';
 import { createPgLlmCallRepository } from '../infrastructure/postgres/pg-llm-call-repository';
+import { createPgScorecardRepository } from '../infrastructure/postgres/pg-scorecard-repository';
 import { createApp } from '../interfaces/http/app';
 import type { AppBindings } from '../interfaces/http/app-bindings';
 import type { SeedArgs } from './cli/seed-args';
 import { createLlm, createProviderClients, createSmokeCheck, type LlmSettings } from './llm-wiring';
+import { SCREENING_SETTINGS } from './screening-settings';
 import { createSeeder, loadSeedDataset } from './seed-wiring';
 
 /** The wired application, shared by every entry point. */
@@ -47,17 +59,47 @@ export function createContainer(source: Readonly<Record<string, string | undefin
   const logger = createJsonConsoleLogger({ clock: systemClock });
   // One pool per process. Connecting is lazy, so a cold start pays nothing until the first query.
   const pool = createPool({ connectionString: env.DATABASE_URL, logger });
-  const { llm, embedder } = createLlm(llmSettingsFrom(env), {
-    clock: systemClock,
-    logger,
-    calls: createPgLlmCallRepository(pool),
-  });
+  const calls = createPgLlmCallRepository(pool);
+  const { llm, embedder } = createLlm(llmSettingsFrom(env), { clock: systemClock, logger, calls });
+  const jobs = createPgJobRepository(pool);
+  const candidates = createPgCandidateRepository(pool);
+  const scorecards = createPgScorecardRepository(pool);
+  const getJob = createGetJob({ jobs });
+  const getCandidateDetail = createGetCandidateDetail({ candidates, jobs, scorecards });
   const app = createApp({
     logger,
     health: {
       llmMode: env.LLM_MODE,
       gitSha: env.GIT_SHA,
       database: createPgDatabaseProbe(pool),
+    },
+    jobs: {
+      listJobs: createListJobs({ jobs }),
+      getJob,
+      listCandidates: createListCandidates({ getJob, candidates }),
+    },
+    candidates: {
+      getCandidateDetail,
+      shortlistCandidate: createShortlistCandidate({
+        candidates,
+        getDetail: getCandidateDetail,
+        clock: systemClock,
+      }),
+      screenCandidate: createScreenCandidate({
+        llm,
+        embedder,
+        jobs,
+        candidates,
+        chunks: createPgChunkRepository(pool),
+        scorecards,
+        clock: systemClock,
+        settings: SCREENING_SETTINGS,
+      }),
+      checkDailyCap: createCheckDailyCap({
+        calls,
+        clock: systemClock,
+        cap: env.DAILY_LLM_CALL_CAP,
+      }),
     },
   });
   return { env, logger, app, pool, llm, embedder };

@@ -3,12 +3,17 @@ import { describe, expect, it } from 'vitest';
 
 import { FakeDatabaseProbe } from '../../../test/fakes/fake-database-probe';
 import { RecordingLogger } from '../../../test/fakes/recording-logger';
+import { UNUSED_RESOURCE_ROUTES } from '../../../test/helpers/test-app';
 import { createApp } from './app';
 
 function setup() {
   const logger = new RecordingLogger();
   const database = new FakeDatabaseProbe();
-  const app = createApp({ logger, health: { llmMode: 'replay', gitSha: 'abc1234', database } });
+  const app = createApp({
+    logger,
+    health: { llmMode: 'replay', gitSha: 'abc1234', database },
+    ...UNUSED_RESOURCE_ROUTES,
+  });
   return { app, logger, database };
 }
 

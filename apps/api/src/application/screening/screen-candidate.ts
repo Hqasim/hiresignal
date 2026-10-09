@@ -70,6 +70,8 @@ export interface ScreenCandidateInput {
 /** The stored scorecard, plus metadata about how it was reached (for logs; never text). */
 export interface ScreeningOutcome {
   scorecard: Scorecard;
+  /** The job screened against, so callers can show each requirement's text. */
+  job: Job;
   /** Whether verification failed and one `screen.repair` call was made. */
   repairAttempted: boolean;
   /** Requirements downgraded to `unclear` because errors remained after the repair. */
@@ -210,6 +212,7 @@ export function createScreenCandidate(deps: ScreenCandidateDeps): ScreenCandidat
     });
     return {
       scorecard,
+      job,
       repairAttempted,
       downgraded: requirements.filter((requirement) => requirement.note !== null).length,
       agentSteps: agent.steps,

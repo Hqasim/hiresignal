@@ -11,6 +11,7 @@ import {
 } from '../../src/domain/candidates/candidate';
 import type { EmbeddedChunk } from '../../src/domain/chunks/resume-chunk';
 import type { JobId } from '../../src/domain/jobs/job';
+import type { Scorecard } from '../../src/domain/scoring/scorecard';
 
 /** When the fake says candidates were created; tests don't depend on real time. */
 const CREATED_AT = new Date('2026-10-09T12:00:00Z');
@@ -22,6 +23,14 @@ const CREATED_AT = new Date('2026-10-09T12:00:00Z');
 export class InMemoryCandidateRepository implements CandidateRepository {
   readonly candidates: Candidate[] = [];
   readonly chunks = new Map<CandidateId, readonly EmbeddedChunk[]>();
+
+  /**
+   * @param scorecards where `listRanked` reads latest scores from, like the SQL join; usually an
+   *   `InMemoryScorecardRepository`. Without it, every candidate is unscored.
+   */
+  constructor(
+    private readonly scorecards: { scorecards: readonly Scorecard[] } = { scorecards: [] },
+  ) {}
 
   insertIngested(ingested: IngestedCandidate): Promise<InsertIngestedResult> {
     const existing = this.find(ingested.jobId, ingested.sourceHash);
@@ -60,20 +69,21 @@ export class InMemoryCandidateRepository implements CandidateRepository {
   listRanked(jobId: JobId, options: { limit: number }): Promise<RankedCandidate[]> {
     const rows = this.candidates
       .filter((c) => c.jobId === jobId)
-      .sort(
-        (a, b) =>
-          Number(a.guardStatus === 'quarantined') - Number(b.guardStatus === 'quarantined') ||
-          a.alias.localeCompare(b.alias),
-      )
-      .slice(0, options.limit)
       .map(({ id, alias, displayName, guardStatus, shortlistedAt }) => ({
         id,
         alias,
         displayName,
         guardStatus,
         shortlistedAt,
-        latestScore: null,
-      }));
+        latestScore: this.latestScore(id),
+      }))
+      .sort(
+        (a, b) =>
+          Number(a.guardStatus === 'quarantined') - Number(b.guardStatus === 'quarantined') ||
+          (b.latestScore?.score ?? -1) - (a.latestScore?.score ?? -1) ||
+          a.alias.localeCompare(b.alias),
+      )
+      .slice(0, options.limit);
     return Promise.resolve(rows);
   }
 
@@ -88,5 +98,22 @@ export class InMemoryCandidateRepository implements CandidateRepository {
 
   private find(jobId: JobId, sourceHash: string): Candidate | undefined {
     return this.candidates.find((c) => c.jobId === jobId && c.sourceHash === sourceHash);
+  }
+
+  private latestScore(id: CandidateId): RankedCandidate['latestScore'] {
+    const latest = this.scorecards.scorecards
+      .filter((scorecard) => scorecard.candidateId === id)
+      .reduce<Scorecard | null>(
+        (newest, scorecard) =>
+          newest === null || scorecard.createdAt >= newest.createdAt ? scorecard : newest,
+        null,
+      );
+    return latest === null
+      ? null
+      : {
+          score: latest.score,
+          mustHavesMet: latest.mustHavesMet,
+          mustHavesTotal: latest.mustHavesTotal,
+        };
   }
 }

@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { FakeClock } from '../../../test/fakes/fake-clock';
 import { InMemoryScorecardRepository } from '../../../test/fakes/in-memory-scorecard-repository';
 import { RecordingLogger } from '../../../test/fakes/recording-logger';
+import { aNewJob } from '../../../test/helpers/builders';
 import type { CandidateId } from '../../domain/candidates/candidate';
 import { CandidateAliasSchema, CandidateIdSchema } from '../../domain/candidates/candidate';
 import { ChunkRefSchema } from '../../domain/candidates/chunk-ref';
 import type { GuardStatus } from '../../domain/guard/guard-status';
+import { type Job, JobIdSchema } from '../../domain/jobs/job';
 import type { NewScorecard } from '../ports/scorecard-repository';
 import { formatRankingTable } from './ranking-table';
 import type { ScreenCandidate } from './screen-candidate';
@@ -61,6 +63,12 @@ function aScorecard(candidateId: CandidateId, score: number): NewScorecard {
   };
 }
 
+const JOB: Job = {
+  ...aNewJob(),
+  id: JobIdSchema.parse('00000000-0000-4000-9000-000000000001'),
+  createdAt: new Date('2026-10-09T12:00:00Z'),
+};
+
 let scorecards: InMemoryScorecardRepository;
 let logger: RecordingLogger;
 let screened: CandidateId[];
@@ -77,7 +85,13 @@ const screen: ScreenCandidate = async ({ candidateId }) => {
   const score = 10 * Number(candidateId.slice(-2));
   const scorecard = await scorecards.save(aScorecard(candidateId, score));
   const repaired = candidateId.endsWith('02');
-  return { scorecard, repairAttempted: repaired, downgraded: repaired ? 1 : 0, agentSteps: 3 };
+  return {
+    scorecard,
+    job: JOB,
+    repairAttempted: repaired,
+    downgraded: repaired ? 1 : 0,
+    agentSteps: 3,
+  };
 };
 
 function pool() {

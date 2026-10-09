@@ -40,7 +40,8 @@ export interface ScreeningWorld {
 export async function aScreeningWorld(): Promise<ScreeningWorld> {
   const jobs = new InMemoryJobRepository();
   const job = await jobs.upsert(aNewJob());
-  const candidates = new InMemoryCandidateRepository();
+  const scorecards = new InMemoryScorecardRepository();
+  const candidates = new InMemoryCandidateRepository(scorecards);
   const { id: c04 } = await candidates.insertIngested(
     aCandidate(job.id, 'C04', [
       { section: 'experience', text: C04_CHUNKS.experience, theta: 0 },
@@ -59,7 +60,7 @@ export async function aScreeningWorld(): Promise<ScreeningWorld> {
     jobs,
     candidates,
     chunks: new InMemoryChunkRepository(candidates),
-    scorecards: new InMemoryScorecardRepository(),
+    scorecards,
     embedder: new FakeEmbedder(),
     c04,
     c01,
