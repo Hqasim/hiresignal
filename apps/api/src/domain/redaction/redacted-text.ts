@@ -6,7 +6,7 @@ declare const redacted: unique symbol;
  * sending a raw resume to a model is a compile error. Never widen it to `string` at those
  * boundaries.
  *
- * Phase 3 adds `redact()`, the only way to produce it from raw text.
+ * `redact()` (`redact.ts`) is the only way to produce it from raw text (ADR 0014).
  */
 export type RedactedText = string & { readonly [redacted]: true };
 
@@ -21,6 +21,6 @@ export type RedactedText = string & { readonly [redacted]: true };
  * const resume = rehydrateRedactedText(row.redacted_resume);
  */
 export function rehydrateRedactedText(stored: string): RedactedText {
-  // The single cast in the codebase that produces RedactedText from a string; see the TSDoc above.
+  // One of two casts that produce RedactedText (the other is in redact()); see the TSDoc above.
   return stored as RedactedText;
 }
