@@ -3,11 +3,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
-import { extractHeaderName } from '../redaction/header-name';
-import { redact } from '../redaction/redact';
+import { prepareResume } from '../ingestion/prepare-resume';
 import type { GuardSignal } from './guard-verdict';
-import { scanInvisible } from './invisible';
-import { scanRedactedText } from './scan';
 
 /** One item of `data/evals/injection.jsonl` (SPEC §12). */
 const InjectionEvalItemSchema = z.object({
@@ -33,10 +30,7 @@ const RULES_QUARANTINE = new Set(['hidden-markup', 'unicode-tag-smuggling']);
 
 /** The rule layers of ingestion (SPEC §9.5 steps 1–3): L0 on raw text, then NFKC, redact, L1 and L2. */
 function ruleSignals(raw: string): GuardSignal[] {
-  const invisible = scanInvisible(raw);
-  const normalized = invisible.stripped.normalize('NFKC');
-  const { text } = redact(normalized, { personName: extractHeaderName(normalized) });
-  return [...invisible.signals, ...scanRedactedText(text)];
+  return prepareResume(raw).signals;
 }
 
 function byLabel(label: InjectionEvalItem['label']): (readonly [string, InjectionEvalItem])[] {
