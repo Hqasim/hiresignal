@@ -653,7 +653,7 @@ Return cosine similarity alongside the fused rank for the floor check. Note in t
 - Request and response shapes come from `@hiresignal/contracts`.
 - Errors use RFC 9457 problem+json `{ type, title, status, detail, instance, code, requestId }`. Every response carries `x-request-id`.
 - Body limit 16 KB.
-- The daily-cap middleware wraps LLM routes: it counts today's `live` calls via `LlmCallRepository` and the `Clock`, and returns a 429 problem with `retryAfter` (next UTC midnight).
+- The daily-cap middleware wraps LLM routes: it counts today's `live` calls via `LlmCallRepository` and the `Clock`, and returns a 429 problem with `retryAfter` (seconds until the next UTC midnight) and a matching `Retry-After` header. It arrived in Phase 5 with the first LLM route.
 - The Function URL handles CORS; the app adds no CORS headers.
 
 **Key DTOs** (contracts)
@@ -1109,7 +1109,7 @@ Claude prints the exact commands.
 3. `domain/citations` verifier and `domain/scoring`, both pure, with exhaustive tests.
 4. Repair-once flow and deterministic downgrade; persistence.
 5. Extend seeding to precompute scorecards; re-record.
-6. Routes: candidates list and detail, shortlist, screen (capped); contracts and mappers; route tests.
+6. Routes: jobs list and detail, candidates list and detail, shortlist, screen (behind the daily-cap middleware, built here); contracts and mappers; route tests.
 7. ADRs 0011, 0012.
 
 **Hamzah does by hand:** run `npm run seed:record` to record the screening fixtures, then commit them.
@@ -1135,7 +1135,7 @@ Claude prints the exact commands.
 ### Phase 7 — API hardening and ops endpoints
 
 1. Typed error mapping complete; request-ID middleware; structured logger with the no-content serializer test; body limit.
-2. Daily-cap middleware (`Clock`-driven tests).
+2. Daily-cap middleware (`Clock`-driven tests). Built in Phase 5 with `POST /screen`; Phase 7 covers it in the contract tests of every LLM route.
 3. Ops summary and calls routes (SQL aggregates).
 4. OpenAPI document and docs UI (Should).
 5. Route contract tests for every endpoint (happy path plus main errors); curl examples in `docs/runbook.md`.

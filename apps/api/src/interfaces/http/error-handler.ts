@@ -1,6 +1,6 @@
 import type { ErrorHandler, NotFoundHandler } from 'hono';
 
-import { AppError, NotFoundError } from '../../application/errors';
+import { AppError, NotFoundError, QuotaExceededError } from '../../application/errors';
 import type { Logger } from '../../application/ports/logger';
 import type { AppBindings } from './app-bindings';
 import { problemResponse } from './problem';
@@ -8,7 +8,8 @@ import { problemResponse } from './problem';
 /**
  * The single place errors become HTTP responses (SPEC §7.4).
  *
- * - {@link AppError}s render with their own status, code and safe `detail`.
+ * - {@link AppError}s render with their own status, code and safe `detail`; a quota error also
+ *   sets `Retry-After`.
  * - Anything else is a bug: it is logged with its stack and rendered as a generic 500,
  *   so internal details never reach the client.
  */
@@ -20,6 +21,7 @@ export function createErrorHandler(logger: Logger): ErrorHandler<AppBindings> {
         title: error.title,
         code: error.code,
         detail: error.detail,
+        ...(error instanceof QuotaExceededError && { retryAfter: error.retryAfterSeconds }),
       });
     }
 

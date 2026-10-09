@@ -10,6 +10,8 @@ export interface ProblemInput {
   title: string;
   code: string;
   detail: string;
+  /** Seconds until a quota resets; also sent as the `Retry-After` header. */
+  retryAfter?: number;
 }
 
 /**
@@ -25,6 +27,10 @@ export function problemResponse(c: Context<AppBindings>, input: ProblemInput): R
     instance: c.req.path,
     code: input.code,
     requestId: c.get('requestId'),
+    ...(input.retryAfter !== undefined && { retryAfter: input.retryAfter }),
   };
-  return c.body(JSON.stringify(problem), input.status, { 'content-type': PROBLEM_CONTENT_TYPE });
+  return c.body(JSON.stringify(problem), input.status, {
+    'content-type': PROBLEM_CONTENT_TYPE,
+    ...(input.retryAfter !== undefined && { 'retry-after': String(input.retryAfter) }),
+  });
 }
