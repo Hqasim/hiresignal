@@ -10,7 +10,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | 1   | Database and persistence                    | ☑ Done        | 2026-10-08 | Neon migrated by the deploy workflow; live health reports `db: up`               |
 | 2   | LLM platform                                | ☑ Done        | 2026-10-09 | Live smoke passed on both tiers and embeddings; its fixtures replay in CI        |
 | 3   | Safety layer: redaction and injection guard | ☑ Done        | 2026-10-09 | Redaction and guard ≥ 95% covered; every rule has attack and hard-negative cases |
-| 4   | Synthetic data and ingestion                | ☐ Not started |            |                                                                                  |
+| 4   | Synthetic data and ingestion                | ☑ Done        | 2026-10-09 | Offline replay seed in 2.5 s; all ten guard outcomes match SPEC §12              |
 | 5   | Screening agent and scorecards              | ☐ Not started |            |                                                                                  |
 | 6   | Ask the talent pool (hybrid RAG)            | ☐ Not started |            |                                                                                  |
 | 7   | API hardening and ops endpoints             | ☐ Not started |            |                                                                                  |
@@ -28,6 +28,49 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+
+## Phase 4 evidence (2026-10-09)
+
+Phase 4's DoD is local: `npm run db:up && npm run db:migrate && npm run seed` works offline in under 30 s, and the outcomes match §12.
+
+- **Fixtures recorded live:** Hamzah ran `npm run seed:record` on 2026-10-09.
+  - 17 calls: 17 live, 0 fallbacks, 0 failed.
+  - 9 `guard.classify` fixtures (`gemini-3.5-flash-lite`). C06 never reaches the classifier.
+  - 8 `embed.documents` fixtures (`gemini-embedding-2`). C06 and C07 are never embedded.
+  - This was the first live batched `embedDocuments` call (ADR 0007); it returned one 768-d vector per chunk.
+  - A grep of the fixtures found no email, phone, street, profile link or header name.
+- **Offline seed on a fresh volume:** `docker compose down --volumes`, `npm run db:up`, `npm run db:migrate` (2 applied), then `npm run seed` with `GEMINI_API_KEY` empty:
+  - `Measure-Command`: `seed --reset` 2.5 s, idempotent re-run 2.0 s
+  - `Model calls: 17 (live 0, fallbacks 0, failed 0)`
+- **Outcomes match §12 exactly.** The replay table is identical to the recording:
+
+  | Alias | Status      | Signals                                                                                          | Dismissed                 | Classifier     | Chunks |
+  | ----- | ----------- | ------------------------------------------------------------------------------------------------ | ------------------------- | -------------- | ------ |
+  | C01   | clean       | –                                                                                                | –                         | benign 1.00    | 7      |
+  | C02   | clean       | –                                                                                                | `L2.instruction-override` | benign 1.00    | 7      |
+  | C03   | clean       | –                                                                                                | –                         | benign 1.00    | 6      |
+  | C04   | clean       | –                                                                                                | –                         | benign 1.00    | 6      |
+  | C05   | clean       | –                                                                                                | –                         | benign 1.00    | 7      |
+  | C06   | quarantined | L1 html-comment, white-text; L2 instruction-override, evaluator-targeting, output-forcing (high) | –                         | skipped        | 0      |
+  | C07   | quarantined | L2 evaluator-targeting, output-forcing (medium)                                                  | –                         | malicious 0.99 | 0      |
+  | C08   | clean       | –                                                                                                | –                         | benign 1.00    | 7      |
+  | C09   | clean       | –                                                                                                | –                         | benign 1.00    | 6      |
+  | C10   | clean       | –                                                                                                | `L0.zero-width`           | benign 1.00    | 7      |
+
+  That makes 53 chunks in all, from 12 to 232 estimated tokens, so none needed splitting.
+
+- **`npm run test:integration` passes:** 62 tests in 5 files (Phase 1: 45). `test/integration/seed.test.ts` replays the fixtures through the CLI's own wiring (`createSeeder`) and asserts:
+  - every §12 outcome
+  - no chunks for quarantined resumes, and every chunk an exact slice of `redacted_resume`
+  - C10's PII absent
+  - every call logged as `replay`
+  - an idempotent re-run (no new rows), and a reset that reproduces the same outcomes
+- **`npm run verify` is green:**
+  - 705 unit tests: contracts 9, api 692, web 4. Phase 3 had 565.
+  - 0 dependency-cruiser violations (249 modules)
+  - every coverage gate passes. `domain/chunking` is 100% lines and 96.66% branches; `domain/ingestion` is 100%; `application/ingest` is 98.3% lines and 91.17% branches.
+- **The offline dataset test checks the rule-level half of §12 on every unit run:** each resume's exact rule signals, zero PII leaks, the required structure, and chunks that are exact slices under the limit.
+- **Not pushed yet.** CI isn't part of this phase's DoD, but the new integration test runs there. The Phase 4 commits wait for Hamzah's approval to push.
 
 ## Phase 3 evidence (2026-10-09)
 
@@ -153,6 +196,29 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 - [0017 Static SPA on Amplify with CI-driven deploys](adr/0017-static-spa-on-amplify-with-ci-deploys.md)
 - [0018 Forward-only SQL migrations, run before the code deploy](adr/0018-forward-only-migrations-before-deploy.md)
 
+- [0019 Section-aware chunking with exact offsets](adr/0019-section-aware-chunking-with-exact-offsets.md)
+
+Phase 4 changes agreed with Hamzah in the plan (2026-10-09) and recorded in SPEC:
+
+- **Invisible characters in resumes are visible `\u{XXXX}` escapes,** which the dataset loader decodes before ingestion (§12, `data/README.md`). `source_hash` is of the file as stored.
+- **`CandidateRepository` gains `findBySourceHash` and `deleteByJob`** (§7.2). Ingestion checks for an existing candidate first, so re-seeding makes no model calls. `--reset` deletes with the owner role.
+- **Chunking as built** (§9.5, ADR 0019):
+  - a role keeps its `###` line; a section's `##` line moves to the context header
+  - the preamble isn't chunked
+  - splits fall between bullets or paragraphs
+  - one `embedDocuments` call per resume, embedding the header, a line break and the content
+- **`SEED_MIN_CALL_INTERVAL_MS` = 6000** (§7.5). Google publishes no free-tier numbers (its rate-limits page points to AI Studio), so it assumes 10 per minute.
+- **ADR 0014 update:** the derived constructors `sliceRedactedText` and `joinRedactedText`. `contextHeader` is `RedactedText`.
+
+Phase 4 choices recorded in commit messages and ADRs:
+
+- **`yaml` 2.9.1** (dependency of `@hiresignal/api`, no install scripts), imported only in `infrastructure/dataset/`.
+- **`seed:record` always resets,** so a recording covers every resume. Seeding connects as `DATABASE_MIGRATION_URL` (§16).
+- **`withThrottle` sits innermost,** above the provider clients, so retries and fallbacks are spaced out too. Only record and live modes use it.
+- **`withCallTally` counts fallbacks.** The CLI fails a recording that fell back, because the fixture would be saved under the other tier's model.
+- **`main/seed-wiring.ts` is shared** by the CLI and the replay integration test, so both send byte-identical requests.
+- **A resume without a `# Name` heading gets its alias as `displayName`.**
+
 Phase 3 changes agreed with Hamzah in the plan (2026-10-09) and recorded in SPEC:
 
 - **The classifier is skipped when a high signal already quarantines** (`shouldRunClassifier`, `classifier: null`). Its answer couldn't change the outcome, and a known attack never reaches a model (§9.4, §9.5, §6.3 flow, ADR 0013).
@@ -237,8 +303,8 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 
 ## Deferred and cut-list items
 
-- **Seed fixtures (classifier, agent, synthesis, ask, document embeddings):** recorded by `npm run seed:record` from Phase 4. The first batch `embedDocuments` call is the first live test of embedding-2 batching (ADR 0007).
-- **Wiring the guard into ingestion is Phase 4:** L0 → NFKC → `redact` → `scanRedactedText` → `shouldRunClassifier` → `createClassifyInjection` → `decideGuard`, with `CLASSIFIER_MAX_OUTPUT_TOKENS` and `CLASSIFIER_QUARANTINE_CONFIDENCE` passed in from `main/`. The classifier's first live run (with `seed:record`) is also the first live check that Gemini accepts its response schema.
+- **Seed fixtures for screening, synthesis and ask:** Phases 5 and 6 extend `seed:record`. The classifier and document-embedding fixtures are recorded (Phase 4).
+- **Seeding production** (`seed-demo` workflow, replay with `--reset` against Neon): Phase 10.
 - **The question guard for Ask** (L0–L2 on the question, `InjectionRejectedError`): Phase 6. Spotlight labels for questions and chunks arrive with their prompts (Phases 5–6).
 - **Classifier precision and recall, and the rules-only vs rules + classifier ablation:** the Phase 9 eval runner, over `data/evals/injection.jsonl`.
 - **Enforcing `DAILY_LLM_CALL_CAP`:** Phase 7. The variable and the `countLiveSince` query exist now.
@@ -248,7 +314,6 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **`EXPLAIN` output for hybrid search and notes on `hnsw.iterative_scan`:** ADR 0008 in Phase 6, once real data is seeded.
 - **A retry on stale connections in the health probe:** only if Lambda logs ever show `health.db_unreachable` after a thaw (ADR 0006).
 - **Scripts arriving with their phases:**
-  - `seed` and `seed:record` (Phase 4)
   - `eval` and `test:e2e` (Phase 9)
 - **`ValidationError` and the other `AppError` subclasses:** added by the phases that raise them (SPEC §7.4).
 - **No cut-list items used.**
@@ -259,7 +324,9 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
   - names outside the header, non-US addresses
   - cross-script homoglyphs, external CSS, nested same-name tags
   - paraphrased social engineering, which only L3 catches
-- **C02 and C07 outcomes depend on Phase 4 resume wording and the live classifier.** The rules give C07-style text only a medium signal; quarantine needs a `malicious` verdict at ≥ 0.7. C02 needs a rule to fire and the classifier to say `benign`.
+- **C07 is quarantined only by the classifier** (`malicious` 0.99 on 2026-10-09); the rules alone would flag it. Changing the classifier prompt or model means re-recording, and the seed integration test catches a changed verdict.
+- **Editing a resume or the classifier prompt changes fixture keys.** Clear `guard.classify` and `embed.documents`, then re-record (`docs/runbook.md`, Re-record fixtures).
+- **Windows Python writes CRLF.** One-off edit scripts must write LF, or `format:check` fails. Prefer Node or the editor tools.
 - **The Gemini SDK made the bundle and cold start heavier.**
   - The bundle grew from 988 kB to 2.7 MB with `@google/genai` and its dependencies (google-auth-library, protobufjs, ws).
   - As of 2026-10-09, Lambda init is 573 ms (Phase 1: 304 ms). The web app's health call on page load absorbs it.
@@ -321,4 +388,22 @@ The first live smoke passed on `gemini-3.5-flash-lite`, `gemini-3.5-flash` and `
 
 Nothing calls the guard yet; Phase 4's ingest does. No live call and no deploy were needed. The commits are local, waiting for Hamzah's approval to push.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 4` (synthetic data and ingestion). Phase 4 writes the job and 10 resumes, wires the safety layer into ingestion, and needs Hamzah to run `npm run seed:record` once to record the classifier and embedding fixtures.
+**2026-10-09, Phase 4 done.** Synthetic data and ingestion are complete and run offline:
+
+- the job and ten resumes (§12), with the dataset loader
+- `prepareResume` (the rule half of ingestion)
+- section-aware chunking with exact offsets (ADR 0019)
+- the ingest and seed use cases
+- the seed CLI (replay, record, live, `--reset`), throttled and tallied
+- recorded classifier and embedding fixtures
+- a replay integration test that pins every §12 guard outcome
+
+Hamzah recorded the fixtures live (17 calls, 0 fallbacks). A replay seed takes 2.5 s. No deploy was needed. The 11 commits are local, waiting for Hamzah's approval to push.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 5` (screening agent and scorecards). Phase 5 builds:
+
+- the screening prefix
+- the agent loop with `search_resume` and `read_section`
+- citation verification and deterministic scoring
+
+It also extends seeding to precompute scorecards. Hamzah runs `npm run seed:record` again to record the screening fixtures.
