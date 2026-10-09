@@ -9,7 +9,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | 0   | Foundations and walking skeleton            | ☑ Done        | 2026-10-08 | CI and deploy green; the live web page shows "API: healthy" from the live Lambda |
 | 1   | Database and persistence                    | ☑ Done        | 2026-10-08 | Neon migrated by the deploy workflow; live health reports `db: up`               |
 | 2   | LLM platform                                | ☑ Done        | 2026-10-09 | Live smoke passed on both tiers and embeddings; its fixtures replay in CI        |
-| 3   | Safety layer: redaction and injection guard | ☐ Not started |            |                                                                                  |
+| 3   | Safety layer: redaction and injection guard | ☑ Done        | 2026-10-09 | Redaction and guard ≥ 95% covered; every rule has attack and hard-negative cases |
 | 4   | Synthetic data and ingestion                | ☐ Not started |            |                                                                                  |
 | 5   | Screening agent and scorecards              | ☐ Not started |            |                                                                                  |
 | 6   | Ask the talent pool (hybrid RAG)            | ☐ Not started |            |                                                                                  |
@@ -28,6 +28,38 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+
+## Phase 3 evidence (2026-10-09)
+
+Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tests and coverage.
+
+- **Coverage of `domain/redaction` and `domain/guard` is at least 95%,** enforced by per-folder gates in `apps/api/vitest.config.ts`. The gate fails the run when unmet: checked by raising it to 99%, which produced `ERROR: Coverage for branches (96.59%) does not meet "src/domain/guard/**" threshold (99%)`.
+
+  | Folder              | Lines            | Branches         | Functions    | Statements       |
+  | ------------------- | ---------------- | ---------------- | ------------ | ---------------- |
+  | `domain/redaction`  | 100% (102/102)   | 100% (33/33)     | 100% (36/36) | 100% (110/110)   |
+  | `domain/guard`      | 98.89% (178/180) | 96.60% (142/147) | 100% (51/51) | 98.95% (188/190) |
+  | `application/guard` | 100%             | 100%             | 100%         | 100%             |
+
+  The uncovered guard branches are two `assertNever` defaults and two regex-group fallbacks, none of them reachable.
+
+- **Every rule has positive and negative cases** (table tests):
+  - **PII detectors** (`redact.test.ts`): every type and format has positives. The hard negatives include year ranges, ISO dates, versions, thousands separators, `rgb()`, framework names, "GitHub Actions", a bare `github.com`, five-digit metrics, a university outside Education, a city and state without a ZIP, a lone "School", and already-redacted text.
+  - **L0** (`invisible.test.ts`):
+    - positives: `L0.zero-width` (U+200B/C/D, U+2060, U+FEFF), `L0.bidi-control` (both ends of each range), `L0.tag-characters` (U+E0000, U+E007F, a smuggled sentence)
+    - negatives: a leading BOM, four ZWJ emoji sequences, accented, CJK and Arabic text, NBSP
+  - **L1** (`hidden-markup.test.ts`): 25 positive rows across `html-comment`, `markdown-comment`, `hidden-element`, `zero-font-size`, `zero-opacity` and `white-text`, and 17 hard negatives (white on dark, `background-color: white`, greys, readable sizes, partial opacity, `data-hidden`, `aria-hidden`, Markdown link references, `<` in prose, …).
+  - **L2** (`rules.test.ts`): each of `L2.instruction-override`, `role-hijack`, `evaluator-targeting`, `output-forcing` and `delimiter-spoofing` has 5–8 attack rows and 4–5 benign rows.
+  - **Policy** (`policy.test.ts`): 12 table rows cover every §9.4 outcome, including the 0.7 boundary (0.7 quarantines, 0.69 flags), `classifier: null`, C02/C10 dismissal, and `shouldRunClassifier`.
+- **Eval sets drafted and checked offline:**
+  - `pii.jsonl`: 15 snippets, all 7 types, 0 leaks.
+  - `injection.jsonl`: 40 items. The rules alone flag 18/20 malicious (5 high) and 4/20 benign (all medium, none high).
+- **fast-check found a real bug:** RFC 5322 local parts (`!#x{1}@a.aa`) slipped past the email detector. It's fixed and pinned as a table row.
+- **`npm run verify` is green locally:**
+  - 565 unit tests: contracts 9, api 552, web 4. Phase 2 had 277.
+  - 0 dependency-cruiser violations (218 modules)
+  - every coverage gate passes
+- **Not pushed yet.** CI isn't part of this phase's DoD. The 14 Phase 3 commits wait for Hamzah's approval to push.
 
 ## Phase 2 evidence (2026-10-09)
 
@@ -115,9 +147,36 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - [0007 Embedding model, dimensions and normalization](adr/0007-embedding-model-dimensions-and-normalization.md)
 - [0009 Record/replay LLM adapter](adr/0009-record-replay-llm-adapter.md)
 - [0010 Rule-based routing with tier fallback](adr/0010-rule-based-routing-with-tier-fallback.md)
+- [0013 Layered injection defense and quarantine policy](adr/0013-layered-injection-defense-and-quarantine-policy.md)
+- [0014 One-way redaction with branded types](adr/0014-one-way-redaction-with-branded-types.md)
 - [0016 Secrets via GitHub Environments → Lambda env vars](adr/0016-secrets-via-github-environments.md)
 - [0017 Static SPA on Amplify with CI-driven deploys](adr/0017-static-spa-on-amplify-with-ci-deploys.md)
 - [0018 Forward-only SQL migrations, run before the code deploy](adr/0018-forward-only-migrations-before-deploy.md)
+
+Phase 3 changes agreed with Hamzah in the plan (2026-10-09) and recorded in SPEC:
+
+- **The classifier is skipped when a high signal already quarantines** (`shouldRunClassifier`, `classifier: null`). Its answer couldn't change the outcome, and a known attack never reaches a model (§9.4, §9.5, §6.3 flow, ADR 0013).
+- **`malicious` below `CLASSIFIER_QUARANTINE_CONFIDENCE` flags.** Read literally, the first draft made it `clean` when no rule fired (§9.4).
+- **Redaction:**
+  - The summary counts distinct entities.
+  - Every name variant shares `[PERSON_1]`.
+  - A ZIP is redacted only after `City, ST`.
+  - Canonical keys: phone digits, URLs without scheme or `www.` (§9.3, ADR 0014).
+- **Detector additions:**
+  - L1 also catches `visibility:hidden`, the `hidden` attribute, Markdown `[//]: #` comments, transparent colours, `font-size` ≤ 1px and opacity ≤ 0.05.
+  - White text on a declared non-white background isn't flagged.
+  - L0 ignores a leading BOM and a ZWJ between two emoji (§9.4).
+- **`spotlight()`'s pattern also allows spaces before the slash** (`< /untrusted_…`), and its `<` becomes `&lt;` (§9.2).
+- **§7.5 gains `CLASSIFIER_MAX_OUTPUT_TOKENS` = 1024.**
+
+Phase 3 choices recorded in commit messages and ADRs:
+
+- **fast-check 4.10.2** (devDependency of `@hiresignal/api`, no install scripts). Property runs use a fixed seed, so CI stays deterministic.
+- **The classifier's response schema has no `maxLength`.** Gemini's structured-output page documents only `enum` and `format` for strings, so the 300-character rationale cap is applied in code (truncation), not by a repair call.
+- **`createClassifyInjection` returns the `ClassifierVerdict` only.** Model, tokens and latency are already in `llm_calls`.
+- **Signal excerpts:** L0 excerpts name code points and counts only, never a decoded tag payload (raw text isn't redacted yet). L1 and L2 excerpts are capped at 160 characters.
+- **Dataset tests live next to the code** (`*-dataset.test.ts`) and read `data/evals/*.jsonl` with `node:fs`. dependency-cruiser's purity rule excludes test files.
+- **Invisible characters in tests and data are always escapes,** never literal characters. Use the `\u{…}` form in TypeScript. The JSONL files are written by a script that emits JSON `\u` escapes.
 
 Phase 2 changes agreed with Hamzah (2026-10-08/09) and recorded in SPEC:
 
@@ -179,6 +238,9 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 ## Deferred and cut-list items
 
 - **Seed fixtures (classifier, agent, synthesis, ask, document embeddings):** recorded by `npm run seed:record` from Phase 4. The first batch `embedDocuments` call is the first live test of embedding-2 batching (ADR 0007).
+- **Wiring the guard into ingestion is Phase 4:** L0 → NFKC → `redact` → `scanRedactedText` → `shouldRunClassifier` → `createClassifyInjection` → `decideGuard`, with `CLASSIFIER_MAX_OUTPUT_TOKENS` and `CLASSIFIER_QUARANTINE_CONFIDENCE` passed in from `main/`. The classifier's first live run (with `seed:record`) is also the first live check that Gemini accepts its response schema.
+- **The question guard for Ask** (L0–L2 on the question, `InjectionRejectedError`): Phase 6. Spotlight labels for questions and chunks arrive with their prompts (Phases 5–6).
+- **Classifier precision and recall, and the rules-only vs rules + classifier ablation:** the Phase 9 eval runner, over `data/evals/injection.jsonl`.
 - **Enforcing `DAILY_LLM_CALL_CAP`:** Phase 7. The variable and the `countLiveSince` query exist now.
 - **A smaller cold start:** load `@google/genai` lazily on the first live call, if the cold start matters (see Known issues).
 - **Playwright `@smoke` step in `deploy.yml`:** Phase 9, because Playwright isn't installed yet. `curl --fail` smoke tests cover the API and web until then.
@@ -193,6 +255,11 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 
 ## Known issues
 
+- **Regex detectors have documented gaps** (`docs/threat-model.md`, Known limits):
+  - names outside the header, non-US addresses
+  - cross-script homoglyphs, external CSS, nested same-name tags
+  - paraphrased social engineering, which only L3 catches
+- **C02 and C07 outcomes depend on Phase 4 resume wording and the live classifier.** The rules give C07-style text only a medium signal; quarantine needs a `malicious` verdict at ≥ 0.7. C02 needs a rule to fire and the classifier to say `benign`.
 - **The Gemini SDK made the bundle and cold start heavier.**
   - The bundle grew from 988 kB to 2.7 MB with `@google/genai` and its dependencies (google-auth-library, protobufjs, ws).
   - As of 2026-10-09, Lambda init is 573 ms (Phase 1: 304 ms). The web app's health call on page load absorbs it.
@@ -242,4 +309,16 @@ Local and CI moved to Postgres 18 to match Neon.
 
 The first live smoke passed on `gemini-3.5-flash-lite`, `gemini-3.5-flash` and `gemini-embedding-2`, and its fixtures replay in CI. Production now runs with the Gemini key and model IDs. No route calls a model yet.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 3` (safety layer: redaction and injection guard). Phase 3 is offline except for the classifier, whose fixtures are recorded in Phase 4 with the seed.
+**2026-10-09, Phase 3 done.** The safety layer is complete, offline and unit-tested:
+
+- one-way PII redaction producing `RedactedText` (table, property and dataset tests)
+- the L0 invisible-character scan, L1 hidden-markup detection and L2 pattern rules
+- the pure quarantine policy
+- `spotlight()`
+- the L3 classifier use case with a byte-stable prompt
+- draft PII and injection eval sets
+- ADRs 0013 and 0014, a first threat model, and the safety-layer architecture section
+
+Nothing calls the guard yet; Phase 4's ingest does. No live call and no deploy were needed. The 14 commits are local, waiting for Hamzah's approval to push.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 4` (synthetic data and ingestion). Phase 4 writes the job and 10 resumes, wires the safety layer into ingestion, and needs Hamzah to run `npm run seed:record` once to record the classifier and embedding fixtures.
