@@ -39,7 +39,22 @@ Redaction must also leave the job evidence intact. Year ranges in Experience ("2
 - **Negative:**
   - These are pattern detectors, not NER. They miss names that aren't in the header (a referee, a cofounder), non-US address formats, a city without a ZIP, and PII inside images. All of these are listed in [`docs/threat-model.md`](../threat-model.md).
   - School names and graduation years outside Education (a university as a client, say) are kept on purpose. That trades a small leak for job evidence the screener needs.
-  - The brand is a compile-time guarantee. A deliberate `as RedactedText` cast would defeat it, so the two legitimate casts are documented in place and nothing else may add one.
+  - The brand is a compile-time guarantee. A deliberate `as RedactedText` cast would defeat it, so every legitimate cast is documented in place (see the update below) and nothing else may add one.
+
+## Update (2026-10-09, Phase 4)
+
+Chunking needs text that is _derived from_ redacted text, so [`redacted-text.ts`](../../apps/api/src/domain/redaction/redacted-text.ts) gained two derived constructors ([ADR 0019](0019-section-aware-chunking-with-exact-offsets.md)):
+
+- `sliceRedactedText(text, start, end)`: a substring of redacted text is still redacted. Chunk contents and headings are cut this way.
+- `joinRedactedText(parts, separator)`: joins redacted text and candidate aliases with `' · '` or `'\n'`. The separator type allows only those literals, and an alias is a generated label, so nothing raw can enter. Context headers and the embedder's `header + content` input are built this way.
+
+The brand is now produced in four places, all in `domain/redaction/`:
+
+- `redact()`, the only one that takes raw text
+- `rehydrateRedactedText()`, for text read back from columns written only from `RedactedText`
+- the two derived constructors above
+
+`ResumeChunk.contextHeader` and `RetrievedChunk.contextHeader` are `RedactedText`, because the Phase 5 and 6 prompts spotlight them.
 
 ## Alternatives considered
 

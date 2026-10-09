@@ -22,3 +22,4 @@ Decisions that shape HireSignal, in Nygard format ([ADR 0001](0001-record-archit
 | 0016 | [Secrets via GitHub Environments → Lambda env vars](0016-secrets-via-github-environments.md)                    | Accepted          |
 | 0017 | [Static SPA on Amplify with CI-driven deploys](0017-static-spa-on-amplify-with-ci-deploys.md)                   | Accepted          |
 | 0018 | [Forward-only SQL migrations, run before the code deploy](0018-forward-only-migrations-before-deploy.md)        | Accepted          |
+| 0019 | [Section-aware chunking with exact offsets](0019-section-aware-chunking-with-exact-offsets.md)                  | Accepted          |
