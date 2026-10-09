@@ -501,10 +501,15 @@ The routing policy is a pure function in `domain/routing/` with table-driven tes
   | `SCHOOL` | Institution names in the Education section (…University, College, Institute, School, Academy; "University of …") |
   | `GRAD_YEAR` | Four-digit years in the Education section (an age proxy) |
 
-- Tokens look like `[EMAIL_1]`. Numbering is per type, per document, and the same value always maps to the same token.
+- Tokens look like `[EMAIL_1]`. Numbering is per type, per document, and the same value always maps to the same token. Values are compared canonically: digits for phones, URLs without scheme or `www.`, and every variant of the header name shares `[PERSON_1]`. The summary counts distinct entities per type (ADR 0014).
+- Detector details (ADR 0014):
+  - Names skip initials, generational suffixes and credentials after a comma.
+  - Emails accept the RFC 5322 `atext` set.
+  - A ZIP is redacted only as part of `City, ST 12345`, because a bare five-digit number is usually a metric.
+  - Overlaps resolve to the earliest, then longest, match, so an email containing the name stays one `EMAIL`.
 - Redaction is one-way; originals aren't stored. `display_name` is kept separately (synthetic) for the shortlist reveal.
 - `RedactedText` is a branded type that only `redact()` can produce. The embedder's document path, the classifier and the prompt builders accept resume text only as `RedactedText`, so sending a raw resume to a model is a compile error. Recruiter questions and agent search queries aren't resume text: they go through `embedQuery` and are spotlighted as untrusted input.
-- Known limits (document them in `docs/threat-model.md`): names that don't appear in the header, non-US address formats, PII inside images (out of scope).
+- Known limits (document them in `docs/threat-model.md`): names that don't appear in the header, non-US address formats, a city and state without a ZIP, schools and years outside the Education section, PII inside images (out of scope).
 
 ### 9.4 Prompt-injection defense
 

@@ -17,7 +17,7 @@ Decisions that shape HireSignal, in Nygard format ([ADR 0001](0001-record-archit
 | 0011 | Prompt caching via byte-stable prefixes                                                                         | Planned (Phase 5) |
 | 0012 | Deterministic scoring with verified citations                                                                   | Planned (Phase 5) |
 | 0013 | Layered injection defense and quarantine policy                                                                 | Planned (Phase 3) |
-| 0014 | One-way redaction with branded types                                                                            | Planned (Phase 3) |
+| 0014 | [One-way redaction with branded types](0014-one-way-redaction-with-branded-types.md)                            | Accepted          |
 | 0015 | Precomputed results and a daily call cap                                                                        | Planned (Phase 7) |
 | 0016 | [Secrets via GitHub Environments → Lambda env vars](0016-secrets-via-github-environments.md)                    | Accepted          |
 | 0017 | [Static SPA on Amplify with CI-driven deploys](0017-static-spa-on-amplify-with-ci-deploys.md)                   | Accepted          |
