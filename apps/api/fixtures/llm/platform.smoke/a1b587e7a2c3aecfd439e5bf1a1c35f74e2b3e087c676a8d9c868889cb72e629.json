@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "a1b587e7a2c3aecfd439e5bf1a1c35f74e2b3e087c676a8d9c868889cb72e629",
+  "task": "platform.smoke",
+  "model": "gemini-3.5-flash",
+  "recordedAt": "2026-10-09T06:58:57.123Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"sentiment\":\"positive\",\"confidence\":0.98}",
+          "thoughtSignature": "EvUICvIIAWkUfRPrTAQf38rb1P6+7w+5nnWc86eVvUsRnO32S5kxgHP93TKjgsgqSqcu0LZVtCF9FEfssfVx4X29icWuLj5dJQZdWe1yGrwksu81vBEofCrJDkceifLF3IlEVbIynqhyhgxHtNi7yZHGECeYrGFGapkhdXOz3wI0Q/dPj7eaEbGQGP2kQg/HIsaxvGj4CzwsJsvJFuIhhHKkXOMcIs9tANqdAgkbn21NxzajAMaIrBTyR6mGwFk74PU+ftbsnA4WYqUzx2wVXiiC2CNRNm+OkZ6TirkMEz2OUzBNeYxsZXKYRhcgKbiN81Ixtr4HBmLchb+haGKGMpxgc2TZyc0Sb17Z+/5bawCWj50g2Cyck5jAncQAMkdR8J1zleumS6OMLp6clfRRt3nD1iUbXPPU/fFD9qFVaNQUbp9fHe+Xd+6/lkESgtPXKcZmrzYQMaVyO8snLA4Ge+/DnbJUpqTUw0JjBAoZ0SJN+ujjEL0pPypUS6ygoDdG9jUNaG47UsitU1oOpmEfonI/28ozdli4+NBWpj3KXpDkz48P7ANLTCDl4wLJDskImsrBpEndlUuAO3aCzTZZYznK5pQOux/HCIrfBajX603wgfg1VLLAi0s/dQwsMsr2G0NxprmfkQwiMA/NLPLhTun6LSt0Yhb/p8L74vISWHYiHnCIhPLCV+hlQTSoG5nLorQRfOhGlj/63EMsSUJIHMlkJlfjf6tH7pk3QLv1lb2DNshBQN4j0eus4MipE7UF/ZLQRWy0GyBlhgXo3EUSHcyJQAirHCpbzx6POZtbXpQININDyTo5tV1a6XiwPs4L+x84mPtlrlKBHjKbf+DuyWmhANCCVuGaT7NdW1T8p14Jk2qDyGX3bbPHi/kwdjGZ6lXKO8bDsasfPgCWYTRe+70+zKL0bSdOeYooCQRT0oet+KM3EsIHuyf3FNZBRQ5JLweHqZSvYSBTmVLZXDuVMKezTICKCpt7OVdPCl8W+ZfKwVKN/+qGHqPtnI2UQQwrK82Jf/q8yQN7MDgTUH40AwOdgLWYwjuH0Ljg+9gJH/Zlf3Ol9ggmNZRT0wAwVbIfec6+wX2uUtP+cGHGt6CVTPS/WoYxdExQck4vXENg6pxNtTdpHfIOFRbWTiFywJRHOe6bUxMBZeOOTrjoV416huNBs9pvwfUzhoivC+FphhYBoL0JZF1TBjj5tQQTCnD5gAJDjaezce8hlnAj3l+E/W2c+KlWqB6HD5Ouek48CylO5UT5uE3CTmd3oK+hE11bkTTwhJ/UoMpRflKmQnt/g+haqG+irdYYCUqSKQ9s3UTqRbJae7yeCGTldVv+AoKa6uPnmsZuYTPcV4/hipEom4OKoVZndY7tjqNeNelFO4D077stPHCl6VfFL2TeSzvja8s0day9k1JsxK619WXHVVJ6R478FUBW2sUq+K84vKSMD4sJ5wkmL95LlDikD46vypkhBYLMSBbqmJ8oKDZ7g+DlhjCw31eBQSXHAIs4BcKPvoac6ndTKQ=="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"sentiment\":\"positive\",\"confidence\":0.98}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1959
+  },
+  "usage": {
+    "inputTokens": 43,
+    "outputTokens": 288,
+    "cachedTokens": 0
+  }
+}

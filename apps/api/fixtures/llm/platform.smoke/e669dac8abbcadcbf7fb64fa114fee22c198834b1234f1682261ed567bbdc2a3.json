@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "e669dac8abbcadcbf7fb64fa114fee22c198834b1234f1682261ed567bbdc2a3",
+  "task": "platform.smoke",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T06:58:55.154Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"sentiment\": \"positive\",\n  \"confidence\": 1.0\n}",
+          "thoughtSignature": "EmAKXgFpFH0TG4GIbfcXXMjzrH7gewWvKa/KvHirMHM+fqnYa1Fn3YwLq8bd4PnUmnT69jLIeWL2FNw7jiUtJ7Q9tchSQAWNEXSgvwnmza3K3eVOD5+Y6WpH4jcChxQoHBI="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"sentiment\": \"positive\",\n  \"confidence\": 1.0\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1310
+  },
+  "usage": {
+    "inputTokens": 43,
+    "outputTokens": 20,
+    "cachedTokens": 0
+  }
+}
