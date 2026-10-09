@@ -19,7 +19,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 1. **Spec first.** If a request conflicts with `docs/SPEC.md`, or the spec looks wrong, stop and ask. When we change direction, update the spec and add an ADR in the same commit.
 2. **No live LLM calls in tests or CI.**
    - Tests use hand-written fakes or the replay adapter (`LLM_MODE=replay`).
-   - Only `npm run seed:record` and `npm run llm:smoke` touch the live Gemini API, and only when I run them.
+   - Only `npm run seed:record`, `npm run ask:golden -- --mode record` and `npm run llm:smoke` touch the live Gemini API, and only when I run them. Record mode calls Gemini only for requests that have no fixture yet.
 3. **PII never reaches a model.**
    - Resume text reaches the embedder (`embedDocuments`), the classifier and every prompt builder only as `RedactedText`.
    - Never widen these types to `string`.
@@ -74,7 +74,8 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 | `npm run db:up` / `npm run db:down` | Start or stop local Postgres + pgvector (Docker, `localhost:5433`) |
 | `npm run db:migrate` | Apply `db/migrations/*.sql` using `DATABASE_MIGRATION_URL` |
 | `npm run seed` | Load synthetic data and precomputed results from fixtures (replay, offline). `-- --reset` re-ingests every resume |
-| `npm run seed:record` | Reset, run the pipeline against live Gemini and record fixtures (I run this) |
+| `npm run seed:record` | Reset, run the pipeline and the golden questions in record mode: Gemini is called only for requests without a fixture (I run this) |
+| `npm run ask:golden` | Ask the seeded job the golden questions (replay, offline) and print recall@5, MRR and the similarity floor check; `-- --mode record --retrieval-only` records only question embeddings (I run that) |
 | `npm run llm:smoke` | One live structured call per tier and one embedding to check key and model IDs (I run this) |
 | `npm run dev` | API on `:3000` and web on `:5173` (Vite proxies `/api`) |
 | `npm run verify` | Format check, lint, typecheck, depcruise, unit tests. Run after every step. |
@@ -83,7 +84,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 | `npm run eval` | Eval suites with thresholds; `npm run eval -- --write` updates `docs/evals.md` |
 | `npm run build` | esbuild API bundle (`apps/api/dist/lambda.mjs`) and Vite web build |
 
-Each phase adds the scripts its code needs: Phase 0 created `dev`, `verify`, `build`, `db:up`/`db:down` and `test:integration`; `db:migrate` arrives in Phase 1, `llm:smoke` in Phase 2, `seed`/`seed:record` in Phase 4, `eval` and `test:e2e` in Phase 9. Keep this table accurate if any of them change.
+Each phase adds the scripts its code needs: Phase 0 created `dev`, `verify`, `build`, `db:up`/`db:down` and `test:integration`; `db:migrate` arrives in Phase 1, `llm:smoke` in Phase 2, `seed`/`seed:record` in Phase 4, `ask:golden` in Phase 6, `eval` and `test:e2e` in Phase 9. Keep this table accurate if any of them change.
 
 npm passes arguments to a script only after `--`, for example `npm run eval -- --write` or `npm run seed -- --reset`. Without the `--`, npm silently drops the flag.
 

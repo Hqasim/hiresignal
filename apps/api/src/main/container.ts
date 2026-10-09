@@ -32,6 +32,8 @@ import { createPgScorecardRepository } from '../infrastructure/postgres/pg-score
 import { createApp } from '../interfaces/http/app';
 import type { AppBindings } from '../interfaces/http/app-bindings';
 import { ASK_SETTINGS } from './ask-settings';
+import { createAskGolden, type GoldenQuestionRun, loadGoldenQuestions } from './ask-wiring';
+import type { AskGoldenArgs } from './cli/ask-golden-args';
 import type { SeedArgs } from './cli/seed-args';
 import { createLlm, createProviderClients, createSmokeCheck, type LlmSettings } from './llm-wiring';
 import { SCREENING_SETTINGS } from './screening-settings';
@@ -197,6 +199,48 @@ export function createSeedRunner(
       const result = await seeder.seed({ ...(await loadSeedDataset()), reset: args.reset });
       const screenings = await seeder.screen(result.outcomes);
       return { result, screenings, calls: seeder.tally() };
+    },
+    close: () => pool.end(),
+  };
+}
+
+/** The golden-question CLI's dependencies (`npm run ask:golden`). */
+export interface AskGoldenRunner {
+  logger: Logger;
+  /** Runs every golden question against the seeded job; returns the runs and a tally of calls. */
+  run(): Promise<{ runs: GoldenQuestionRun[]; calls: LlmCallTally }>;
+  close(): Promise<void>;
+}
+
+/**
+ * Wires `npm run ask:golden` on the owner connection (`DATABASE_MIGRATION_URL`, like seeding),
+ * with the LLM stack in the mode the `--mode` flag picks. The job must be seeded first.
+ *
+ * @throws Error if the environment is invalid, for example a missing key in record mode.
+ */
+export function createAskGoldenRunner(
+  source: Readonly<Record<string, string | undefined>>,
+  args: AskGoldenArgs,
+): AskGoldenRunner {
+  const env = parseSeedEnv(source, args.mode);
+  const logger = createJsonConsoleLogger({ clock: systemClock });
+  const pool = createPool({ connectionString: env.DATABASE_MIGRATION_URL, logger });
+  const golden = createAskGolden(
+    {
+      mode: args.mode,
+      apiKey: env.GEMINI_API_KEY,
+      models: { lite: env.GEMINI_MODEL_LITE, flash: env.GEMINI_MODEL_FLASH },
+      embeddingModel: env.GEMINI_EMBEDDING_MODEL,
+    },
+    { pool, clock: systemClock, logger, sleep: (ms) => sleep(ms) },
+  );
+  return {
+    logger,
+    run: async () => {
+      const runs = await golden.run(await loadGoldenQuestions(), {
+        retrievalOnly: args.retrievalOnly,
+      });
+      return { runs, calls: golden.tally() };
     },
     close: () => pool.end(),
   };

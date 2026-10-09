@@ -180,6 +180,21 @@ npm run seed -- --reset    # deletes the job's candidates, then ingests all ten 
 
 It then precomputes a scorecard for every non-quarantined candidate that has none, and ends with two tables: each candidate's guard status, signals, classifier verdict and chunk count, then the ranking (score, must-haves, rating counts, citations, repairs). Last comes a `Model calls:` line. In replay mode that line must say `live 0`. As of 2026-10-09, a replay seed takes about 2.5 s.
 
+## Ask the golden questions
+
+`npm run ask:golden` asks the seeded job the 23 questions in `data/evals/retrieval.jsonl` through the same use case as `POST /api/jobs/:slug/ask`, in replay mode, so it is offline. Seed first. It prints:
+
+- one row per question: its expected and top-5 aliases, the best cosine similarity, how many candidates the chunks span, and how the ask ended (outcome, routing rule, citations kept and dropped)
+- recall@5 and MRR for each keyword-match mode (`all`, `any`, `off`), with ask's own mode marked
+- where `SIMILARITY_FLOOR` falls between the answerable and the out-of-scope questions
+
+It prints ids, aliases and numbers, never question or answer text.
+
+```powershell
+npm run seed
+npm run ask:golden
+```
+
 ## Re-record fixtures
 
 Replay keys cover the model ID, the prompt and its version, the schema, the tools and the token limit, so changing any of them makes replay miss with `FixtureMissingError`, whose message names the command to run. With the key in `.env`:
@@ -203,6 +218,8 @@ After a screening prompt change (a new `SCREENING_PROMPT_VERSION`), only the scr
 Remove-Item -Recurse -Force apps/api/fixtures/llm/screen.agent, apps/api/fixtures/llm/screen.synthesize, apps/api/fixtures/llm/screen.repair -ErrorAction SilentlyContinue
 npm run seed:record
 ```
+
+`npm run seed:record` then runs `ask:golden` in record mode, so new golden questions get their embedding and answer fixtures. To record only the question embeddings, with no answer calls (for example before tuning the similarity floor), run `npm run ask:golden -- --mode record --retrieval-only`. After a change to the ask prompt (a new `ASK_PROMPT_VERSION`), clear `ask.answer` and run `npm run seed:record`.
 
 A screening recording makes roughly 150 live calls (8 candidates × up to 8 agent turns, their query embeddings, 8 syntheses and a few repairs, plus ingestion), about 15–20 minutes at one call per 6 s.
 
