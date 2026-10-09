@@ -169,7 +169,7 @@ export function detectPerson(text: string, personName: string): PiiMatch[] {
 
 /** The full name (credentials after a comma dropped) and each part of it, longest first. */
 function nameVariants(personName: string): string[] {
-  const fullName = (personName.split(',')[0] ?? '').trim();
+  const fullName = personName.replace(/,.*$/s, '').trim();
   const parts = fullName
     .split(/\s+/)
     .map((part) => part.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, ''))

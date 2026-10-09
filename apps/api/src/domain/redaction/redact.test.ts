@@ -131,6 +131,10 @@ describe('redact', () => {
       expect(redact(input, { personName }).text).toBe(expected);
     });
 
+    it('redacts nothing for a header name with no usable part', () => {
+      expect(redact('J. wrote it', { personName: 'J.' }).text).toBe('J. wrote it');
+    });
+
     it('leaves names alone when there is no header name', () => {
       expect(redact('Priya led the team.', noName).text).toBe('Priya led the team.');
     });

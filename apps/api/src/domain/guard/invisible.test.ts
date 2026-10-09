@@ -118,6 +118,14 @@ describe('scanInvisible', () => {
       expect(scanInvisible(text)).toEqual({ signals: [], stripped: text });
     });
 
+    it('flags a joiner at the very end of the text', () => {
+      expect(scanInvisible('mentor 👩‍').signals).toHaveLength(1);
+    });
+
+    it('flags a joiner at the very start of the text', () => {
+      expect(scanInvisible('‍👩 mentor').signals).toHaveLength(1);
+    });
+
     it('still flags a joiner with an emoji on only one side', () => {
       expect(scanInvisible('👩\u200dx').signals).toHaveLength(1);
     });
