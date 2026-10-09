@@ -319,7 +319,7 @@ withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model 
 
 ### 7.4 Errors
 
-`AppError` (abstract) carries `code`, `httpStatus`, `title` and a safe `detail`. Subclasses: `NotFoundError`, `ValidationError`, `QuotaExceededError`, `LlmUnavailableError`, `LlmOutputInvalidError`, `InjectionRejectedError`, `FixtureMissingError`. One error middleware renders RFC 9457 `application/problem+json` with `requestId`. Unknown errors become a generic 500 and are logged with the stack trace, never returned.
+`AppError` (abstract) carries `code`, `httpStatus`, `title` and a safe `detail`. Subclasses: `NotFoundError`, `ValidationError`, `CandidateQuarantinedError` (409: screening a quarantined resume is refused), `QuotaExceededError`, `LlmUnavailableError`, `LlmOutputInvalidError`, `InjectionRejectedError`, `FixtureMissingError`. One error middleware renders RFC 9457 `application/problem+json` with `requestId`. Unknown errors become a generic 500 and are logged with the stack trace, never returned.
 
 ### 7.5 Configuration
 
@@ -564,7 +564,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
   - `read_section({ section: string })` → every chunk of one section for this candidate.
   - Results are returned as spotlighted text labelled with refs (`C04#3`).
 - **Loop:** at most `MAX_AGENT_STEPS` model turns. Parallel function calls are allowed. The loop stops when the model replies without function calls. The model's returned content is appended to history unchanged (required for Gemini 3 thought signatures). Each step records the tool, arguments, returned refs, latency and tokens to the trace.
-- **Synthesis:** one `screen.synthesize` call with the prefix, the evidence set (every chunk retrieved, spotlighted) and the `ScorecardDraft` schema:
+- **Synthesis:** one `screen.synthesize` call, in a fresh conversation (not the agent history), with the prefix, the evidence set (every chunk retrieved, spotlighted) and the `ScorecardDraft` schema:
 
   ```ts
   ScorecardDraft = {
@@ -585,7 +585,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
   - The whitespace-normalized `quote` is a substring of that chunk's content and is 8–300 characters long.
   - Every requirement appears exactly once.
   - `strong` and `partial` ratings need at least one valid citation.
-  - If anything fails, one `screen.repair` call lists the exact errors. Anything still invalid is downgraded deterministically (rating → `unclear`, note `citation_failed`).
+  - If anything fails, one `screen.repair` call lists the exact errors (if its reply never matches the schema, the first draft is kept). Anything still invalid is downgraded deterministically and strictly: a requirement with any remaining error becomes `unclear`, note `citation_failed`, keeping only its valid citations; a requirement the model left out is added as `unclear` (ADR 0012).
 - **Scoring** (`domain/scoring/`, pure): rating values are strong 1, partial 0.5, none 0, unclear 0. `score = round(100 × Σ(weight × value) / Σ weight)`. `mustHavesMet` counts must-have requirements rated strong or partial. Citation spans are computed from chunk offsets so the UI can highlight them.
 - **Human checkpoint:** nothing is auto-rejected. Shortlisting is the only decision, and only a person makes it.
 

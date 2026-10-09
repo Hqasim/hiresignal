@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { LlmCallError } from '../llm/llm-call-error';
 import {
   type AppError,
+  CandidateQuarantinedError,
   FixtureMissingError,
   LlmOutputInvalidError,
   LlmUnavailableError,
@@ -12,6 +13,7 @@ import {
 describe('application errors', () => {
   it.each<[string, AppError, string, number]>([
     ['NotFoundError', new NotFoundError('x'), 'NOT_FOUND', 404],
+    ['CandidateQuarantinedError', new CandidateQuarantinedError('x'), 'CANDIDATE_QUARANTINED', 409],
     ['LlmUnavailableError', new LlmUnavailableError('x'), 'LLM_UNAVAILABLE', 503],
     ['LlmOutputInvalidError', new LlmOutputInvalidError('x'), 'LLM_OUTPUT_INVALID', 502],
     ['FixtureMissingError', new FixtureMissingError('guard.classify'), 'FIXTURE_MISSING', 500],

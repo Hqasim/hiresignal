@@ -1,5 +1,5 @@
 /** HTTP statuses an {@link AppError} may map to. */
-export type AppErrorStatus = 400 | 404 | 413 | 422 | 429 | 500 | 502 | 503;
+export type AppErrorStatus = 400 | 404 | 409 | 413 | 422 | 429 | 500 | 502 | 503;
 
 /**
  * Base class for every error the application raises on purpose (SPEC §7.4).
