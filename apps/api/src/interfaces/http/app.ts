@@ -4,6 +4,7 @@ import { requestId } from 'hono/request-id';
 import type { Logger } from '../../application/ports/logger';
 import type { AppBindings } from './app-bindings';
 import { createErrorHandler, notFoundHandler } from './error-handler';
+import { askRoutes, type AskRoutesDeps } from './routes/ask';
 import { candidateRoutes, type CandidateRoutesDeps } from './routes/candidates';
 import { type HealthRouteDeps, healthRoutes } from './routes/health';
 import { jobRoutes, type JobRoutesDeps } from './routes/jobs';
@@ -15,6 +16,7 @@ export interface AppDeps {
   health: Omit<HealthRouteDeps, 'logger'>;
   jobs: JobRoutesDeps;
   candidates: CandidateRoutesDeps;
+  ask: AskRoutesDeps;
 }
 
 /** Longest client-supplied `x-request-id` we accept; longer ones are replaced with a fresh UUID. */
@@ -34,6 +36,7 @@ export function createApp(deps: AppDeps): Hono<AppBindings> {
   app.route('/api', healthRoutes({ ...deps.health, logger: deps.logger }));
   app.route('/api', jobRoutes(deps.jobs));
   app.route('/api', candidateRoutes(deps.candidates));
+  app.route('/api', askRoutes(deps.ask));
 
   return app;
 }

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { Hono } from 'hono';
 
+import { createAskTalentPool } from '../application/ask/ask-talent-pool';
 import { createGetCandidateDetail } from '../application/candidates/get-candidate-detail';
 import { createListCandidates } from '../application/candidates/list-candidates';
 import { createShortlistCandidate } from '../application/candidates/shortlist-candidate';
@@ -30,6 +31,7 @@ import { createPgLlmCallRepository } from '../infrastructure/postgres/pg-llm-cal
 import { createPgScorecardRepository } from '../infrastructure/postgres/pg-scorecard-repository';
 import { createApp } from '../interfaces/http/app';
 import type { AppBindings } from '../interfaces/http/app-bindings';
+import { ASK_SETTINGS } from './ask-settings';
 import type { SeedArgs } from './cli/seed-args';
 import { createLlm, createProviderClients, createSmokeCheck, type LlmSettings } from './llm-wiring';
 import { SCREENING_SETTINGS } from './screening-settings';
@@ -65,7 +67,13 @@ export function createContainer(source: Readonly<Record<string, string | undefin
   const candidates = createPgCandidateRepository(pool);
   const scorecards = createPgScorecardRepository(pool);
   const getJob = createGetJob({ jobs });
+  const chunks = createPgChunkRepository(pool);
   const getCandidateDetail = createGetCandidateDetail({ candidates, jobs, scorecards });
+  const checkDailyCap = createCheckDailyCap({
+    calls,
+    clock: systemClock,
+    cap: env.DAILY_LLM_CALL_CAP,
+  });
   const app = createApp({
     logger,
     health: {
@@ -90,16 +98,23 @@ export function createContainer(source: Readonly<Record<string, string | undefin
         embedder,
         jobs,
         candidates,
-        chunks: createPgChunkRepository(pool),
+        chunks,
         scorecards,
         clock: systemClock,
         settings: SCREENING_SETTINGS,
       }),
-      checkDailyCap: createCheckDailyCap({
-        calls,
-        clock: systemClock,
-        cap: env.DAILY_LLM_CALL_CAP,
+      checkDailyCap,
+    },
+    ask: {
+      askTalentPool: createAskTalentPool({
+        getJob,
+        embedder,
+        chunks,
+        llm,
+        logger,
+        settings: ASK_SETTINGS,
       }),
+      checkDailyCap,
     },
   });
   return { env, logger, app, pool, llm, embedder };

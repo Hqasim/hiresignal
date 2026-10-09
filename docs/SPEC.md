@@ -597,7 +597,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
 2. Embed the question (`embedQuery`, which sends it as `task: search result | query: …`) and run hybrid search across the job, excluding quarantined candidates, keeping the top `ASK_TOP_K`.
 3. If the best cosine similarity < `SIMILARITY_FLOOR`, return `insufficientEvidence: true` with no LLM call.
 4. Route the call (§9.1), then generate with the `AskAnswer` schema `{ answer (plain text, ≤ 1,200 chars), citations: { ref, quote }[], insufficientEvidence: boolean }`.
-5. Verify citations (same verifier), drop invalid ones, and map refs to candidate alias, section and span.
+5. Verify citations (same verifier), drop invalid ones, and map refs to candidate alias, section and span. If the model said `insufficientEvidence`, or no citation verifies, return `insufficientEvidence: true` with no citations: nothing reaches the recruiter without a checked quote.
 
 **Hybrid search SQL** (single place, commented, in `pg-chunk-repository.ts`):
 
@@ -664,7 +664,7 @@ Return cosine similarity alongside the fused rank for the floor check. Note in t
 - `CandidateSummary { id, alias, displayName | null, guardStatus, shortlisted, score | null, mustHaves: { met, total } | null }`
 - `CandidateDetail { …summary, redactedResume, redactionSummary, guard: { status, signals[], dismissed[], classifier | null }, scorecard | null }`
 - `Scorecard { score, mustHaves, requirements: [{ requirementId, text, kind, weight, rating, rationale, citations: [{ ref, section, quote, span: { start, end } }] }], strengths, concerns, summary, promptVersion, models, createdAt, trace[] }`
-- `AskResponse { answer, insufficientEvidence, citations: [{ ref, candidateId, alias, section, quote }], model, routedReason }`
+- `AskRequest { question }` (trimmed, 1–500 chars) and `AskResponse { answer, insufficientEvidence, citations: [{ ref, candidateId, alias, section, quote, span }], model | null, routedReason | null }`; `model` and `routedReason` are `null` when the similarity floor answered without a model call
 - `OpsSummary`, `LlmCallRow`, `Problem`
 
 ---

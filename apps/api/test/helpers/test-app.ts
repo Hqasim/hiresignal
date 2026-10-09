@@ -1,3 +1,4 @@
+import { createAskTalentPool } from '../../src/application/ask/ask-talent-pool';
 import { createGetCandidateDetail } from '../../src/application/candidates/get-candidate-detail';
 import { createListCandidates } from '../../src/application/candidates/list-candidates';
 import { createShortlistCandidate } from '../../src/application/candidates/shortlist-candidate';
@@ -19,8 +20,10 @@ import { aScreeningWorld } from './screening-world';
 
 /** Options of {@link aTestApp}. */
 export interface TestAppOptions {
-  /** Scripted model turns for `POST /screen`. */
+  /** Scripted model turns for `POST /screen` and `POST /ask`. */
   script?: readonly LlmResponse[];
+  /** Ask's `SIMILARITY_FLOOR`. The default, -1, always reaches the model; raise it to test the floor. */
+  similarityFloor?: number;
   /** `DAILY_LLM_CALL_CAP`; the default leaves room. */
   cap?: number;
 }
@@ -38,6 +41,7 @@ export async function aTestApp(options: TestAppOptions = {}) {
   const llm = new FakeLlmClient(options.script ?? []);
   const calls = new InMemoryLlmCallRepository();
   const getJob = createGetJob({ jobs: world.jobs });
+  const checkDailyCap = createCheckDailyCap({ calls, clock, cap: options.cap ?? 100 });
   const getCandidateDetail = createGetCandidateDetail({
     candidates: world.candidates,
     jobs: world.jobs,
@@ -73,7 +77,25 @@ export async function aTestApp(options: TestAppOptions = {}) {
           retrieval: { searchTopK: 4, poolPerArm: 20, rrfK: 60, maxQueryChars: 200 },
         },
       }),
-      checkDailyCap: createCheckDailyCap({ calls, clock, cap: options.cap ?? 100 }),
+      checkDailyCap,
+    },
+    ask: {
+      askTalentPool: createAskTalentPool({
+        getJob,
+        embedder: world.embedder,
+        chunks: world.chunks,
+        llm,
+        logger,
+        settings: {
+          topK: 12,
+          poolPerArm: 20,
+          rrfK: 60,
+          keywordMatch: 'any',
+          similarityFloor: options.similarityFloor ?? -1,
+          maxOutputTokens: 4096,
+        },
+      }),
+      checkDailyCap,
     },
   });
   return { app, world, llm, calls, clock, logger, database };
@@ -150,4 +172,5 @@ export const UNUSED_RESOURCE_ROUTES = {
     screenCandidate: unused,
     checkDailyCap: unused,
   },
+  ask: { askTalentPool: unused, checkDailyCap: unused },
 };
