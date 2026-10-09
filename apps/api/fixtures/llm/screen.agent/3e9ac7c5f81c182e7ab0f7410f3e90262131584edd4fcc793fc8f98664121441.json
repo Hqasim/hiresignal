@@ -1,0 +1,79 @@
+{
+  "kind": "generate",
+  "key": "3e9ac7c5f81c182e7ab0f7410f3e90262131584edd4fcc793fc8f98664121441",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:03:53.952Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R5",
+              "query": "AWS Lambda serverless backend API Gateway"
+            },
+            "id": "call_390509"
+          },
+          "thoughtSignature": "EmAKXgFpFH0TmpIvW97FmdkAuCDtRqANYOjZQAJH7zV4T7tEoRWHrLCPJ2Ei680mVEqd8u0N6msLIWTdpDIXO2ySJ3tS2s0yacCIpooUkTq/asTi7Rjoy3zXvMe+OYCxRy4="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R6",
+              "query": "GitHub Actions automated testing Playwright CI CD"
+            },
+            "id": "call_390510"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "Mentor mid-level engineers technical leadership design review",
+              "requirementId": "R7"
+            },
+            "id": "call_390511"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_390509",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R5",
+          "query": "AWS Lambda serverless backend API Gateway"
+        }
+      },
+      {
+        "id": "call_390510",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R6",
+          "query": "GitHub Actions automated testing Playwright CI CD"
+        }
+      },
+      {
+        "id": "call_390511",
+        "name": "search_resume",
+        "args": {
+          "query": "Mentor mid-level engineers technical leadership design review",
+          "requirementId": "R7"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 2612
+  },
+  "usage": {
+    "inputTokens": 7508,
+    "outputTokens": 93,
+    "cachedTokens": 4053
+  }
+}

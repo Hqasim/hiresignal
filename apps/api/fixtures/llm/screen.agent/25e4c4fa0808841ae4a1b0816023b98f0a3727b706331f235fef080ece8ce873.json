@@ -1,0 +1,79 @@
+{
+  "kind": "generate",
+  "key": "25e4c4fa0808841ae4a1b0816023b98f0a3727b706331f235fef080ece8ce873",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:05:15.073Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R5",
+              "query": "AWS serverless Lambda SQS workers"
+            },
+            "id": "call_753384"
+          },
+          "thoughtSignature": "EmAKXgFpFH0TVqAaZROhehKIX6GwQi/VwTg4rM1RZ/IC4rQeXcp8MTQVVFQzKfV9+SPaiykK+KU/aZkCHDI+mosULy1JBG0TEUG8z/ngzY33ocRZB8xQ/zTf6I0Nbh415AE="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R6",
+              "query": "CircleCI Jest automated testing CI CD pipeline"
+            },
+            "id": "call_753385"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "coach mentor lead engineers technical leadership",
+              "requirementId": "R7"
+            },
+            "id": "call_753386"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_753384",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R5",
+          "query": "AWS serverless Lambda SQS workers"
+        }
+      },
+      {
+        "id": "call_753385",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R6",
+          "query": "CircleCI Jest automated testing CI CD pipeline"
+        }
+      },
+      {
+        "id": "call_753386",
+        "name": "search_resume",
+        "args": {
+          "query": "coach mentor lead engineers technical leadership",
+          "requirementId": "R7"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 2832
+  },
+  "usage": {
+    "inputTokens": 7321,
+    "outputTokens": 90,
+    "cachedTokens": 4052
+  }
+}

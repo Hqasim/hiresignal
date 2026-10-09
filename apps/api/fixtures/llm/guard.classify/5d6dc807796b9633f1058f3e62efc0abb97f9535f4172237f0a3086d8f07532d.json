@@ -3,25 +3,25 @@
   "key": "5d6dc807796b9633f1058f3e62efc0abb97f9535f4172237f0a3086d8f07532d",
   "task": "guard.classify",
   "model": "gemini-3.5-flash-lite",
-  "recordedAt": "2026-10-09T09:58:03.589Z",
+  "recordedAt": "2026-10-09T13:03:10.679Z",
   "response": {
     "content": {
       "parts": [
         {
-          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional profile for a senior software engineer detailing legitimate work experience, technical skills, and education without any instruction manipulation or adversarial payloads.\"\n}",
-          "thoughtSignature": "EmAKXgFpFH0TH3NjKrwaDitsaTivhCZ1FrtERKIPtKB+ZB4TH4gC2/KX4xb8VWwin3i6mtFMF2pxMgEs3XUjx9PXTGF3W48v1ZAFWV9Is0dpyHu9FmsrQB7Zq/QGvjLCX4M="
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional work history describing software engineering experience without any hidden instructions or attempts to manipulate an AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0T5PxgnCc5YciYFikTXcVIb7o9twDVUeYv62grE0tLKR1M0k+y7DeY+EnMJJ0sf74oZ/QtIqUjK1NSCOQkaallO6y/naxJlIDyLGkgEBHhhtSYKltdIrkCMI4="
         }
       ],
       "role": "model"
     },
-    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional profile for a senior software engineer detailing legitimate work experience, technical skills, and education without any instruction manipulation or adversarial payloads.\"\n}",
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional work history describing software engineering experience without any hidden instructions or attempts to manipulate an AI screener.\"\n}",
     "functionCalls": [],
     "finishReason": "stop",
-    "latencyMs": 1168
+    "latencyMs": 1341
   },
   "usage": {
     "inputTokens": 896,
-    "outputTokens": 60,
+    "outputTokens": 55,
     "cachedTokens": 0
   }
 }

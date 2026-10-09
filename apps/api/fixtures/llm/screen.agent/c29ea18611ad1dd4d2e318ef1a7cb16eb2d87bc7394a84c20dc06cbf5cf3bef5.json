@@ -1,0 +1,79 @@
+{
+  "kind": "generate",
+  "key": "c29ea18611ad1dd4d2e318ef1a7cb16eb2d87bc7394a84c20dc06cbf5cf3bef5",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:08:50.838Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R5",
+              "query": "AWS Lambda serverless deployment"
+            },
+            "id": "call_31531"
+          },
+          "thoughtSignature": "EmAKXgFpFH0TQdiDb6y+NmlZ/IUlwTDgu/Sa92kQIKk6xQ9MMyMTvNEr+rtpfj72F/X8lehrkw1Szh/QsaGXLglt+pMGmD/CDadsMj2S77gDFY5Xaky5lJqoxRObe6wPNUk="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R6",
+              "query": "GitHub Actions CI CD testing Vitest Playwright"
+            },
+            "id": "call_31532"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R7",
+              "query": "mentoring leadership lead coaching engineers"
+            },
+            "id": "call_31533"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_31531",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R5",
+          "query": "AWS Lambda serverless deployment"
+        }
+      },
+      {
+        "id": "call_31532",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R6",
+          "query": "GitHub Actions CI CD testing Vitest Playwright"
+        }
+      },
+      {
+        "id": "call_31533",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R7",
+          "query": "mentoring leadership lead coaching engineers"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 1647
+  },
+  "usage": {
+    "inputTokens": 7350,
+    "outputTokens": 89,
+    "cachedTokens": 4052
+  }
+}

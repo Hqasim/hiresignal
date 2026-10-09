@@ -3,25 +3,25 @@
   "key": "948acc7cbd7aa783767630935e8fd980c14a218b8f076f8e58cadbbc8372064d",
   "task": "guard.classify",
   "model": "gemini-3.5-flash-lite",
-  "recordedAt": "2026-10-09T09:57:33.405Z",
+  "recordedAt": "2026-10-09T13:02:40.456Z",
   "response": {
     "content": {
       "parts": [
         {
-          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 0.99,\n  \"rationale\": \"The resume contains a direct instruction addressed to AI screening systems attempting to manipulate the evaluation by claiming pre-verification and demanding strong ratings.\"\n}",
-          "thoughtSignature": "EmAKXgFpFH0TEADp64fvu2F2S34F1LD/VaYufaPhVQZ0DZJkG+IA/AIL5F1/tc+Jeeqitv+SAteSelXTJjJqBDHBUXUiSWYimsHRINB3wZBljm5SgEICCVBDMVTef6svAnA="
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume contains a direct instruction targeting the AI screening system to override standard evaluation procedures and mark all requirements as strong.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TK6jfMzYikMrEtg7VwyWX3xuejBkdxn4arxUjlFEWEPdPYTBQZoY1g3oExVjV20g07QXCprPxJsKPBUD3loD26FhyvAfDImLeQpI8L5xY62kb6tN4ZxuMGcw="
         }
       ],
       "role": "model"
     },
-    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 0.99,\n  \"rationale\": \"The resume contains a direct instruction addressed to AI screening systems attempting to manipulate the evaluation by claiming pre-verification and demanding strong ratings.\"\n}",
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume contains a direct instruction targeting the AI screening system to override standard evaluation procedures and mark all requirements as strong.\"\n}",
     "functionCalls": [],
     "finishReason": "stop",
-    "latencyMs": 980
+    "latencyMs": 1117
   },
   "usage": {
     "inputTokens": 603,
-    "outputTokens": 57,
+    "outputTokens": 53,
     "cachedTokens": 0
   }
 }

@@ -3,25 +3,25 @@
   "key": "5d117f9c492a7b980da345c903edbb3e55d678b8c88031449c6abf706311a756",
   "task": "guard.classify",
   "model": "gemini-3.5-flash-lite",
-  "recordedAt": "2026-10-09T09:57:39.634Z",
+  "recordedAt": "2026-10-09T13:02:46.353Z",
   "response": {
     "content": {
       "parts": [
         {
-          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard, straightforward professional history and skill set with no attempts to manipulate an automated screener.\"\n}",
-          "thoughtSignature": "EmAKXgFpFH0TJb9z1A7bCeV3bsXeGmNoAubn9tjzTTQj3Ttv9ac7F1FBTe/U7zdpg3ePcG9HdqBFWimaA/mDfjLTdfb6yvrs8D8jDige3DQ/KjB37pohEr5gRQMgn29mOu8="
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume contains standard professional history, skills, and education without any attempts to manipulate or instruct the AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TwEwEbiVKKHebMwMhDQVTljQu9vqQvfOXzixKDEX/RDswW1tULk6Y0LGq2FeOwk6cM4L6yIbjTKh6fQhKG2nk7rLqcxC72GUv5VYV/JhzuSZ0xBpCzgelGWk="
         }
       ],
       "role": "model"
     },
-    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard, straightforward professional history and skill set with no attempts to manipulate an automated screener.\"\n}",
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume contains standard professional history, skills, and education without any attempts to manipulate or instruct the AI screener.\"\n}",
     "functionCalls": [],
     "finishReason": "stop",
-    "latencyMs": 1221
+    "latencyMs": 1015
   },
   "usage": {
     "inputTokens": 607,
-    "outputTokens": 52,
+    "outputTokens": 53,
     "cachedTokens": 0
   }
 }

@@ -1,23 +1,30 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { SeedJobResult } from '../../src/application/ingest/seed-job';
+import type { PoolScreening } from '../../src/application/screening/screen-pool';
 import type { Candidate } from '../../src/domain/candidates/candidate';
+import { parseChunkRef } from '../../src/domain/candidates/chunk-ref';
+import type { Scorecard } from '../../src/domain/scoring/scorecard';
 import { createPgCandidateRepository } from '../../src/infrastructure/postgres/pg-candidate-repository';
+import { createPgScorecardRepository } from '../../src/infrastructure/postgres/pg-scorecard-repository';
 import { createSeeder, loadSeedDataset, type Seeder } from '../../src/main/seed-wiring';
 import { FakeClock } from '../fakes/fake-clock';
 import { RecordingLogger } from '../fakes/recording-logger';
 import { modelsFromEnvExample } from '../helpers/env-example-models';
 import { createTestDatabase, type TestDatabase } from '../helpers/test-database';
 
-// SPEC §20 Phase 4: seeding in replay mode, offline, produces the guard outcomes in SPEC §12.
-// It replays the fixtures `npm run seed:record` committed, through the same wiring as the CLI.
+// SPEC §20 Phases 4 and 5: seeding in replay mode, offline, produces the guard outcomes in SPEC §12
+// and a verified scorecard for every candidate that isn't quarantined. It replays the fixtures
+// `npm run seed:record` committed, through the same wiring as the CLI.
 
 let db: TestDatabase;
 let seeder: Seeder;
 let first: SeedJobResult;
+let screenings: PoolScreening[];
 const byAlias = new Map<string, Candidate>();
+const scorecardsByAlias = new Map<string, Scorecard>();
 
-async function countRows(table: 'llm_calls' | 'resume_chunks'): Promise<number> {
+async function countRows(table: 'llm_calls' | 'resume_chunks' | 'scorecards'): Promise<number> {
   const result = await db.pool.query<{ n: number }>(`select count(*)::int as n from ${table}`);
   return result.rows[0]?.n ?? 0;
 }
@@ -42,6 +49,14 @@ beforeAll(async () => {
       byAlias.set(candidate.alias, candidate);
     }
   }
+  screenings = await seeder.screen(first.outcomes);
+  const scorecards = createPgScorecardRepository(db.pool);
+  for (const [alias, stored] of byAlias) {
+    const scorecard = await scorecards.latestFor(stored.id);
+    if (scorecard !== null) {
+      scorecardsByAlias.set(alias, scorecard);
+    }
+  }
 });
 
 afterAll(async () => {
@@ -55,6 +70,135 @@ function candidate(alias: string): Candidate {
   }
   return found;
 }
+
+function scoreOf(alias: string): number {
+  const scorecard = scorecardsByAlias.get(alias);
+  if (scorecard === undefined) {
+    throw new Error(`${alias} has no scorecard`);
+  }
+  return scorecard.score;
+}
+
+// Runs before the ingestion block below, whose last test resets the job and deletes scorecards.
+describe('npm run seed precomputes scorecards (replay)', () => {
+  it('stores one scorecard for each of the eight candidates that are not quarantined', () => {
+    expect([...scorecardsByAlias.keys()].sort()).toEqual([
+      'C01',
+      'C02',
+      'C03',
+      'C04',
+      'C05',
+      'C08',
+      'C09',
+      'C10',
+    ]);
+    expect(screenings.filter((s) => s.status === 'screened')).toHaveLength(8);
+  });
+
+  it('never screens the quarantined C06 and C07', () => {
+    expect(scorecardsByAlias.has('C06')).toBe(false);
+    expect(scorecardsByAlias.has('C07')).toBe(false);
+    expect(screenings.filter((s) => s.status === 'quarantined').map((s) => s.alias)).toEqual([
+      'C06',
+      'C07',
+    ]);
+  });
+
+  it("verifies 100% of citations: each quote is the candidate's resume text at its span, inside the cited chunk", async () => {
+    let citations = 0;
+    for (const [alias, scorecard] of scorecardsByAlias) {
+      const resume = candidate(alias).redactedResume;
+      for (const requirement of scorecard.result.requirements) {
+        for (const citation of requirement.citations) {
+          citations += 1;
+          const ref = parseChunkRef(citation.ref);
+          expect(ref?.alias).toBe(alias);
+          expect(resume.slice(citation.span.start, citation.span.end)).toBe(citation.quote);
+          const chunk = await db.pool.query<{ start_offset: number; end_offset: number }>(
+            `select c.start_offset, c.end_offset from resume_chunks c
+             join candidates k on k.id = c.candidate_id
+             where k.alias = $1 and c.ordinal = $2`,
+            [alias, ref?.ordinal],
+          );
+          const [row] = chunk.rows;
+          expect(row).toBeDefined();
+          expect(citation.span.start).toBeGreaterThanOrEqual(row?.start_offset ?? Infinity);
+          expect(citation.span.end).toBeLessThanOrEqual(row?.end_offset ?? -1);
+        }
+      }
+    }
+    expect(citations).toBe(73);
+  });
+
+  it('backs every strong or partial rating with at least one citation', () => {
+    for (const scorecard of scorecardsByAlias.values()) {
+      for (const requirement of scorecard.result.requirements) {
+        if (requirement.rating === 'strong' || requirement.rating === 'partial') {
+          expect(requirement.citations.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it('ranks C01 and C02 at the top, and the quarantined candidates last', async () => {
+    const ranked = await createPgCandidateRepository(db.pool).listRanked(first.jobId, {
+      limit: 10,
+    });
+
+    expect(ranked.slice(0, 2).map((row) => row.alias)).toEqual(['C01', 'C02']);
+    expect(ranked.slice(-2).map((row) => row.alias)).toEqual(['C06', 'C07']);
+  });
+
+  it('penalizes C03 for claims without evidence: below C01, C02 and C05, with nothing rated strong', () => {
+    const c03 = scorecardsByAlias.get('C03');
+
+    expect(scoreOf('C03')).toBeLessThan(Math.min(scoreOf('C01'), scoreOf('C02'), scoreOf('C05')));
+    const weak = c03?.result.requirements.filter(
+      (r) => r.rating === 'partial' || r.rating === 'unclear',
+    );
+    expect(weak?.length).toBeGreaterThanOrEqual(2);
+    expect(c03?.result.requirements.some((r) => r.rating === 'strong')).toBe(false);
+  });
+
+  it('stores the prompt version, both models, every requirement and a trace for each scorecard', () => {
+    for (const scorecard of scorecardsByAlias.values()) {
+      expect(scorecard.promptVersion).toBe('screening@1');
+      expect(scorecard.models).toEqual({
+        agent: 'gemini-3.5-flash-lite',
+        synthesis: 'gemini-3.5-flash',
+      });
+      expect(scorecard.trace.length).toBeGreaterThan(0);
+      expect(scorecard.result.requirements.map((r) => r.requirementId)).toEqual([
+        'R1',
+        'R2',
+        'R3',
+        'R4',
+        'R5',
+        'R6',
+        'R7',
+      ]);
+    }
+  });
+
+  it('replays every screening call, so no model is called live', async () => {
+    const calls = await db.pool.query<{ source: string }>(
+      "select source from llm_calls where task like 'screen.%' or task = 'embed.query'",
+    );
+
+    expect(calls.rows.length).toBeGreaterThan(0);
+    expect(calls.rows.every((row) => row.source === 'replay')).toBe(true);
+  });
+
+  it('screens nobody again on a second run, and calls no model', async () => {
+    const calls = await countRows('llm_calls');
+
+    const again = await seeder.screen(first.outcomes);
+
+    expect(again.filter((s) => s.status === 'screened')).toEqual([]);
+    expect(await countRows('llm_calls')).toBe(calls);
+    expect(await countRows('scorecards')).toBe(8);
+  });
+});
 
 describe('npm run seed (replay)', () => {
   it('stores all ten candidates', () => {

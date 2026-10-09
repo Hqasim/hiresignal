@@ -1,0 +1,97 @@
+{
+  "kind": "generate",
+  "key": "26c86f8788a2a06bd4feb66740caa2dd9b7beab4615fd9c1d0af891f21fabe4a",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:07:10.817Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R1",
+              "query": "TypeScript and React production web applications 5 years"
+            },
+            "id": "call_62347"
+          },
+          "thoughtSignature": "EmAKXgFpFH0Ts50Vx40uNLgECrdq9y+l+78hpBaDbBLRUWmJxIcN9TE/dXXjXS0nQWLzVqFWe8CfoUEjnO1GtnOQw2SkknnfeIQ1ptvGv6VW3ogukrp5iNXi5lxL81oCZx4="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R2",
+              "query": "PostgreSQL relational database backend API"
+            },
+            "id": "call_62348"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R3",
+              "query": "LLM-powered features prompting tool calling structured outputs"
+            },
+            "id": "call_62349"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "retrieval-augmented generation embeddings vector store pgvector",
+              "requirementId": "R4"
+            },
+            "id": "call_62350"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_62347",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R1",
+          "query": "TypeScript and React production web applications 5 years"
+        }
+      },
+      {
+        "id": "call_62348",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R2",
+          "query": "PostgreSQL relational database backend API"
+        }
+      },
+      {
+        "id": "call_62349",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R3",
+          "query": "LLM-powered features prompting tool calling structured outputs"
+        }
+      },
+      {
+        "id": "call_62350",
+        "name": "search_resume",
+        "args": {
+          "query": "retrieval-augmented generation embeddings vector store pgvector",
+          "requirementId": "R4"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 1091
+  },
+  "usage": {
+    "inputTokens": 5340,
+    "outputTokens": 128,
+    "cachedTokens": 2031
+  }
+}

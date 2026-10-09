@@ -1,0 +1,95 @@
+{
+  "kind": "generate",
+  "key": "8642c35bd4ac9692a167147e4c31d0101dff34ac11fdc147b64cf8c7efa7696f",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:10:11.549Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R5",
+              "query": "AWS serverless Lambda serverless architecture"
+            },
+            "id": "call_541497"
+          },
+          "thoughtSignature": "EmAKXgFpFH0T5I+zlaEceNND4GTBj07AYvixTEWkyYpYpsEsZFz/4lEdbYAM1oJC9VSO1GdRN54rLgQbzPRXE7UjkCWNYYG7TY5Pz1zbgPFuy6Jjo21aTPTWc89z8ktMAOg="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "CI/CD automated testing GitHub Actions deployment",
+              "requirementId": "R6"
+            },
+            "id": "call_541498"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "mentoring coaching technical leadership leading engineers",
+              "requirementId": "R7"
+            },
+            "id": "call_541499"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "read_section",
+            "args": {
+              "section": "experience"
+            },
+            "id": "call_541500"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_541497",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R5",
+          "query": "AWS serverless Lambda serverless architecture"
+        }
+      },
+      {
+        "id": "call_541498",
+        "name": "search_resume",
+        "args": {
+          "query": "CI/CD automated testing GitHub Actions deployment",
+          "requirementId": "R6"
+        }
+      },
+      {
+        "id": "call_541499",
+        "name": "search_resume",
+        "args": {
+          "query": "mentoring coaching technical leadership leading engineers",
+          "requirementId": "R7"
+        }
+      },
+      {
+        "id": "call_541500",
+        "name": "read_section",
+        "args": {
+          "section": "experience"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 2137
+  },
+  "usage": {
+    "inputTokens": 6650,
+    "outputTokens": 107,
+    "cachedTokens": 4048
+  }
+}

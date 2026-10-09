@@ -3,25 +3,25 @@
   "key": "71826aff9a40acb3f01ca7f64bb047f100ab5d51d5ece35542a334309426cfb0",
   "task": "guard.classify",
   "model": "gemini-3.5-flash-lite",
-  "recordedAt": "2026-10-09T09:57:09.714Z",
+  "recordedAt": "2026-10-09T13:02:16.304Z",
   "response": {
     "content": {
       "parts": [
         {
-          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional description of a front-end engineer's experience, skills, and projects without any attempt to manipulate an AI screener.\"\n}",
-          "thoughtSignature": "EmAKXgFpFH0Th5gHf/4mImv5I5uxk1svR5W9xTYi8RKlA4rSC2CVlb0dlHHthUUZelW2GSR2MIOxyHyFeErEXL+kBoSWpfnCTZWfJjyELZJJ7nWWnSMIeXJ3rytst1I8JQI="
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional profile for a front-end engineer without any attempts to manipulate the AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TP5TO9VDxUgY1XX4OQYnaUcX55O2q7sevi/AnPlVQBBJ5oBFxjw2WETy8pZrQxhaUEobB1pZ2VWDyGO4kHSjhS458ivU1ib0liH7a12wTnmaSDtmlamvJh0w="
         }
       ],
       "role": "model"
     },
-    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional description of a front-end engineer's experience, skills, and projects without any attempt to manipulate an AI screener.\"\n}",
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard professional profile for a front-end engineer without any attempts to manipulate the AI screener.\"\n}",
     "functionCalls": [],
     "finishReason": "stop",
-    "latencyMs": 1299
+    "latencyMs": 959
   },
   "usage": {
     "inputTokens": 750,
-    "outputTokens": 61,
+    "outputTokens": 53,
     "cachedTokens": 0
   }
 }

@@ -1,0 +1,95 @@
+{
+  "kind": "generate",
+  "key": "b0df2f5599910bc78388bf1014fa5d190a3f0c09b3dc9d5e2eb42e016811f288",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:06:27.806Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "AWS Lambda serverless infrastructure deployment",
+              "requirementId": "R5"
+            },
+            "id": "call_73097"
+          },
+          "thoughtSignature": "EmAKXgFpFH0Tm8HQlwQpKUChJG68ECrkswNMxfBFr7Ei9t2Umoch2u+SqBa9lLLCkU9czKcNuu9HaEZMeNsawyYZiPZ4nU2bRHOivGRy0IAj+LD3XIKKfSRwrAKDHN5NSeQ="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "CI/CD automated testing TDD deployment pipeline",
+              "requirementId": "R6"
+            },
+            "id": "call_73098"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "mentoring leadership coaching engineers team",
+              "requirementId": "R7"
+            },
+            "id": "call_73099"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "read_section",
+            "args": {
+              "section": "education"
+            },
+            "id": "call_73100"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_73097",
+        "name": "search_resume",
+        "args": {
+          "query": "AWS Lambda serverless infrastructure deployment",
+          "requirementId": "R5"
+        }
+      },
+      {
+        "id": "call_73098",
+        "name": "search_resume",
+        "args": {
+          "query": "CI/CD automated testing TDD deployment pipeline",
+          "requirementId": "R6"
+        }
+      },
+      {
+        "id": "call_73099",
+        "name": "search_resume",
+        "args": {
+          "query": "mentoring leadership coaching engineers team",
+          "requirementId": "R7"
+        }
+      },
+      {
+        "id": "call_73100",
+        "name": "read_section",
+        "args": {
+          "section": "education"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 2781
+  },
+  "usage": {
+    "inputTokens": 7095,
+    "outputTokens": 106,
+    "cachedTokens": 4051
+  }
+}

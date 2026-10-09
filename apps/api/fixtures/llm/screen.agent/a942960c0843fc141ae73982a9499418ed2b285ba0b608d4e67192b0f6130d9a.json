@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "a942960c0843fc141ae73982a9499418ed2b285ba0b608d4e67192b0f6130d9a",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:06:50.458Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "DONE",
+          "thoughtSignature": "EmAKXgFpFH0TGmy2EzTgZ0764/pdmt6ak6BQhrWNXpvgHESw6RkytL7aGHmVVLs3qNu1WETcIoySm+aoN9rpMxj46XbgOFWai2dLCDJ1oDUFVU0zFWJghJep6D6dHn1FK08="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "DONE",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1419
+  },
+  "usage": {
+    "inputTokens": 8540,
+    "outputTokens": 1,
+    "cachedTokens": 6064
+  }
+}

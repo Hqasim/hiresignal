@@ -1,0 +1,79 @@
+{
+  "kind": "generate",
+  "key": "94a8c2e0fcc96f08d3abe764f2a4b5e5b79f9280f218c463bbb2466e8ec54b26",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:12:35.356Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R5",
+              "query": "AWS serverless Lambda Step Functions"
+            },
+            "id": "call_48572"
+          },
+          "thoughtSignature": "EmAKXgFpFH0Thfa1QHQd0jl6sp0DNRtrz+1XN1FdZRM7sEbttQ6aF0v0au9q9zdW9bPg2J1wmUbNThc7UeNeFBURjoBdkW2ZB+hXEKgfY0WWiVK4YWFdnrhoS1XlolSoMto="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "CI CD automated testing GitHub Actions Playwright Vitest",
+              "requirementId": "R6"
+            },
+            "id": "call_48573"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R7",
+              "query": "mentoring technical leadership led a team of four interns"
+            },
+            "id": "call_48574"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_48572",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R5",
+          "query": "AWS serverless Lambda Step Functions"
+        }
+      },
+      {
+        "id": "call_48573",
+        "name": "search_resume",
+        "args": {
+          "query": "CI CD automated testing GitHub Actions Playwright Vitest",
+          "requirementId": "R6"
+        }
+      },
+      {
+        "id": "call_48574",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R7",
+          "query": "mentoring technical leadership led a team of four interns"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 1570
+  },
+  "usage": {
+    "inputTokens": 7543,
+    "outputTokens": 95,
+    "cachedTokens": 4054
+  }
+}

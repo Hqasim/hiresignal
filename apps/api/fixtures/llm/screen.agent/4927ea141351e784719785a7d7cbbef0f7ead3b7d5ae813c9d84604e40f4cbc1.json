@@ -1,0 +1,97 @@
+{
+  "kind": "generate",
+  "key": "4927ea141351e784719785a7d7cbbef0f7ead3b7d5ae813c9d84604e40f4cbc1",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:03:22.796Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R1",
+              "query": "TypeScript React production web applications years"
+            },
+            "id": "call_69958"
+          },
+          "thoughtSignature": "EmAKXgFpFH0Tx27vh7OKbpmRki+yw9tC18FSH5PWZxYF2V/RRtNSGeOqvSn8ueleQtC0tS2yXdhx+Rc5iz8rO9GZ1v7pwxEe1Oj2+cW6MN+F8tRQCk/SJxp7buOeeZmcUfQ="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R2",
+              "query": "PostgreSQL backend APIs database schema operations"
+            },
+            "id": "call_69959"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "LLM features prompt calling structured outputs production",
+              "requirementId": "R3"
+            },
+            "id": "call_69960"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "retrieval augmented generation embeddings vector store pgvector",
+              "requirementId": "R4"
+            },
+            "id": "call_69961"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_69958",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R1",
+          "query": "TypeScript React production web applications years"
+        }
+      },
+      {
+        "id": "call_69959",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R2",
+          "query": "PostgreSQL backend APIs database schema operations"
+        }
+      },
+      {
+        "id": "call_69960",
+        "name": "search_resume",
+        "args": {
+          "query": "LLM features prompt calling structured outputs production",
+          "requirementId": "R3"
+        }
+      },
+      {
+        "id": "call_69961",
+        "name": "search_resume",
+        "args": {
+          "query": "retrieval augmented generation embeddings vector store pgvector",
+          "requirementId": "R4"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 1450
+  },
+  "usage": {
+    "inputTokens": 5371,
+    "outputTokens": 123,
+    "cachedTokens": 0
+  }
+}

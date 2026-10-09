@@ -1,0 +1,79 @@
+{
+  "kind": "generate",
+  "key": "9464734777108d3b1fe3b9c3b968c43c25cd8e5c4a9fd735290574fa1eb80f29",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:11:19.274Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R5",
+              "query": "AWS Lambda Step Functions serverless"
+            },
+            "id": "call_66829"
+          },
+          "thoughtSignature": "EmAKXgFpFH0TFlTLgBgNDUWHqkFdB+qt44kQqpvbU4I9aIImct4V69sbt5T9ZYvivYb2fWwDzWAUZIvpTA4T50BFCZT06mH5SnVkRsd2Wh3321tnVrHGblo1w3aE08KrNBA="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "CI/CD automated testing GitHub Actions Jenkins Testcontainers",
+              "requirementId": "R6"
+            },
+            "id": "call_66830"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "query": "mentor backend engineers technical leadership",
+              "requirementId": "R7"
+            },
+            "id": "call_66831"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_66829",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R5",
+          "query": "AWS Lambda Step Functions serverless"
+        }
+      },
+      {
+        "id": "call_66830",
+        "name": "search_resume",
+        "args": {
+          "query": "CI/CD automated testing GitHub Actions Jenkins Testcontainers",
+          "requirementId": "R6"
+        }
+      },
+      {
+        "id": "call_66831",
+        "name": "search_resume",
+        "args": {
+          "query": "mentor backend engineers technical leadership",
+          "requirementId": "R7"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 1431
+  },
+  "usage": {
+    "inputTokens": 7063,
+    "outputTokens": 90,
+    "cachedTokens": 4051
+  }
+}

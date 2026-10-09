@@ -1,0 +1,97 @@
+{
+  "kind": "generate",
+  "key": "8fd0d56e94a3d6de3f4883bd1ffc328a42dafadbf3a0843660935bfbccf266e9",
+  "task": "screen.agent",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T13:10:48.977Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R1",
+              "query": "TypeScript and React production web applications"
+            },
+            "id": "call_37196"
+          },
+          "thoughtSignature": "EmAKXgFpFH0TaPecA8Lzyfnlnq4L9URvVwt0YMj8qvJHlQVcWgPzqENOYvEtoL2OZ+HuHjwXSPCUEs50MY0rnqar1od6Tkk0PbbmsmjyOhPv1SWC+YeDAo22hKn1uJOKuRw="
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R2",
+              "query": "PostgreSQL relational database backend APIs"
+            },
+            "id": "call_37197"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R3",
+              "query": "LLM features prompt tool calling structured outputs"
+            },
+            "id": "call_37198"
+          }
+        },
+        {
+          "functionCall": {
+            "name": "search_resume",
+            "args": {
+              "requirementId": "R4",
+              "query": "retrieval-augmented generation embeddings vector store"
+            },
+            "id": "call_37199"
+          }
+        }
+      ],
+      "role": "model"
+    },
+    "text": "",
+    "functionCalls": [
+      {
+        "id": "call_37196",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R1",
+          "query": "TypeScript and React production web applications"
+        }
+      },
+      {
+        "id": "call_37197",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R2",
+          "query": "PostgreSQL relational database backend APIs"
+        }
+      },
+      {
+        "id": "call_37198",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R3",
+          "query": "LLM features prompt tool calling structured outputs"
+        }
+      },
+      {
+        "id": "call_37199",
+        "name": "search_resume",
+        "args": {
+          "requirementId": "R4",
+          "query": "retrieval-augmented generation embeddings vector store"
+        }
+      }
+    ],
+    "finishReason": "stop",
+    "latencyMs": 1152
+  },
+  "usage": {
+    "inputTokens": 5338,
+    "outputTokens": 121,
+    "cachedTokens": 2031
+  }
+}
