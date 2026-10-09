@@ -55,6 +55,13 @@ export const ASK_ESCALATION_CANDIDATES = 3;
 export const CLASSIFIER_QUARANTINE_CONFIDENCE = 0.7;
 
 /**
+ * Output budget for one `guard.classify` call. The reply is an enum, a number and at most 300
+ * characters of rationale (under 100 tokens), but Gemini 3 thinking tokens count toward the limit
+ * (288 for a 20-token reply in the Phase 2 smoke check), so it leaves room for both.
+ */
+export const CLASSIFIER_MAX_OUTPUT_TOKENS = 1024;
+
+/**
  * Per-attempt timeout. Two attempts plus a fallback attempt and backoff still fit inside the
  * Lambda's 60 s limit only when the provider fails fast, which 429s and 503s do; a timeout is the
  * slow path, so it is kept well under half of 60 s.
