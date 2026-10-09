@@ -56,6 +56,16 @@ export interface CandidateRepository {
   /** Returns the candidate, or `null` if there is none. */
   findById(id: CandidateId): Promise<Candidate | null>;
   /**
+   * Returns the candidate already ingested from this source file for the job, or `null`. Ingestion
+   * checks it first, so re-seeding makes no model calls for resumes it has stored.
+   */
+  findBySourceHash(jobId: JobId, sourceHash: string): Promise<Candidate | null>;
+  /**
+   * Deletes every candidate of the job, with their chunks and scorecards (`seed --reset`). Returns
+   * how many were deleted. Needs the owner role: the runtime role `hiresignal_app` can't delete.
+   */
+  deleteByJob(jobId: JobId): Promise<number>;
+  /**
    * Returns up to `limit` candidates of the job: quarantined last, then by latest score (highest
    * first, unscored after scored), then by alias.
    */

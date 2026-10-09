@@ -50,6 +50,22 @@ export function createPgCandidateRepository(pool: DbPool): CandidateRepository {
       return row === undefined ? null : toCandidate(row);
     },
 
+    async findBySourceHash(jobId: JobId, sourceHash: string): Promise<Candidate | null> {
+      const [row] = await queryRows(
+        pool,
+        `select ${CANDIDATE_COLUMNS} from candidates k where k.job_id = $1 and k.source_hash = $2`,
+        [jobId, sourceHash],
+        CandidateRowSchema,
+      );
+      return row === undefined ? null : toCandidate(row);
+    },
+
+    async deleteByJob(jobId: JobId): Promise<number> {
+      // Chunks and scorecards go with their candidates (on delete cascade, SPEC §8).
+      const result = await pool.query('delete from candidates where job_id = $1', [jobId]);
+      return result.rowCount ?? 0;
+    },
+
     async listRanked(jobId: JobId, options: { limit: number }): Promise<RankedCandidate[]> {
       // The lateral join picks each candidate's newest scorecard; re-screening adds rows.
       const rows = await queryRows(

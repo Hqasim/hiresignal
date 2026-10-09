@@ -164,6 +164,42 @@ describe('PgCandidateRepository', () => {
 
     expect(again?.shortlistedAt).toEqual(first);
   });
+
+  it('finds a candidate by the source hash it was ingested from, only within its job', async () => {
+    const ingested = aCandidate(job.id, 'C06', [{ section: 's', text: 'Find me', theta: 0 }]);
+    const { id } = await candidates.insertIngested(ingested);
+    const otherJob = await jobs.upsert(aNewJob({ slug: JobSlugSchema.parse('other-hash-job') }));
+
+    expect((await candidates.findBySourceHash(job.id, ingested.sourceHash))?.id).toBe(id);
+    expect(await candidates.findBySourceHash(otherJob.id, ingested.sourceHash)).toBeNull();
+    expect(await candidates.findBySourceHash(job.id, 'no-such-hash')).toBeNull();
+  });
+});
+
+describe('PgCandidateRepository.deleteByJob', () => {
+  it('deletes the job’s candidates with their chunks and leaves other jobs alone', async () => {
+    const doomed = await jobs.upsert(aNewJob({ slug: JobSlugSchema.parse('reset-job') }));
+    const kept = await jobs.upsert(aNewJob({ slug: JobSlugSchema.parse('kept-job') }));
+    await candidates.insertIngested(
+      aCandidate(doomed.id, 'C01', [{ section: 's', text: 'Gone', theta: 0 }]),
+    );
+    await candidates.insertIngested(aQuarantinedCandidate(doomed.id, 'C02'));
+    const survivor = await candidates.insertIngested(
+      aCandidate(kept.id, 'C01', [{ section: 's', text: 'Stays', theta: 0 }]),
+    );
+
+    const deleted = await candidates.deleteByJob(doomed.id);
+
+    expect(deleted).toBe(2);
+    expect(await candidates.listRanked(doomed.id, { limit: 10 })).toEqual([]);
+    expect(await candidates.findById(survivor.id)).not.toBeNull();
+    const orphans = await db.pool.query(
+      `select count(*)::int as n from resume_chunks c
+       where not exists (select 1 from candidates k where k.id = c.candidate_id)`,
+    );
+    expect(orphans.rows).toEqual([{ n: 0 }]);
+    expect(await candidates.deleteByJob(doomed.id)).toBe(0);
+  });
 });
 
 describe('PgCandidateRepository.listRanked', () => {

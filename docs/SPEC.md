@@ -289,7 +289,7 @@ export interface Embedder {
   embedQuery(text: string): Promise<UnitVector>;
 }
 export interface JobRepository { /* upsert, findBySlug, list */ }
-export interface CandidateRepository { /* insertIngested (candidate + chunks, one transaction), findById, listRanked, shortlist */ }
+export interface CandidateRepository { /* insertIngested (candidate + chunks, one transaction), findById, findBySourceHash, listRanked, shortlist, deleteByJob (seed --reset, owner role only) */ }
 export interface ChunkRepository { /* hybridSearch, getSection, getByRefs */ }
 export interface ScorecardRepository { /* save, latestFor */ }
 export interface LlmCallRepository { /* record, countLiveSince; summary and recent arrive in Phase 7 */ }
