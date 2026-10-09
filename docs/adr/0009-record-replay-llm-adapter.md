@@ -52,6 +52,18 @@ HireSignal's core features are model calls: the injection classifier, the screen
   - Embedding fixtures are large: about 15 kB per vector. At the demo's size (about a hundred chunks), that's a couple of megabytes in git.
   - Replay can't test provider failures. Those are covered by the decorator unit tests with scripted fakes.
 
+## Update (2026-10-09, Phase 6): record only what's missing
+
+The first version of `record` called Gemini for every request and overwrote its fixture. That made every recording run re-roll every answer: adding ask fixtures would have re-recorded all 105 screening calls, and the Phase 5 ranking could have shifted with them. It also spent free-tier quota on prompts that hadn't changed.
+
+`record` now replays a request whose fixture already exists, and calls Gemini only for new requests ([`fixture-first.ts`](../../apps/api/src/infrastructure/llm/replay/fixture-first.ts), wired in [`llm-wiring.ts`](../../apps/api/src/main/llm-wiring.ts)):
+
+- **The split sits between retry and call logging.** Each side has its own call logging, so a replayed call is logged as `replay` and isn't throttled, and only real Gemini calls count toward the daily cap and the seed tally.
+- **To force a fresh recording,** delete that task's fixture folder first. The runbook already worked this way.
+- **`npm run llm:smoke` is unchanged.** It builds the provider clients directly, so it still calls live every time, which is its purpose.
+- **Checked offline:** `npm run seed:record` with a dummy key reported `Model calls: 105 (live 0, …)` and the Phase 5 ranking, with no fixture changed.
+- **The cost:** a stale fixture (one whose request changed) is no longer rewritten, so `git status` can't flag it as untouched. It is never read, and the runbook says to delete it.
+
 ## Alternatives considered
 
 - **HTTP-level recording (Polly.js, nock or MSW in record mode).** Rejected: it records transport details (headers, the API key's query parameter, SDK version strings), which makes keys brittle and risks committing secrets. It also ties fixtures to the SDK's wire format rather than our port.

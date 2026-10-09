@@ -188,7 +188,9 @@ Replay keys cover the model ID, the prompt and its version, the schema, the tool
 npm run llm:smoke      # the smoke fixtures (platform.smoke, embed.query)
 ```
 
-`npm run seed:record` re-records the seed fixtures: `guard.classify` and `embed.documents` from ingestion, and `screen.agent`, `screen.synthesize`, `screen.repair` and `embed.query` from screening. It always resets the job, so every resume is recorded, and it spaces live calls 6 s apart (`SEED_MIN_CALL_INTERVAL_MS`). Its fixture keys include the resume text, so editing a resume means re-recording. Clear the old seed fixtures first, so stale ones don't linger:
+`npm run seed:record` records the seed fixtures: `guard.classify` and `embed.documents` from ingestion, and `screen.agent`, `screen.synthesize`, `screen.repair` and `embed.query` from screening. It always resets the job, so every resume goes through the pipeline, and it spaces live calls 6 s apart (`SEED_MIN_CALL_INTERVAL_MS`).
+
+**Record mode records only what's missing** (since 2026-10-09, ADR 0009). A request whose fixture already exists replays it, logged as `replay` and not throttled. Only new requests reach Gemini. So a run with nothing new reports `live 0`, and an unchanged prompt keeps its committed answer instead of being re-rolled. To force a fresh recording, delete that task's fixture folder first. Fixture keys include the resume text, so editing a resume means re-recording:
 
 ```powershell
 Remove-Item -Recurse -Force apps/api/fixtures/llm/guard.classify, apps/api/fixtures/llm/embed.documents -ErrorAction SilentlyContinue
@@ -208,7 +210,7 @@ If its summary reports a fallback, the CLI exits with an error: that fixture was
 
 Then, for either command:
 
-1. Delete fixtures that nothing requests any more. Check with `git status`: re-recorded files are new, stale ones are untouched.
+1. Check `git status`. Fixtures in a cleared folder come back as new files. A fixture whose request changed stays behind as a stale file that nothing reads; delete it.
 2. Run `npm run verify`; replay tests must pass offline.
 3. Commit the fixtures in the same commit as the prompt or model change ([ADR 0009](adr/0009-record-replay-llm-adapter.md)).
 

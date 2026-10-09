@@ -626,6 +626,7 @@ Return cosine similarity alongside the fused rank for the floor check. Note in t
 - Fixtures: `apps/api/fixtures/llm/<task>/<hash>.json` → `{ kind, key, task, model, recordedAt, response, usage }`. They contain only redacted synthetic text, so they're safe to commit.
 - `replay` with a missing fixture throws `FixtureMissingError`: "No recorded response for <task>. Run `npm run seed:record` (needs GEMINI_API_KEY)."
 - Changing a prompt or model ID changes the keys. Re-record and commit the fixtures in the same commit as the prompt change.
+- `record` records only what's missing: a request whose fixture exists replays it (logged as `replay`), and only new requests call Gemini. To force a fresh recording, delete the task's fixtures first (ADR 0009).
 - Replay needs the same model IDs that were recorded. The defaults in `.env.example` and the `GEMINI_MODEL_*` values used by CI and `seed-demo` must match the committed fixtures.
 - Production is seeded in replay mode: zero Gemini calls, identical data to CI.
 

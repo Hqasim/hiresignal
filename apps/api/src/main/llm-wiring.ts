@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import type { Clock } from '../application/ports/clock';
 import type { Embedder } from '../application/ports/embedder';
-import type { LlmCallRepository } from '../application/ports/llm-call-repository';
+import type { LlmCallRepository, LlmCallSource } from '../application/ports/llm-call-repository';
 import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
 import type { RoutedLlmClient } from '../application/ports/routed-llm-client';
@@ -38,6 +38,10 @@ import {
 } from '../infrastructure/llm/decorators/with-throttle';
 import { createGeminiClients } from '../infrastructure/llm/gemini/create-gemini-clients';
 import { GEMINI_EMBEDDING_INPUT_FORMAT } from '../infrastructure/llm/gemini/gemini-embedder';
+import {
+  withEmbeddingFixtureFirst,
+  withFixtureFirst,
+} from '../infrastructure/llm/replay/fixture-first';
 import { createFsFixtureStore } from '../infrastructure/llm/replay/fixture-store';
 import { createRecordingEmbedder } from '../infrastructure/llm/replay/recording-embedder';
 import { createRecordingLlmClient } from '../infrastructure/llm/replay/recording-llm-client';
@@ -118,6 +122,11 @@ export function createProviderClients(settings: LlmSettings, deps: LlmWiringDeps
  * With a `throttle` (live and record seeding), it sits just above the provider clients, so every
  * attempt, including retries and fallbacks, is spaced out.
  *
+ * In `record` mode, a fixture-first split sits between retry and call logging: requests that
+ * already have a fixture replay it (logged as `replay`, never throttled), and only new ones reach
+ * Gemini and are recorded (ADR 0009). `npm run llm:smoke` doesn't use this stack, so it always
+ * calls live.
+ *
  * @example
  * const { llm, embedder } = createLlm(settings, { clock, logger, calls });
  */
@@ -125,17 +134,8 @@ export function createLlm(
   settings: LlmSettings,
   deps: LlmWiringDeps & { calls: LlmCallRepository; throttle?: Throttle },
 ): { llm: LlmClient; embedder: Embedder } {
-  const provider = throttled(createProviderClients(settings, deps), deps.throttle);
-  const logging = {
-    calls: deps.calls,
-    clock: deps.clock,
-    logger: deps.logger,
-    // Recording mode calls Gemini, so its calls count as live toward the daily cap.
-    source: settings.mode === 'replay' ? 'replay' : 'live',
-  } as const;
-
-  const logged = withCallLogging(provider.llm, logging);
-  const retried = withRetry(logged, {
+  const logged = loggedProviders(settings, deps);
+  const retried = withRetry(logged.llm, {
     maxRetries: LLM_MAX_RETRIES,
     baseDelayMs: LLM_RETRY_BASE_DELAY_MS,
     maxDelayMs: LLM_RETRY_MAX_DELAY_MS,
@@ -150,13 +150,43 @@ export function createLlm(
       escalationCandidates: ASK_ESCALATION_CANDIDATES,
     },
   });
+  return { llm, embedder: logged.embedder };
+}
 
-  const embedder = withEmbeddingCallLogging(provider.embedder, {
-    ...logging,
-    model: settings.embeddingModel,
-    inputFormat: GEMINI_EMBEDDING_INPUT_FORMAT,
-  });
-  return { llm, embedder };
+/**
+ * The call-logged provider clients for a mode. `record` mode splits each call between a replay
+ * chain and a recording chain, each logged with its true source, so the daily cap and the seed
+ * tally count only calls that reached Gemini.
+ */
+function loggedProviders(
+  settings: LlmSettings,
+  deps: LlmWiringDeps & { calls: LlmCallRepository; throttle?: Throttle },
+): ProviderClients {
+  const logged = (provider: ProviderClients, source: LlmCallSource): ProviderClients => {
+    const logging = { calls: deps.calls, clock: deps.clock, logger: deps.logger, source };
+    return {
+      llm: withCallLogging(provider.llm, logging),
+      embedder: withEmbeddingCallLogging(provider.embedder, {
+        ...logging,
+        model: settings.embeddingModel,
+        inputFormat: GEMINI_EMBEDDING_INPUT_FORMAT,
+      }),
+    };
+  };
+  const provider = throttled(createProviderClients(settings, deps), deps.throttle);
+  if (settings.mode !== 'record') {
+    return logged(provider, settings.mode === 'replay' ? 'replay' : 'live');
+  }
+  const store = createFsFixtureStore(FIXTURES_DIRECTORY);
+  const replay = logged(createProviderClients({ ...settings, mode: 'replay' }, deps), 'replay');
+  const record = logged(provider, 'live');
+  return {
+    llm: withFixtureFirst({ replay: replay.llm, record: record.llm }, store),
+    embedder: withEmbeddingFixtureFirst(
+      { replay: replay.embedder, record: record.embedder },
+      { store, model: settings.embeddingModel, inputFormat: GEMINI_EMBEDDING_INPUT_FORMAT },
+    ),
+  };
 }
 
 function throttled(provider: ProviderClients, throttle: Throttle | undefined): ProviderClients {
