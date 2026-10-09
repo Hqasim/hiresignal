@@ -33,7 +33,14 @@ import { toVectorLiteral } from './vector-literal';
  *   unit vectors, so ordering by it ascending is ordering by similarity descending. HNSW serves
  *   it when the planner thinks that's cheaper than a scan.
  * - `kw`: full-text matches ranked by `ts_rank_cd` (cover density) over the generated
- *   `content_tsv`, which includes the context header.
+ *   `content_tsv`, which includes the context header. `$8` picks how the query text matches:
+ *   - `all`: `websearch_to_tsquery`, which ANDs every word. Right for the screening agent's short
+ *     phrases ("pgvector hybrid search").
+ *   - `any`: ORs the query's lexemes (stemmed, stop words dropped by `to_tsvector`), so a natural
+ *     question still matches: ANDed, "Which candidates know Go?" needs the stem `candid`, which no
+ *     resume contains. Cover density still ranks a chunk with more of the words higher. Each
+ *     lexeme is quoted with `quote_literal`, so query text is never parsed as tsquery syntax.
+ *   - `off`: no keyword arm, so the search is vector-only (the retrieval ablation).
  *
  * Reciprocal rank fusion then scores each chunk `Σ 1 / (k + rank)` over the arms it appears in.
  * It uses ranks, not raw scores, so a cosine and a text rank need no calibration against each
@@ -45,11 +52,17 @@ import { toVectorLiteral } from './vector-literal';
  * hits, so the ask use case can apply its similarity floor.
  *
  * Parameters: $1 query vector, $2 query text, $3 job, $4 candidate or null, $5 pool per arm,
- * $6 RRF k, $7 limit.
+ * $6 RRF k, $7 limit, $8 keyword match.
  */
 const HYBRID_SEARCH_SQL = `
 with
-q   as (select $1::vector as v, websearch_to_tsquery('english', $2) as tsq),
+q   as (select $1::vector as v,
+               case $8::text
+                 when 'all' then websearch_to_tsquery('english', $2)
+                 when 'any' then (select string_agg(quote_literal(lexeme), ' | ')::tsquery
+                                  from unnest(tsvector_to_array(to_tsvector('english', $2))) lexeme)
+                 else null
+               end as tsq),
 vec as (select c.id, row_number() over (order by c.embedding <=> q.v) as r
         from resume_chunks c join candidates k on k.id = c.candidate_id, q
         where k.job_id = $3 and k.guard_status <> 'quarantined'
@@ -94,6 +107,7 @@ export function createPgChunkRepository(db: Queryable): ChunkRepository {
           query.poolPerArm,
           query.rrfK,
           query.limit,
+          query.keywordMatch,
         ],
         ScoredChunkRowSchema,
       );

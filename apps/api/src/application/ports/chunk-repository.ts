@@ -32,6 +32,12 @@ export interface ScoredChunk extends RetrievedChunk {
   rrfScore: number;
 }
 
+/**
+ * How the keyword arm matches the query text (ADR 0008): `all` words (the agent's short phrases),
+ * `any` word (natural-language questions), or `off` for vector-only search (the ablation).
+ */
+export type KeywordMatch = 'all' | 'any' | 'off';
+
 /** Parameters of {@link ChunkRepository.hybridSearch}. Tunables come from `config/ai.ts`. */
 export interface HybridSearchQuery {
   jobId: JobId;
@@ -39,8 +45,10 @@ export interface HybridSearchQuery {
   candidateId: CandidateId | null;
   /** Embedding of the query, from `Embedder.embedQuery` (ADR 0007). */
   queryVector: UnitVector;
-  /** The query as typed; parsed with `websearch_to_tsquery`, so it is never SQL. */
+  /** The query as typed; turned into a text-search query by the database, so it is never SQL. */
   queryText: string;
+  /** How the keyword arm matches `queryText`. */
+  keywordMatch: KeywordMatch;
   /** How many chunks each arm contributes before fusion (`RETRIEVAL_POOL_PER_ARM`). */
   poolPerArm: number;
   /** RRF damping constant (`RRF_K`). */

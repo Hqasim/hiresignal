@@ -89,6 +89,7 @@ function search(overrides: Partial<HybridSearchQuery>): HybridSearchQuery {
     candidateId: null,
     queryVector: planeVector(0),
     queryText: 'pgvector',
+    keywordMatch: 'all',
     poolPerArm: 20,
     rrfK: 60,
     limit: 10,
@@ -151,6 +152,71 @@ describe('hybrid search', () => {
 
     expect(hits.map((hit) => hit.ref)).toContain('C01#0');
   });
+
+  it('needs every word to match in all mode', async () => {
+    const hits = await chunks.hybridSearch(
+      search({
+        queryVector: planeVector(Math.PI / 2),
+        queryText: 'Which candidates know Kubernetes?',
+        poolPerArm: 2,
+      }),
+    );
+
+    expect(hits.map((hit) => hit.ref)).toEqual(['C01#1', 'C02#1']);
+  });
+
+  it('fuses in a chunk that matches any word of a natural question in any mode', async () => {
+    const hits = await chunks.hybridSearch(
+      search({
+        queryVector: planeVector(Math.PI / 2),
+        queryText: 'Which candidates know Kubernetes?',
+        keywordMatch: 'any',
+        poolPerArm: 2,
+      }),
+    );
+
+    expect(hits.map((hit) => hit.ref)).toEqual(['C01#1', 'C02#0', 'C02#1']);
+  });
+
+  it('lifts chunks that match some of the words above the nearest vector-only chunk in any mode', async () => {
+    const hits = await chunks.hybridSearch(
+      search({
+        queryVector: planeVector(Math.PI),
+        queryText: 'retrieval pipelines or React dashboards on pgvector',
+        keywordMatch: 'any',
+        poolPerArm: 20,
+        limit: 2,
+      }),
+    );
+
+    // C01#1 is the nearest vector, but C02#1 and C01#0 are also found by the keyword arm.
+    expect(hits.map((hit) => hit.ref)).toEqual(['C02#1', 'C01#0']);
+  });
+
+  it('ignores the query text in off mode, leaving a vector-only search', async () => {
+    const hits = await chunks.hybridSearch(
+      search({
+        queryVector: planeVector(Math.PI / 2),
+        queryText: 'kubernetes',
+        keywordMatch: 'off',
+        poolPerArm: 2,
+      }),
+    );
+
+    expect(hits.map((hit) => hit.ref)).toEqual(['C01#1', 'C02#1']);
+    expect(hits[0]?.rrfScore).toBeCloseTo(1 / 61, 10);
+  });
+
+  it.each(['any', 'all'] as const)(
+    'treats query text as words in %s mode, even quotes, operators and stop words only',
+    async (keywordMatch) => {
+      for (const queryText of [`o'brien's pgvector') | !`, 'the and of', '']) {
+        await expect(
+          chunks.hybridSearch(search({ queryText, keywordMatch })),
+        ).resolves.toBeInstanceOf(Array);
+      }
+    },
+  );
 
   it('returns chunk offsets and the redacted text for citations', async () => {
     const [top] = await chunks.hybridSearch(search({ limit: 1 }));

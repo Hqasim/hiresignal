@@ -99,6 +99,9 @@ export function createScreeningTools(
           candidateId: scope.candidateId,
           queryVector,
           queryText: parsed.data.query,
+          // The agent writes short, focused phrases, so every word must match. Changing this would
+          // change the agent's tool results, and with them every screening fixture key.
+          keywordMatch: 'all',
           poolPerArm: deps.retrieval.poolPerArm,
           rrfK: deps.retrieval.rrfK,
           limit: deps.retrieval.searchTopK,
