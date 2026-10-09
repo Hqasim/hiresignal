@@ -4,8 +4,7 @@ How to run, deploy and operate HireSignal. Commands are for Windows PowerShell u
 
 Sections still to come, each with its phase:
 
-- reseed (Phase 4)
-- re-record the seed fixtures (Phase 4)
+- reseed production with the `seed-demo` workflow (Phase 10)
 - quota exhausted (Phase 7)
 - branch protection (Phase 9)
 
@@ -168,6 +167,19 @@ gh variable set DAILY_LLM_CALL_CAP     --env production --body "300"
 
 The deploy fails fast if any of them is missing.
 
+## Seed the local database
+
+Loads the job and the ten resumes from `data/` through ingestion, offline, from the committed fixtures. It connects as `DATABASE_MIGRATION_URL` (the owner role):
+
+```powershell
+npm run db:up
+npm run db:migrate
+npm run seed               # skips resumes that are already stored
+npm run seed -- --reset    # deletes the job's candidates, then ingests all ten again
+```
+
+It ends with a table of each candidate's guard status, signals, classifier verdict and chunk count, and a `Model calls:` line. In replay mode that line must say `live 0`. As of 2026-10-09, a replay seed takes about 2.5 s.
+
 ## Re-record fixtures
 
 Replay keys cover the model ID, the prompt and its version, the schema, the tools and the token limit, so changing any of them makes replay miss with `FixtureMissingError`, whose message names the command to run. With the key in `.env`:
@@ -176,7 +188,16 @@ Replay keys cover the model ID, the prompt and its version, the schema, the tool
 npm run llm:smoke      # the smoke fixtures (platform.smoke, embed.query)
 ```
 
-`npm run seed:record` re-records the seed fixtures from Phase 4. Then:
+`npm run seed:record` re-records the seed fixtures (`guard.classify`, `embed.documents`). It always resets the job, so every resume is recorded, and it spaces live calls 6 s apart (`SEED_MIN_CALL_INTERVAL_MS`). Its fixture keys include the resume text, so editing a resume means re-recording. Clear the old seed fixtures first, so stale ones don't linger:
+
+```powershell
+Remove-Item -Recurse -Force apps/api/fixtures/llm/guard.classify, apps/api/fixtures/llm/embed.documents -ErrorAction SilentlyContinue
+npm run seed:record
+```
+
+If its summary reports a fallback, the CLI exits with an error: that fixture was saved under the other tier's model, which replay never asks for. Run it again.
+
+Then, for either command:
 
 1. Delete fixtures that nothing requests any more. Check with `git status`: re-recorded files are new, stale ones are untouched.
 2. Run `npm run verify`; replay tests must pass offline.

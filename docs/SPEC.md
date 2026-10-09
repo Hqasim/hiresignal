@@ -547,9 +547,9 @@ So even a missed injection can't raise a score without real, verifiable evidence
 2. Redact PII, producing `RedactedText`.
 3. Run L1 and L2 on the redacted text, then the L3 classifier (skipped when a high signal already quarantines), then the policy.
 4. If quarantined, store the candidate with the redacted text and verdict, and stop.
-5. Otherwise chunk section by section. `##` headings are sections and `###` headings are roles. A chunk is one role or section, split between bullets so it stays at or under `CHUNK_MAX_TOKENS`. Each chunk gets a context header, and the offsets of `content` within `redacted_resume` are recorded.
-6. Embed `context_header + content` in batches, as `title: none | text: …` with one `Content` per chunk, at 768 dimensions, then L2-normalize (ADR 0007).
-7. Persist the candidate and chunks in one transaction. Ingestion is idempotent on `(job_id, source_hash)`.
+5. Otherwise chunk section by section (ADR 0019). `##` headings are sections and `###` headings are roles. A chunk is one role (keeping its `###` line) or one section (its `##` line moves to the context header), split between bullets or paragraphs so it stays at or under `CHUNK_MAX_TOKENS`; a single oversized bullet stays whole. The name and contact preamble before the first `##` isn't chunked. Each chunk gets a context header (`C04 · Experience · <role>`), and the offsets of `content` within `redacted_resume` are recorded.
+6. Embed `context_header`, a line break and `content` (one `embedDocuments` call per resume; the adapter batches), as `title: none | text: …` with one `Content` per chunk, at 768 dimensions, then L2-normalize (ADR 0007).
+7. Persist the candidate and chunks in one transaction. Ingestion is idempotent on `(job_id, source_hash)`, and checks for an existing candidate first (`findBySourceHash`), so re-seeding makes no model calls.
 
 ### 9.6 Screening agent (`application/screening/`)
 
@@ -735,7 +735,7 @@ apps/web/src/
 | C09 | Mei Lin Chen | Strong backend (Java/Postgres/AWS), no AI | Partial match | Mid |
 | C10 | Gabriel Silva | Strong match with heavy PII (two emails, phones, street address, LinkedIn/GitHub URLs, school and graduation years) and stray zero-width spaces | Redaction and invisible characters | Fully redacted; clean with a dismissed L0 medium signal |
 
-`data/README.md` documents each file's intent and expected outcome. Integration tests assert these outcomes.
+`data/README.md` documents each file's intent and expected outcome. Integration tests assert these outcomes. Invisible characters are written as visible `\u{XXXX}` escapes (C10's zero-width spaces), which the dataset loader decodes before ingestion, so diffs show them and the L0 scan still sees real characters.
 
 **Eval sets** (`data/evals/`):
 

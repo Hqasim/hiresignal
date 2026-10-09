@@ -73,8 +73,8 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 | `npm ci` | Install the workspace exactly from `package-lock.json` (Node 24.21.0 from `.nvmrc`, npm 11.19.0+). Add a dependency with `npm install <pkg> -w <workspace>`. |
 | `npm run db:up` / `npm run db:down` | Start or stop local Postgres + pgvector (Docker, `localhost:5433`) |
 | `npm run db:migrate` | Apply `db/migrations/*.sql` using `DATABASE_MIGRATION_URL` |
-| `npm run seed` | Load synthetic data and precomputed results from fixtures (replay, offline) |
-| `npm run seed:record` | Run the pipeline against live Gemini and record fixtures (I run this) |
+| `npm run seed` | Load synthetic data and precomputed results from fixtures (replay, offline). `-- --reset` re-ingests every resume |
+| `npm run seed:record` | Reset, run the pipeline against live Gemini and record fixtures (I run this) |
 | `npm run llm:smoke` | One live structured call per tier and one embedding to check key and model IDs (I run this) |
 | `npm run dev` | API on `:3000` and web on `:5173` (Vite proxies `/api`) |
 | `npm run verify` | Format check, lint, typecheck, depcruise, unit tests. Run after every step. |

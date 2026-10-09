@@ -78,7 +78,7 @@ flowchart TD
 
 ## Safety layer
 
-Every resume passes through redaction and the injection guard before anything else reads it ([ADR 0013](adr/0013-layered-injection-defense-and-quarantine-policy.md), [ADR 0014](adr/0014-one-way-redaction-with-branded-types.md)). Everything except the classifier is pure code in `domain/`. Phase 4's ingest use case composes the steps:
+Every resume passes through redaction and the injection guard before anything else reads it ([ADR 0013](adr/0013-layered-injection-defense-and-quarantine-policy.md), [ADR 0014](adr/0014-one-way-redaction-with-branded-types.md)). Everything except the classifier is pure code in `domain/`. The ingest use case composes the steps (next section):
 
 ```mermaid
 flowchart TD
@@ -99,6 +99,50 @@ flowchart TD
 - **Severity is about visibility.** An instruction a human can read is medium, and the classifier decides whether the resume is an attack or a résumé _about_ attacks. An instruction a human can't see is high, and quarantines on its own.
 - **The policy is a table.** [`decideGuard`](../apps/api/src/domain/guard/policy.ts) is pure. Its tests cover every row, including the 0.7 confidence boundary.
 - **Spotlighting** ([`spotlight.ts`](../apps/api/src/application/prompts/spotlight.ts)) wraps untrusted text in `<untrusted_*>` tags and neutralizes wrapper-like tags inside it, so content can't close its own wrapper.
+
+## Ingestion and seeding
+
+`npm run seed` loads `data/` into Postgres through [`createIngestResume`](../apps/api/src/application/ingest/ingest-resume.ts), one resume at a time (SPEC §9.5, [ADR 0019](adr/0019-section-aware-chunking-with-exact-offsets.md)):
+
+```mermaid
+sequenceDiagram
+  participant CLI as seed CLI (main/cli/seed.ts)
+  participant DS as readDataset (infrastructure/dataset)
+  participant S as createSeedJob
+  participant I as createIngestResume
+  participant L3 as classify (guard.classify)
+  participant E as Embedder
+  participant DB as Postgres (owner role)
+  CLI->>DS: data/jobs/*.md, data/resumes/cNN-*.md
+  DS-->>CLI: job + resumes (sha256 source hashes, escapes decoded)
+  CLI->>S: seed({ job, resumes, reset })
+  S->>DB: upsert job (and delete its candidates on --reset)
+  loop each resume, in alias order
+    S->>I: ingest(source)
+    I->>DB: findBySourceHash
+    alt already stored
+      I-->>S: skipped (no model call)
+    else new
+      I->>I: prepareResume: L0 → NFKC → redact → L1 + L2
+      opt no high signal
+        I->>L3: spotlighted RedactedText
+      end
+      I->>I: decideGuard
+      opt clean or flagged
+        I->>I: chunkResume (exact offsets, context headers)
+        I->>E: embedDocuments(header + content), one call
+      end
+      I->>DB: insertIngested (candidate + chunks, one transaction)
+      I-->>S: outcome (alias, status, signal ids, counts)
+    end
+  end
+  S-->>CLI: outcomes → table + model-call tally
+```
+
+- **Modes.** `--mode replay` (the default) reads fixtures and needs no key. `record` calls Gemini and saves fixtures, and `seed:record` always adds `--reset`, so a recording is complete. `live` only calls Gemini. Live calls are spaced by `SEED_MIN_CALL_INTERVAL_MS`, using a throttle just above the provider clients.
+- **One wiring.** [`createSeeder`](../apps/api/src/main/seed-wiring.ts) builds the seeder for both the CLI and the replay integration test, so replay sends byte-identical requests to the recorded ones.
+- **Idempotent.** A second run skips stored resumes before any model call. A fallback during recording would save a fixture under the wrong model, so the CLI reports fallbacks and fails if one happened.
+- **As of 2026-10-09,** a replay seed of the 10 resumes takes 2.5 s locally with 0 live calls. It yields 8 clean candidates with 53 chunks, and 2 quarantined candidates with none.
 
 ## Data model
 
