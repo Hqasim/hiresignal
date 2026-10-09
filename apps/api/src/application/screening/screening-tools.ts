@@ -7,8 +7,8 @@ import type { JsonObject } from '../llm/json-value';
 import type { ChunkRepository, RetrievedChunk, ScoredChunk } from '../ports/chunk-repository';
 import type { Embedder } from '../ports/embedder';
 import type { LlmFunctionCall } from '../ports/llm-client';
+import { formatChunks } from '../prompts/format-chunks';
 import {
-  formatChunks,
   ReadSectionArgsSchema,
   type ScreeningToolName,
   searchResumeArgsSchema,

@@ -27,6 +27,20 @@ export const RRF_K = 60;
 /** Chunks passed to the answer model: enough to span several candidates, small enough for Flash-Lite. */
 export const ASK_TOP_K = 12;
 
+/**
+ * How ask's keyword arm matches the question (ADR 0008). `any` ORs the question's words, because
+ * ANDing them needs every word of a natural question, "candidates" included, to be in one chunk.
+ * A starting value, measured against `all` and vector-only on the golden questions in Phase 6.
+ */
+export const ASK_KEYWORD_MATCH = 'any';
+
+/**
+ * Output budget for one `ask.answer` call. The reply is at most 1,200 characters of answer plus
+ * eight short citations, under 700 tokens of JSON, but comparative questions route to Flash, which
+ * thinks first (about 4,000 output tokens per synthesis in Phase 5), so it leaves that headroom.
+ */
+export const ASK_MAX_OUTPUT_TOKENS = 4096;
+
 /** Chunks returned per `search_resume` call, so one agent step reads a focused slice. */
 export const AGENT_SEARCH_TOP_K = 4;
 

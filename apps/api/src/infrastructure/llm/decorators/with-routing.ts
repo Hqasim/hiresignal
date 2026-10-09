@@ -1,4 +1,4 @@
-import type { LlmClient, LlmRequest, LlmResponse } from '../../../application/ports/llm-client';
+import type { LlmClient, LlmRequest, LlmResult } from '../../../application/ports/llm-client';
 import type { RoutedLlmClient } from '../../../application/ports/routed-llm-client';
 import type { ModelTier } from '../../../domain/routing/llm-task';
 import { routeLlmTask, type RoutingThresholds } from '../../../domain/routing/policy';
@@ -14,7 +14,8 @@ export interface RoutingDeps {
 
 /**
  * Outermost decorator (SPEC §7.3, ADR 0010). Asks the pure routing policy for a tier, resolves
- * the tier to a model ID, and hands a routed request to the inner chain. Use cases see only
+ * the tier to a model ID, and hands a routed request to the inner chain. The result carries the
+ * rule that fired (`routedReason`), so ask can report it. Use cases see only
  * {@link LlmClient}, so they can't name a model.
  *
  * @example
@@ -22,16 +23,17 @@ export interface RoutingDeps {
  */
 export function withRouting(inner: RoutedLlmClient, deps: RoutingDeps): LlmClient {
   return {
-    generate(request: LlmRequest): Promise<LlmResponse> {
+    async generate(request: LlmRequest): Promise<LlmResult> {
       const { tier, reason } = routeLlmTask(
         request.task,
         request.routingContext ?? {},
         deps.thresholds,
       );
-      return inner.generate({
+      const response = await inner.generate({
         ...request,
         route: { tier, model: deps.models[tier], reason, isFallback: false },
       });
+      return { ...response, routedReason: reason };
     },
   };
 }

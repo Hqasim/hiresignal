@@ -1,5 +1,5 @@
 import type { LlmTask } from '../../domain/routing/llm-task';
-import type { RoutingContext } from '../../domain/routing/policy';
+import type { RoutingContext, RoutingReason } from '../../domain/routing/policy';
 import type { JsonObject, JsonValue } from '../llm/json-value';
 
 declare const providerTurn: unique symbol;
@@ -93,6 +93,15 @@ export interface LlmResponse {
 }
 
 /**
+ * A model turn as {@link LlmClient} returns it: the response plus the routing rule that picked its
+ * tier (SPEC §9.1), so a use case can show why a model answered without choosing one itself.
+ */
+export interface LlmResult extends LlmResponse {
+  /** The rule that picked the tier; `model` says which model answered, after any fallback. */
+  routedReason: RoutingReason;
+}
+
+/**
  * Generates model turns. Use cases depend on this port; the routing decorator picks the model
  * from `task` (SPEC §7.3, ADR 0010).
  */
@@ -104,5 +113,5 @@ export interface LlmClient {
    * @throws LlmCallError (reason `rejected`) when the provider refused the request, which is a bug.
    * @throws FixtureMissingError in replay mode when no recording matches the request.
    */
-  generate(request: LlmRequest): Promise<LlmResponse>;
+  generate(request: LlmRequest): Promise<LlmResult>;
 }

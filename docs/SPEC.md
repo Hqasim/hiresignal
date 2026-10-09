@@ -278,7 +278,7 @@ export type LlmTask =
 
 export interface LlmClient {
   /** Generates one model turn. The routing decorator resolves the model from `task`. */
-  generate(request: LlmRequest): Promise<LlmResponse>;
+  generate(request: LlmRequest): Promise<LlmResult>; // LlmResponse + routedReason (the rule that picked the tier)
 }
 /** The inner decorator chain and the provider clients: requests already carry their route. */
 export interface RoutedLlmClient {
@@ -301,7 +301,7 @@ Candidate detail is composed by the use case from `CandidateRepository.findById`
 
 `LlmRequest` contains: `task`, `promptVersion`, `system`, `contents` (turns: user text, an unchanged model turn, or tool results), optional `tools`, optional `responseSchema` (JSON Schema), `maxOutputTokens` (it includes Gemini 3 thinking tokens), optional `temperature` (left unset: Google recommends the default 1.0 for Gemini 3), optional `routingContext` (escalation signals for the policy) and optional `requestId`. `LlmResponse` contains: `content` (provider turn, kept opaque so it can be appended unchanged), `text`, `functionCalls`, `usage` (`inputTokens`, `outputTokens` including thinking, `cachedTokens`), `model`, `latencyMs`, `finishReason` (`stop`, `max_tokens`, `safety`, `other`).
 
-Use cases depend on `LlmClient`. Only `withRouting` turns an `LlmRequest` into a routed one (`route: { tier, model, reason, isFallback }`), and every inner decorator and provider client implements `RoutedLlmClient`, so an unrouted request can't reach a provider (ADR 0010). Provider failures are thrown as a provider-neutral `LlmCallError` (`rate_limited`, `unavailable`, `timeout`, `rejected`) with an optional server-requested `retryAfterMs`.
+Use cases depend on `LlmClient`, whose result adds `routedReason` to the response, so ask can report why a tier answered without choosing one. Only `withRouting` turns an `LlmRequest` into a routed one (`route: { tier, model, reason, isFallback }`), and every inner decorator and provider client implements `RoutedLlmClient`, so an unrouted request can't reach a provider (ADR 0010). Provider failures are thrown as a provider-neutral `LlmCallError` (`rate_limited`, `unavailable`, `timeout`, `rejected`) with an optional server-requested `retryAfterMs`.
 
 ### 7.3 LLM decorator chain
 
@@ -332,6 +332,8 @@ withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model 
 | `RETRIEVAL_POOL_PER_ARM` | 20 | Candidates per arm (vector, keyword) before fusion |
 | `RRF_K` | 60 | Standard RRF damping constant |
 | `ASK_TOP_K` | 12 | Chunks passed to the answer model |
+| `ASK_KEYWORD_MATCH` | `any` | How ask's keyword arm matches the question: `any` ORs its words, because ANDing a natural question finds nothing (ADR 0008) |
+| `ASK_MAX_OUTPUT_TOKENS` | 4096 | Output budget per `ask.answer` call: about 700 tokens of JSON plus Flash thinking |
 | `AGENT_SEARCH_TOP_K` | 4 | Chunks returned per `search_resume` call |
 | `MAX_AGENT_STEPS` | 8 | Hard bound on agent turns |
 | `AGENT_MAX_OUTPUT_TOKENS` | 2048 | Output budget per `screen.agent` turn: a few function calls plus Gemini 3 thinking tokens |

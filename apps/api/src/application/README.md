@@ -7,7 +7,7 @@ Use cases and the ports they depend on.
   - ports (`ports/`): interfaces for everything outside the process (`LlmClient`, `RoutedLlmClient`, `Embedder`, repositories, clock, logger)
   - typed errors (`errors/`)
   - LLM helpers (`llm/`): `generateStructured` (Zod schema → JSON Schema → parse, one repair turn), `LlmCallError`, `withCallTally`, JSON types
-  - prompt builders (`prompts/`), each exporting `PROMPT_VERSION`, and `spotlight()`, which wraps every piece of untrusted text; `screening-prefix.ts` is the byte-stable, cacheable system instruction shared by every screening call (ADR 0011)
+  - prompt builders (`prompts/`), each exporting `PROMPT_VERSION`, and `spotlight()`, which wraps every piece of untrusted text; `screening-prefix.ts` is the byte-stable, cacheable system instruction shared by every screening call (ADR 0011); `ask-answer.ts` is ask's system instruction, question turn and answer schema; `format-chunks.ts` formats retrieved chunks for every prompt
 - **Allowed imports:** `domain/` and `zod` (dependency-cruiser `application-depends-on-domain-only`). Tunables from `config/` arrive as parameters.
 - **Tests:** with hand-written fakes from `test/fakes/`; coverage gate ≥ 80%.
 - **Entry points:** `ports/llm-client.ts`, `llm/generate-structured.ts`, `ingest/ingest-resume.ts`, `screening/screen-candidate.ts`, `errors/index.ts` (`AppError` and subclasses).

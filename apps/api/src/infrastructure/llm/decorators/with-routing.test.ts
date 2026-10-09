@@ -36,15 +36,15 @@ describe('withRouting', () => {
     });
   });
 
-  it('passes the request and the response through unchanged', async () => {
+  it('passes the request and the response through, adding the rule that fired', async () => {
     const response = fakeLlmResponse('{"answer":"C02"}');
     const inner = new FakeRoutedLlmClient([response]);
     const llm = withRouting(inner, { thresholds, models: TEST_MODELS });
-    const request = llmRequest();
+    const request = llmRequest({ routingContext: { candidateCount: 5 } });
 
     const result = await llm.generate(request);
 
-    expect(result).toBe(response);
+    expect(result).toEqual({ ...response, routedReason: 'candidate-count' });
     expect(inner.requests[0]).toMatchObject(request);
   });
 });

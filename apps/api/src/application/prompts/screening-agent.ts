@@ -18,13 +18,6 @@ export interface OutlineEntry {
   contextHeader: RedactedText;
 }
 
-/** A chunk as the agent and the synthesis read it. */
-export interface PromptChunk {
-  ref: ChunkRef;
-  contextHeader: RedactedText;
-  content: RedactedText;
-}
-
 /** The name of a screening tool, as declared to the model and recorded in the trace. */
 export type ScreeningToolName = 'search_resume' | 'read_section';
 
@@ -118,25 +111,4 @@ export function buildAgentOpeningTurn(
       'Search for evidence of every requirement, then reply DONE without tool calls.',
     ].join('\n'),
   };
-}
-
-/**
- * Formats chunks for a tool result or the evidence set: each chunk's ref outside its wrapper, and
- * its context header and content inside `<untrusted_resume_chunk>`, so applicant text can't pose
- * as a ref or close the wrapper. An empty list says so explicitly.
- *
- * @example
- * formatChunks([chunk]);
- * // '[C04#3]\n<untrusted_resume_chunk>\nC04 · Experience · …\n\n- Built …\n</untrusted_resume_chunk>'
- */
-export function formatChunks(chunks: readonly PromptChunk[]): string {
-  if (chunks.length === 0) {
-    return 'No chunks found.';
-  }
-  return chunks
-    .map(
-      (chunk) =>
-        `[${chunk.ref}]\n${spotlight(joinRedactedText([chunk.contextHeader, chunk.content], '\n\n'), 'resume_chunk')}`,
-    )
-    .join('\n\n');
 }

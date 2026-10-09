@@ -4,7 +4,7 @@
 /** Longest question accepted, after trimming. The contracts schema enforces the same limit at the HTTP edge. */
 export const QUESTION_MAX_CHARS = 500;
 
-/** Longest answer kept; a longer reply is cut at a word boundary rather than repaired. */
+/** Longest answer kept; a longer reply is cut (ending in `…`) rather than sent back for repair. */
 export const ANSWER_MAX_CHARS = 1200;
 
 /**

@@ -1,4 +1,4 @@
-import type { LlmClient, LlmRequest, LlmResponse } from '../../../application/ports/llm-client';
+import type { LlmClient, LlmRequest, LlmResult } from '../../../application/ports/llm-client';
 import type { LlmRoute, RoutedLlmClient } from '../../../application/ports/routed-llm-client';
 
 /**
@@ -11,6 +11,9 @@ import type { LlmRoute, RoutedLlmClient } from '../../../application/ports/route
  */
 export function withPinnedRoute(inner: RoutedLlmClient, route: LlmRoute): LlmClient {
   return {
-    generate: (request: LlmRequest): Promise<LlmResponse> => inner.generate({ ...request, route }),
+    generate: async (request: LlmRequest): Promise<LlmResult> => ({
+      ...(await inner.generate({ ...request, route })),
+      routedReason: route.reason,
+    }),
   };
 }

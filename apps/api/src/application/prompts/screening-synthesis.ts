@@ -12,7 +12,7 @@ import {
 } from '../../domain/scoring/scorecard';
 import { capText } from '../llm/cap-text';
 import type { LlmTurn } from '../ports/llm-client';
-import { formatChunks, type PromptChunk } from './screening-agent';
+import { formatChunks, type PromptChunk } from './format-chunks';
 
 /**
  * The scorecard the synthesis model writes (SPEC §9.6). It is flat (objects, arrays, enums and

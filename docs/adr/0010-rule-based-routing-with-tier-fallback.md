@@ -48,6 +48,10 @@ Everything runs on a free Gemini key. Each model has its own per-minute and per-
   - Falling back from Flash to Flash-Lite trades quality for availability on synthesis. The row's `isFallback` flag makes that visible on the ops page.
   - The free tier's long 429 delays mean a quota-exhausted tier is skipped rather than waited for, so a burst can drain both quotas quickly. The daily call cap (Phase 7) bounds that.
 
+## Update (2026-10-09, Phase 6)
+
+Ask's response reports which rule routed it (SPEC §10, `routedReason`). The use case can't compute that without naming the policy itself, so `LlmClient.generate` now returns an `LlmResult`: the provider's `LlmResponse` plus the `routedReason` that `withRouting` decided ([`with-routing.ts`](../../apps/api/src/infrastructure/llm/decorators/with-routing.ts)). The inner chain is unchanged. `model` still says which model actually answered, so a fallback shows as `routedReason: comparative-intent` with the Flash-Lite model.
+
 ## Alternatives considered
 
 - **An LLM router that classifies each request first.** Rejected: it adds a model call, with its latency, cost and quota, to every request, and makes routing nondeterministic and hard to test. The task already tells us most of what a router would learn.

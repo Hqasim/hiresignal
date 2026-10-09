@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import { LlmOutputInvalidError } from '../errors/llm-output-invalid-error';
-import type { LlmClient, LlmRequest, LlmResponse } from '../ports/llm-client';
+import type { LlmClient, LlmRequest, LlmResponse, LlmResult } from '../ports/llm-client';
 import { toJsonSchema } from './json-schema';
 
 /** A generation whose reply must match `schema`. Tools aren't allowed: the reply is the answer. */
@@ -12,7 +12,7 @@ export interface StructuredRequest<T> extends Omit<LlmRequest, 'responseSchema' 
 /** The parsed reply, plus every model response it took (one, or two after a repair). */
 export interface StructuredResult<T> {
   value: T;
-  responses: readonly LlmResponse[];
+  responses: readonly LlmResult[];
 }
 
 type ParseOutcome<T> = { ok: true; value: T } | { ok: false; problems: readonly string[] };

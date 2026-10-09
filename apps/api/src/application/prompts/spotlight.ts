@@ -7,9 +7,10 @@ import type { UntrustedText } from '../../domain/shared/untrusted-text';
  *
  * - `resume`: a whole redacted resume (the L3 classifier)
  * - `resume_outline`: the context headers of a candidate's chunks (the screening agent's first turn)
- * - `resume_chunk`: one retrieved chunk (agent tool results and the synthesis evidence set)
+ * - `resume_chunk`: one retrieved chunk (agent tool results, the synthesis evidence set and ask)
+ * - `question`: a recruiter's question to ask (`UntrustedText`)
  */
-export type SpotlightLabel = 'resume' | 'resume_outline' | 'resume_chunk';
+export type SpotlightLabel = 'resume' | 'resume_outline' | 'resume_chunk' | 'question';
 
 /**
  * Anything that could open or close an `untrusted_*` wrapper: `<` (optional spaces and `/`) then
