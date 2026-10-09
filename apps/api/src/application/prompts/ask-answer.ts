@@ -68,7 +68,10 @@ Reply only with JSON that follows the response schema:
  * @example
  * const turn = buildAskTurn(toUntrustedText('Who has shipped RAG?'), hits);
  */
-export function buildAskTurn(question: UntrustedText, chunks: readonly PromptChunk[]): LlmTurn {
+export function buildAskTurn(
+  question: UntrustedText,
+  chunks: readonly PromptChunk[],
+): Extract<LlmTurn, { role: 'user' }> {
   return {
     role: 'user',
     text: [

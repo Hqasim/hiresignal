@@ -15,11 +15,7 @@ const chunk = {
 };
 
 function turnText(question: string): string {
-  const turn = buildAskTurn(toUntrustedText(question), [chunk]);
-  if (turn.role !== 'user') {
-    throw new Error('expected a user turn');
-  }
-  return turn.text;
+  return buildAskTurn(toUntrustedText(question), [chunk]).text;
 }
 
 describe('ASK_SYSTEM_PROMPT', () => {
