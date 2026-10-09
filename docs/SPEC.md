@@ -288,9 +288,9 @@ export interface Embedder {
   embedDocuments(texts: readonly RedactedText[]): Promise<UnitVector[]>;
   embedQuery(text: string): Promise<UnitVector>;
 }
-export interface JobRepository { /* upsert, findBySlug, list */ }
+export interface JobRepository { /* upsert, findById, findBySlug, list */ }
 export interface CandidateRepository { /* insertIngested (candidate + chunks, one transaction), findById, findBySourceHash, listRanked, shortlist, deleteByJob (seed --reset, owner role only) */ }
-export interface ChunkRepository { /* hybridSearch, getSection, getByRefs */ }
+export interface ChunkRepository { /* hybridSearch, listOutline (refs, sections and headers for the agent), getSection, getByRefs */ }
 export interface ScorecardRepository { /* save, latestFor */ }
 export interface LlmCallRepository { /* record, countLiveSince; summary and recent arrive in Phase 7 */ }
 export interface DatabaseProbe { ping(): Promise<void> }

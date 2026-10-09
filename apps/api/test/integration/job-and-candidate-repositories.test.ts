@@ -4,7 +4,7 @@ import type { CandidateRepository } from '../../src/application/ports/candidate-
 import type { JobRepository } from '../../src/application/ports/job-repository';
 import { CandidateIdSchema } from '../../src/domain/candidates/candidate';
 import type { Job } from '../../src/domain/jobs/job';
-import { JobSlugSchema } from '../../src/domain/jobs/job';
+import { JobIdSchema, JobSlugSchema } from '../../src/domain/jobs/job';
 import { createPgCandidateRepository } from '../../src/infrastructure/postgres/pg-candidate-repository';
 import { createPgJobRepository } from '../../src/infrastructure/postgres/pg-job-repository';
 import { aCandidate, aNewJob, aQuarantinedCandidate } from '../helpers/builders';
@@ -39,6 +39,15 @@ describe('PgJobRepository', () => {
 
     expect(second.id).toBe(first.id);
     expect(second.title).toBe('Renamed');
+  });
+
+  it('finds a job by id', async () => {
+    const stored = await jobs.upsert(aNewJob({ slug: JobSlugSchema.parse('by-id') }));
+
+    expect(await jobs.findById(stored.id)).toEqual(stored);
+    expect(
+      await jobs.findById(JobIdSchema.parse('00000000-0000-4000-8000-000000000000')),
+    ).toBeNull();
   });
 
   it('returns null for an unknown slug', async () => {

@@ -1,5 +1,5 @@
 import type { JobRepository, NewJob } from '../../src/application/ports/job-repository';
-import { type Job, JobIdSchema, type JobSlug } from '../../src/domain/jobs/job';
+import { type Job, type JobId, JobIdSchema, type JobSlug } from '../../src/domain/jobs/job';
 
 /** {@link JobRepository} fake that keeps jobs in memory and upserts by slug, like Postgres. */
 export class InMemoryJobRepository implements JobRepository {
@@ -20,6 +20,10 @@ export class InMemoryJobRepository implements JobRepository {
     };
     this.jobs.push(stored);
     return Promise.resolve(stored);
+  }
+
+  findById(id: JobId): Promise<Job | null> {
+    return Promise.resolve(this.jobs.find((job) => job.id === id) ?? null);
   }
 
   findBySlug(slug: JobSlug): Promise<Job | null> {

@@ -1,4 +1,4 @@
-import type { Job, JobSlug, Requirement } from '../../domain/jobs/job';
+import type { Job, JobId, JobSlug, Requirement } from '../../domain/jobs/job';
 
 /** A job as the seed CLI loads it from `data/jobs/*.md`, before it has an id. */
 export interface NewJob {
@@ -16,6 +16,8 @@ export interface JobRepository {
    * Returns the stored job.
    */
   upsert(job: NewJob): Promise<Job>;
+  /** Returns the job with this id, or `null` if there is none. */
+  findById(id: JobId): Promise<Job | null>;
   /** Returns the job with this slug, or `null` if there is none. */
   findBySlug(slug: JobSlug): Promise<Job | null>;
   /** Returns up to `limit` jobs, oldest first. */

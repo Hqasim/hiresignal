@@ -1,5 +1,5 @@
 import type { JobRepository, NewJob } from '../../application/ports/job-repository';
-import type { Job, JobSlug } from '../../domain/jobs/job';
+import type { Job, JobId, JobSlug } from '../../domain/jobs/job';
 import type { Queryable } from './create-pool';
 import { JOB_COLUMNS, JobRowSchema, toJob } from './pg-job-rows';
 import { queryRows } from './query-rows';
@@ -32,6 +32,16 @@ export function createPgJobRepository(db: Queryable): JobRepository {
         throw new Error('Upserting a job returned no row');
       }
       return toJob(row);
+    },
+
+    async findById(id: JobId): Promise<Job | null> {
+      const [row] = await queryRows(
+        db,
+        `select ${JOB_COLUMNS} from jobs where id = $1`,
+        [id],
+        JobRowSchema,
+      );
+      return row === undefined ? null : toJob(row);
     },
 
     async findBySlug(slug: JobSlug): Promise<Job | null> {

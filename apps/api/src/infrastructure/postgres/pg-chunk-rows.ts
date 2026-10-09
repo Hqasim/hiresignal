@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import type { RetrievedChunk, ScoredChunk } from '../../application/ports/chunk-repository';
+import type {
+  ChunkOutlineEntry,
+  RetrievedChunk,
+  ScoredChunk,
+} from '../../application/ports/chunk-repository';
 import { CandidateAliasSchema, CandidateIdSchema } from '../../domain/candidates/candidate';
 import { formatChunkRef } from '../../domain/candidates/chunk-ref';
 import { rehydrateRedactedText } from '../../domain/redaction/redacted-text';
@@ -59,4 +63,28 @@ export function toRetrievedChunk(row: ChunkRow): RetrievedChunk {
  */
 export function toScoredChunk(row: ScoredChunkRow): ScoredChunk {
   return { ...toRetrievedChunk(row), similarity: row.similarity, rrfScore: row.rrf_score };
+}
+
+/** An outline row: a chunk's position and labels, without its content. */
+export const ChunkOutlineRowSchema = ChunkRowSchema.pick({
+  alias: true,
+  ordinal: true,
+  section: true,
+  context_header: true,
+});
+/** See {@link ChunkOutlineRowSchema}. */
+export type ChunkOutlineRow = z.infer<typeof ChunkOutlineRowSchema>;
+
+/**
+ * Maps an outline row and derives its ref.
+ *
+ * @example
+ * toChunkOutlineEntry(ChunkOutlineRowSchema.parse(row)); // { ref: 'C04#0', section: 'summary', … }
+ */
+export function toChunkOutlineEntry(row: ChunkOutlineRow): ChunkOutlineEntry {
+  return {
+    ref: formatChunkRef(row.alias, row.ordinal),
+    section: row.section,
+    contextHeader: rehydrateRedactedText(row.context_header),
+  };
 }

@@ -17,6 +17,13 @@ export interface RetrievedChunk {
   endOffset: number;
 }
 
+/** One line of a candidate's outline: a chunk's ref, section and context header, never its content. */
+export interface ChunkOutlineEntry {
+  ref: ChunkRef;
+  section: string;
+  contextHeader: RedactedText;
+}
+
 /** A hybrid-search hit. */
 export interface ScoredChunk extends RetrievedChunk {
   /** Cosine similarity to the query embedding, in [-1, 1]; the ask use case's floor checks it. */
@@ -50,6 +57,12 @@ export interface ChunkRepository {
    * similarity, then by ref, so results are deterministic.
    */
   hybridSearch(query: HybridSearchQuery): Promise<ScoredChunk[]>;
+  /**
+   * The candidate's chunks as an outline, in resume order: refs, sections and context headers,
+   * without content. The screening agent starts from it (SPEC §9.6). Empty for a quarantined
+   * candidate, which has no chunks.
+   */
+  listOutline(candidateId: CandidateId): Promise<ChunkOutlineEntry[]>;
   /** Every chunk of one section of one candidate, in resume order (the agent's `read_section`). */
   getSection(candidateId: CandidateId, section: string): Promise<RetrievedChunk[]>;
   /** The chunks behind `refs` within the job, ordered by ref. Unknown refs are simply absent. */

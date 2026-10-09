@@ -1,4 +1,5 @@
 import type {
+  ChunkOutlineEntry,
   ChunkRepository,
   HybridSearchQuery,
   RetrievedChunk,
@@ -14,8 +15,10 @@ import type { JobId } from '../../domain/jobs/job';
 import type { Queryable } from './create-pool';
 import {
   CHUNK_COLUMNS,
+  ChunkOutlineRowSchema,
   ChunkRowSchema,
   ScoredChunkRowSchema,
+  toChunkOutlineEntry,
   toRetrievedChunk,
   toScoredChunk,
 } from './pg-chunk-rows';
@@ -95,6 +98,19 @@ export function createPgChunkRepository(db: Queryable): ChunkRepository {
         ScoredChunkRowSchema,
       );
       return rows.map(toScoredChunk);
+    },
+
+    async listOutline(candidateId: CandidateId): Promise<ChunkOutlineEntry[]> {
+      const rows = await queryRows(
+        db,
+        `select k.alias, c.ordinal, c.section, c.context_header
+         from resume_chunks c join candidates k on k.id = c.candidate_id
+         where c.candidate_id = $1 and k.guard_status <> 'quarantined'
+         order by c.ordinal`,
+        [candidateId],
+        ChunkOutlineRowSchema,
+      );
+      return rows.map(toChunkOutlineEntry);
     },
 
     async getSection(candidateId: CandidateId, section: string): Promise<RetrievedChunk[]> {
