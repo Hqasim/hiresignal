@@ -347,6 +347,7 @@ withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model 
 | `LLM_RETRY_MAX_DELAY_MS` | 10000 | Longest wait honoured; a longer 429 `retryDelay` goes straight to the fallback tier |
 | `EMBEDDING_BATCH_SIZE` | 16 | Documents per embedding request, under the 8,192-token input limit |
 | `SMOKE_MAX_OUTPUT_TOKENS` | 2048 | Output budget for `npm run llm:smoke`, with headroom for thinking tokens |
+| `SEED_MIN_CALL_INTERVAL_MS` | 6000 | Minimum gap between live model calls while seeding (10 per minute); Google publishes no free-tier numbers, so it is conservative |
 
 Model IDs come from env (`GEMINI_MODEL_LITE`, `GEMINI_MODEL_FLASH`, `GEMINI_EMBEDDING_MODEL`). Verify current free-tier IDs in Google AI Studio on build day; Pro models are not on the free tier.
 

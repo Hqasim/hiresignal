@@ -29,6 +29,8 @@
     "db:down": "docker compose down",
     "db:migrate": "npm run db:migrate -w @hiresignal/api",
     "llm:smoke": "npm run llm:smoke -w @hiresignal/api",
+    "seed": "npm run seed -w @hiresignal/api --",
+    "seed:record": "npm run seed:record -w @hiresignal/api",
     "prepare": "lefthook install"
   },
   "devDependencies": {

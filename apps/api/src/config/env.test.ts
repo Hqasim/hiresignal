@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseEnv, parseMigrationEnv, parseSmokeEnv } from './env';
+import { parseEnv, parseMigrationEnv, parseSeedEnv, parseSmokeEnv } from './env';
 
 const LOCAL_DB = 'postgres://hiresignal:hiresignal@localhost:5433/hiresignal';
 const MODELS = {
@@ -137,5 +137,28 @@ describe('parseMigrationEnv', () => {
 
   it('fails fast without the owner connection string', () => {
     expect(() => parseMigrationEnv({ DATABASE_URL: LOCAL_DB })).toThrow('DATABASE_MIGRATION_URL');
+  });
+});
+
+describe('parseSeedEnv', () => {
+  const SEED = { DATABASE_MIGRATION_URL: LOCAL_DB, ...MODELS };
+
+  it('reads the owner connection and the model IDs, and needs no key to replay', () => {
+    expect(parseSeedEnv(SEED, 'replay')).toEqual({ ...SEED, GEMINI_API_KEY: undefined });
+  });
+
+  it.each(['record', 'live'] as const)('requires a key to seed in %s mode', (mode) => {
+    expect(() => parseSeedEnv({ ...SEED, GEMINI_API_KEY: '' }, mode)).toThrow(
+      `GEMINI_API_KEY: required when seeding in ${mode} mode`,
+    );
+    expect(parseSeedEnv({ ...SEED, GEMINI_API_KEY: 'test-key' }, mode).GEMINI_API_KEY).toBe(
+      'test-key',
+    );
+  });
+
+  it('fails fast without the owner connection string', () => {
+    expect(() => parseSeedEnv({ DATABASE_URL: LOCAL_DB, ...MODELS }, 'replay')).toThrow(
+      'DATABASE_MIGRATION_URL',
+    );
   });
 });

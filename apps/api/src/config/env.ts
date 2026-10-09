@@ -78,6 +78,23 @@ const SmokeEnvSchema = z.object({
 /** Parsed, validated environment for `npm run llm:smoke`. */
 export type SmokeEnv = z.infer<typeof SmokeEnvSchema>;
 
+/** How the seed CLI talks to Gemini; the `--mode` flag picks it, not `LLM_MODE`. */
+export type SeedMode = 'replay' | 'record' | 'live';
+
+/**
+ * Variables `npm run seed` reads. It connects as the owner (`DATABASE_MIGRATION_URL`, SPEC §16),
+ * because `--reset` deletes candidates and the runtime role can't. The key is checked against
+ * the mode in {@link parseSeedEnv}.
+ */
+const SeedEnvSchema = z.object({
+  DATABASE_MIGRATION_URL: PostgresUrlSchema,
+  GEMINI_API_KEY: OptionalApiKeySchema,
+  ...geminiModelFields,
+});
+
+/** Parsed, validated environment for `npm run seed`. */
+export type SeedEnv = z.infer<typeof SeedEnvSchema>;
+
 type EnvSource = Readonly<Record<string, string | undefined>>;
 
 /**
@@ -117,6 +134,24 @@ export function parseMigrationEnv(source: EnvSource): MigrationEnv {
  */
 export function parseSmokeEnv(source: EnvSource): SmokeEnv {
   return parseWith(SmokeEnvSchema, source);
+}
+
+/**
+ * Parses the seed CLI's environment. Replay needs no key; record and live do.
+ *
+ * @throws Error naming each invalid variable, without its value.
+ *
+ * @example
+ * parseSeedEnv(process.env, 'replay');
+ */
+export function parseSeedEnv(source: EnvSource, mode: SeedMode): SeedEnv {
+  const env = parseWith(SeedEnvSchema, source);
+  if (mode !== 'replay' && env.GEMINI_API_KEY === undefined) {
+    throw new Error(
+      `Invalid environment configuration:\n  - GEMINI_API_KEY: required when seeding in ${mode} mode`,
+    );
+  }
+  return env;
 }
 
 function parseWith<T>(schema: z.ZodType<T>, source: EnvSource): T {

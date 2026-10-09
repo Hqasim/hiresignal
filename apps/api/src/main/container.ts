@@ -1,12 +1,15 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
 import type { Hono } from 'hono';
 
+import type { SeedJobResult } from '../application/ingest/seed-job';
+import type { LlmCallTally } from '../application/llm/llm-call-tally';
 import type { Embedder } from '../application/ports/embedder';
 import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
 import type { LlmPlatformReport } from '../application/smoke/check-llm-platform';
-import { type Env, parseEnv, parseMigrationEnv, parseSmokeEnv } from '../config/env';
+import { type Env, parseEnv, parseMigrationEnv, parseSeedEnv, parseSmokeEnv } from '../config/env';
 import { systemClock } from '../infrastructure/clock/system-clock';
 import { createJsonConsoleLogger } from '../infrastructure/logging/json-console-logger';
 import { createPool, type DbPool } from '../infrastructure/postgres/create-pool';
@@ -15,7 +18,9 @@ import { createPgDatabaseProbe } from '../infrastructure/postgres/pg-database-pr
 import { createPgLlmCallRepository } from '../infrastructure/postgres/pg-llm-call-repository';
 import { createApp } from '../interfaces/http/app';
 import type { AppBindings } from '../interfaces/http/app-bindings';
+import type { SeedArgs } from './cli/seed-args';
 import { createLlm, createProviderClients, createSmokeCheck, type LlmSettings } from './llm-wiring';
+import { createSeeder, loadSeedDataset } from './seed-wiring';
 
 /** The wired application, shared by every entry point. */
 export interface Container {
@@ -91,6 +96,46 @@ export function createMigrationRunner(
   return {
     logger,
     run: async () => migrate(pool, await readMigrations(MIGRATIONS_DIRECTORY)),
+    close: () => pool.end(),
+  };
+}
+
+/** The seed CLI's dependencies (`npm run seed`). */
+export interface SeedRunner {
+  logger: Logger;
+  /** Loads `data/` and seeds the demo job; returns the outcomes and a tally of model calls. */
+  run(): Promise<{ result: SeedJobResult; calls: LlmCallTally }>;
+  close(): Promise<void>;
+}
+
+/**
+ * Wires `npm run seed` (SPEC §20 Phase 4) on the owner connection (`DATABASE_MIGRATION_URL`,
+ * SPEC §16), with the LLM stack in the mode the `--mode` flag picks.
+ *
+ * @throws Error if the environment is invalid, for example a missing key outside replay mode.
+ */
+export function createSeedRunner(
+  source: Readonly<Record<string, string | undefined>>,
+  args: SeedArgs,
+): SeedRunner {
+  const env = parseSeedEnv(source, args.mode);
+  const logger = createJsonConsoleLogger({ clock: systemClock });
+  const pool = createPool({ connectionString: env.DATABASE_MIGRATION_URL, logger });
+  const seeder = createSeeder(
+    {
+      mode: args.mode,
+      apiKey: env.GEMINI_API_KEY,
+      models: { lite: env.GEMINI_MODEL_LITE, flash: env.GEMINI_MODEL_FLASH },
+      embeddingModel: env.GEMINI_EMBEDDING_MODEL,
+    },
+    { pool, clock: systemClock, logger, sleep: (ms) => sleep(ms) },
+  );
+  return {
+    logger,
+    run: async () => {
+      const result = await seeder.seed({ ...(await loadSeedDataset()), reset: args.reset });
+      return { result, calls: seeder.tally() };
+    },
     close: () => pool.end(),
   };
 }

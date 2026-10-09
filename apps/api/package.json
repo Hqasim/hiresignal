@@ -12,7 +12,9 @@
     "test:integration": "vitest run --project integration --passWithNoTests",
     "smoke:bundle": "node scripts/smoke-bundle.mjs",
     "db:migrate": "tsx --env-file-if-exists=../../.env src/main/cli/migrate.ts",
-    "llm:smoke": "tsx --env-file-if-exists=../../.env src/main/cli/llm-smoke.ts"
+    "llm:smoke": "tsx --env-file-if-exists=../../.env src/main/cli/llm-smoke.ts",
+    "seed": "tsx --env-file-if-exists=../../.env src/main/cli/seed.ts",
+    "seed:record": "tsx --env-file-if-exists=../../.env src/main/cli/seed.ts --mode record --reset"
   },
   "dependencies": {
     "@google/genai": "2.28.0",

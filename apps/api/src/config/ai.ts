@@ -86,3 +86,12 @@ export const LLM_RETRY_MAX_DELAY_MS = 10_000;
  * thinking tokens count toward the limit, so it leaves generous headroom.
  */
 export const SMOKE_MAX_OUTPUT_TOKENS = 2048;
+
+/**
+ * Minimum time between the starts of two live model calls while seeding (`npm run seed:record`),
+ * so a recording run stays under the free tier's per-minute limits (SPEC §21 risk 1). Google
+ * doesn't publish free-tier numbers (its rate-limits page points to AI Studio, checked
+ * 2026-10-09), so this assumes a conservative 10 requests per minute. A 429 that gets through
+ * still costs a fallback attempt, which `npm run seed:record` reports.
+ */
+export const SEED_MIN_CALL_INTERVAL_MS = 6000;

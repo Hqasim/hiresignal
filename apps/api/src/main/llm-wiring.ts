@@ -31,6 +31,11 @@ import { withFallback } from '../infrastructure/llm/decorators/with-fallback';
 import { withPinnedRoute } from '../infrastructure/llm/decorators/with-pinned-route';
 import { withRetry } from '../infrastructure/llm/decorators/with-retry';
 import { type ModelsByTier, withRouting } from '../infrastructure/llm/decorators/with-routing';
+import {
+  type Throttle,
+  withEmbeddingThrottle,
+  withThrottle,
+} from '../infrastructure/llm/decorators/with-throttle';
 import { createGeminiClients } from '../infrastructure/llm/gemini/create-gemini-clients';
 import { GEMINI_EMBEDDING_INPUT_FORMAT } from '../infrastructure/llm/gemini/gemini-embedder';
 import { createFsFixtureStore } from '../infrastructure/llm/replay/fixture-store';
@@ -110,14 +115,17 @@ export function createProviderClients(settings: LlmSettings, deps: LlmWiringDeps
  * routing → fallback → retry → call logging → provider client. Embeddings get call logging only:
  * there is no second embedding tier to fall back to.
  *
+ * With a `throttle` (live and record seeding), it sits just above the provider clients, so every
+ * attempt, including retries and fallbacks, is spaced out.
+ *
  * @example
  * const { llm, embedder } = createLlm(settings, { clock, logger, calls });
  */
 export function createLlm(
   settings: LlmSettings,
-  deps: LlmWiringDeps & { calls: LlmCallRepository },
+  deps: LlmWiringDeps & { calls: LlmCallRepository; throttle?: Throttle },
 ): { llm: LlmClient; embedder: Embedder } {
-  const provider = createProviderClients(settings, deps);
+  const provider = throttled(createProviderClients(settings, deps), deps.throttle);
   const logging = {
     calls: deps.calls,
     clock: deps.clock,
@@ -149,6 +157,15 @@ export function createLlm(
     inputFormat: GEMINI_EMBEDDING_INPUT_FORMAT,
   });
   return { llm, embedder };
+}
+
+function throttled(provider: ProviderClients, throttle: Throttle | undefined): ProviderClients {
+  return throttle === undefined
+    ? provider
+    : {
+        llm: withThrottle(provider.llm, throttle),
+        embedder: withEmbeddingThrottle(provider.embedder, throttle),
+      };
 }
 
 /**
