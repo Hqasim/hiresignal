@@ -3,10 +3,13 @@ import type { UntrustedText } from '../../domain/shared/untrusted-text';
 
 /**
  * What the wrapped text is, which becomes the tag name (`<untrusted_resume>`). Prompts tell the
- * model that anything inside an `untrusted_*` tag is data, never instructions. Later phases add
- * labels for questions and retrieved chunks.
+ * model that anything inside an `untrusted_*` tag is data, never instructions:
+ *
+ * - `resume`: a whole redacted resume (the L3 classifier)
+ * - `resume_outline`: the context headers of a candidate's chunks (the screening agent's first turn)
+ * - `resume_chunk`: one retrieved chunk (agent tool results and the synthesis evidence set)
  */
-export type SpotlightLabel = 'resume';
+export type SpotlightLabel = 'resume' | 'resume_outline' | 'resume_chunk';
 
 /**
  * Anything that could open or close an `untrusted_*` wrapper: `<` (optional spaces and `/`) then

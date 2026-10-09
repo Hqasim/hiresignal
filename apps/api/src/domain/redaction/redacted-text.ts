@@ -35,7 +35,13 @@ export function rehydrateRedactedText(stored: string): RedactedText {
 type CandidateAliasLabel = string & $brand<'CandidateAlias'>;
 
 /** The separators {@link joinRedactedText} may insert: code literals, so they hold no PII. */
-export type RedactedTextSeparator = ' · ' | '\n';
+export type RedactedTextSeparator = ' · ' | '\n' | '\n\n';
+
+/**
+ * A chunk ref such as `C04#3`, matched by its brand for the same reason. Refs are generated
+ * labels, never PII.
+ */
+type ChunkRefLabel = string & $brand<'ChunkRef'>;
 
 /**
  * A substring of redacted text, which is still redacted. Chunk contents and headings are cut from
@@ -64,4 +70,17 @@ export function joinRedactedText(
 ): RedactedText {
   // Derived, not produced: see the TSDoc above.
   return parts.join(separator) as RedactedText;
+}
+
+/**
+ * Prefixes redacted text with a chunk ref in brackets, as prompts label chunks and outline lines:
+ * `[C04#3] C04 · Experience · …`. The result is still redacted: the ref is a generated label
+ * (ADR 0014).
+ *
+ * @example
+ * labelWithRef(ref, chunk.contextHeader); // '[C04#3] C04 · Experience · Engineer, Acme'
+ */
+export function labelWithRef(ref: ChunkRefLabel, text: RedactedText): RedactedText {
+  // Derived, not produced: see the TSDoc above.
+  return `[${ref}] ${text}` as RedactedText;
 }

@@ -1,5 +1,6 @@
 import type { ClassifierVerdict } from '../../domain/guard/guard-verdict';
 import type { RedactedText } from '../../domain/redaction/redacted-text';
+import { capText } from '../llm/cap-text';
 import { generateStructured } from '../llm/generate-structured';
 import type { LlmClient } from '../ports/llm-client';
 import {
@@ -45,13 +46,6 @@ export function createClassifyInjection(deps: ClassifyInjectionDeps): ClassifyIn
       maxOutputTokens: deps.maxOutputTokens,
       schema: ClassifierReplySchema,
     });
-    return { ...value, rationale: capRationale(value.rationale) };
+    return { ...value, rationale: capText(value.rationale, CLASSIFIER_RATIONALE_MAX_CHARS) };
   };
-}
-
-function capRationale(rationale: string): string {
-  const trimmed = rationale.trim();
-  return trimmed.length <= CLASSIFIER_RATIONALE_MAX_CHARS
-    ? trimmed
-    : `${trimmed.slice(0, CLASSIFIER_RATIONALE_MAX_CHARS - 1)}…`;
 }

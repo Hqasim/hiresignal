@@ -28,12 +28,21 @@ export const CitationSchema = z.object({
 /** See {@link CitationSchema}. */
 export type Citation = z.infer<typeof CitationSchema>;
 
+/** Longest rationale per requirement: one or two sentences a recruiter reads at a glance. */
+export const RATIONALE_MAX_CHARS = 300;
+/** Most citations per requirement: enough to show breadth, few enough to check by eye. */
+export const MAX_CITATIONS_PER_REQUIREMENT = 3;
+/** Most strengths, and most concerns, per scorecard. */
+export const MAX_SCORECARD_POINTS = 3;
+/** Longest scorecard summary. */
+export const SUMMARY_MAX_CHARS = 400;
+
 /** One requirement's rating and the evidence behind it. */
 export const RequirementAssessmentSchema = z.object({
   requirementId: RequirementIdSchema,
   rating: RatingSchema,
-  rationale: z.string().max(300),
-  citations: z.array(CitationSchema).max(3),
+  rationale: z.string().max(RATIONALE_MAX_CHARS),
+  citations: z.array(CitationSchema).max(MAX_CITATIONS_PER_REQUIREMENT),
   /** `citation_failed` when verification downgraded the rating to `unclear` (SPEC §9.6). */
   note: z.enum(['citation_failed']).nullable(),
 });
@@ -43,9 +52,9 @@ export type RequirementAssessment = z.infer<typeof RequirementAssessmentSchema>;
 /** The verified scorecard body, stored as `scorecards.result`. The score itself is computed in code. */
 export const ScorecardResultSchema = z.object({
   requirements: z.array(RequirementAssessmentSchema),
-  strengths: z.array(z.string()).max(3),
-  concerns: z.array(z.string()).max(3),
-  summary: z.string().max(400),
+  strengths: z.array(z.string()).max(MAX_SCORECARD_POINTS),
+  concerns: z.array(z.string()).max(MAX_SCORECARD_POINTS),
+  summary: z.string().max(SUMMARY_MAX_CHARS),
 });
 /** See {@link ScorecardResultSchema}. */
 export type ScorecardResult = z.infer<typeof ScorecardResultSchema>;

@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { CandidateAliasSchema } from '../candidates/candidate';
+import { ChunkRefSchema } from '../candidates/chunk-ref';
 import { redact } from './redact';
-import { joinRedactedText, rehydrateRedactedText, sliceRedactedText } from './redacted-text';
+import {
+  joinRedactedText,
+  labelWithRef,
+  rehydrateRedactedText,
+  sliceRedactedText,
+} from './redacted-text';
 
 describe('derived redacted text', () => {
   const { text } = redact('# Ana Lee\nana@example.com\n## Skills\nGo', { personName: 'Ana Lee' });
@@ -16,6 +22,12 @@ describe('derived redacted text', () => {
 
     expect(joinRedactedText([alias, sliceRedactedText(text, 2, 12)], ' · ')).toBe(
       'C04 · [PERSON_1]',
+    );
+  });
+
+  it('labels redacted text with a chunk ref in brackets', () => {
+    expect(labelWithRef(ChunkRefSchema.parse('C04#3'), sliceRedactedText(text, 2, 12))).toBe(
+      '[C04#3] [PERSON_1]',
     );
   });
 

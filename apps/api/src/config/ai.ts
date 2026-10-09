@@ -34,6 +34,27 @@ export const AGENT_SEARCH_TOP_K = 4;
 export const MAX_AGENT_STEPS = 8;
 
 /**
+ * Output budget for one `screen.agent` turn. A turn is a few function calls or a one-word reply,
+ * well under 200 tokens, but Gemini 3 thinking tokens count toward the limit (288 for a 20-token
+ * reply in the Phase 2 smoke check), so it leaves the same headroom as the smoke check.
+ */
+export const AGENT_MAX_OUTPUT_TOKENS = 2048;
+
+/**
+ * Output budget for `screen.synthesize` and `screen.repair`. Seven requirements with a 300-character
+ * rationale and up to three quotes each, plus strengths, concerns and the summary, come to about
+ * 2,500 tokens of JSON; Flash also thinks before a judgment call. A truncated reply costs a repair
+ * call, so the budget is generous.
+ */
+export const SYNTHESIS_MAX_OUTPUT_TOKENS = 8192;
+
+/**
+ * Longest `search_resume` query the agent may send. A focused search is a phrase, not a paragraph;
+ * a longer one is returned to the model as an error instead of being embedded.
+ */
+export const SEARCH_QUERY_MAX_CHARS = 200;
+
+/**
  * Below this best cosine similarity, ask answers "insufficient evidence" without an LLM call.
  * A starting value, tuned on the seeded data in Phase 6.
  */
@@ -44,6 +65,12 @@ export const SIMILARITY_FLOOR = 0.55;
  * is at least this long, plus a margin (SPEC §9.2).
  */
 export const CACHE_MIN_PREFIX_TOKENS = 4096;
+
+/**
+ * Safety margin on {@link CACHE_MIN_PREFIX_TOKENS} for the prefix-size test (SPEC §9.2). Token
+ * counts are estimated at four characters per token, so the test demands 10% more than the minimum.
+ */
+export const CACHE_PREFIX_MARGIN = 0.1;
 
 /** Ask escalates to Flash when the retrieved context is larger than this (SPEC §9.1). */
 export const ASK_ESCALATION_CONTEXT_TOKENS = 3000;
