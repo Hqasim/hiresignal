@@ -76,6 +76,30 @@ flowchart TD
 - **Embeddings** get call logging and record/replay, but no retry or fallback: there is no second embedding tier. [`GeminiEmbedder`](../apps/api/src/infrastructure/llm/gemini/gemini-embedder.ts) sends one `Content` per text with retrieval prefixes, checks one 768-d vector per input, and normalizes.
 - **Record/replay** keys each fixture by `sha256` of the model and everything that decides the answer ([ADR 0009](adr/0009-record-replay-llm-adapter.md)). `npm run llm:smoke` records one structured call per tier and one embedding; a unit test replays them offline.
 
+## Safety layer
+
+Every resume passes through redaction and the injection guard before anything else reads it ([ADR 0013](adr/0013-layered-injection-defense-and-quarantine-policy.md), [ADR 0014](adr/0014-one-way-redaction-with-branded-types.md)). Everything except the classifier is pure code in `domain/`. Phase 4's ingest use case composes the steps:
+
+```mermaid
+flowchart TD
+  raw["Raw Markdown resume"] --> l0["L0 scanInvisible<br/>zero-width · bidi (medium) · tag chars (high)<br/>records, then strips"]
+  l0 --> nfkc["NFKC normalize"]
+  nfkc --> redact["redact()<br/>PERSON · EMAIL · PHONE · URL · ADDRESS · SCHOOL · GRAD_YEAR<br/>→ RedactedText"]
+  redact --> scan["scanRedactedText<br/>L1 hidden markup + L2 rules<br/>high when hidden, medium when visible"]
+  scan --> high{"any high signal?"}
+  high -->|yes| policy
+  high -->|no| l3["L3 classifier · guard.classify · Flash-Lite<br/>spotlighted &lt;untrusted_resume&gt;"]
+  l3 --> policy["decideGuard (pure)"]
+  policy --> q["quarantined<br/>stored, never chunked or scored"]
+  policy --> f["flagged<br/>screened, marked for review"]
+  policy --> c["clean<br/>benign mediums kept as dismissed"]
+```
+
+- **`RedactedText` is the gate.** Only `redact()` produces it from raw text. The embedder's document path, the classifier and `spotlight()` accept nothing else, so a raw resume can't reach a model and still compile.
+- **Severity is about visibility.** An instruction a human can read is medium, and the classifier decides whether the resume is an attack or a résumé _about_ attacks. An instruction a human can't see is high, and quarantines on its own.
+- **The policy is a table.** [`decideGuard`](../apps/api/src/domain/guard/policy.ts) is pure. Its tests cover every row, including the 0.7 confidence boundary.
+- **Spotlighting** ([`spotlight.ts`](../apps/api/src/application/prompts/spotlight.ts)) wraps untrusted text in `<untrusted_*>` tags and neutralizes wrapper-like tags inside it, so content can't close its own wrapper.
+
 ## Data model
 
 The schema is [`db/migrations/0001_init.sql`](../db/migrations/0001_init.sql). [`0002_app_role_grants.sql`](../db/migrations/0002_app_role_grants.sql) gives `hiresignal_app` `select`, `insert` and `update`, with no `delete` and no DDL.
