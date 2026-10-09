@@ -43,6 +43,7 @@ function aScorecard(score: number, createdAt: string): NewScorecard {
           citations: [
             {
               ref: ChunkRefSchema.parse('C01#0'),
+              section: 'experience',
               quote: 'Shipped RAG',
               span: { start: 0, end: 11 },
             },

@@ -4,6 +4,7 @@ import { AgentTraceSchema, ScorecardModelsSchema, ScorecardResultSchema } from '
 
 const citation = {
   ref: 'C01#3',
+  section: 'experience',
   quote: 'Shipped a retrieval pipeline on pgvector',
   span: { start: 410, end: 450 },
 };

@@ -10,10 +10,19 @@ export const RatingSchema = z.enum(['strong', 'partial', 'none', 'unclear']);
 /** See {@link RatingSchema}. */
 export type Rating = z.infer<typeof RatingSchema>;
 
-/** A verified quote: `quote` is a substring of chunk `ref`, and `span` locates it in the resume. */
+/** Shortest quote a citation may use: long enough to be specific evidence (SPEC §9.6). */
+export const CITATION_QUOTE_MIN_CHARS = 8;
+/** Longest quote a citation may use: evidence, not a copy of the resume (SPEC §9.6). */
+export const CITATION_QUOTE_MAX_CHARS = 300;
+
+/**
+ * A verified quote: `quote` is the exact text of chunk `ref` at `span` in the redacted resume, and
+ * `section` is that chunk's section, so the UI can label and highlight it.
+ */
 export const CitationSchema = z.object({
   ref: ChunkRefSchema,
-  quote: z.string().min(8).max(300),
+  section: z.string().min(1),
+  quote: z.string().min(CITATION_QUOTE_MIN_CHARS).max(CITATION_QUOTE_MAX_CHARS),
   span: TextSpanSchema,
 });
 /** See {@link CitationSchema}. */
