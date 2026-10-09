@@ -1,0 +1,23 @@
+{"id":"Q01","question":"Who has built retrieval-augmented generation with embeddings and a vector store?","expected":["C01","C05","C10"],"refs":["C01#1","C05#3","C10#1"]}
+{"id":"Q02","question":"Which candidates have shipped tool calling to production?","expected":["C01","C02","C10"],"refs":["C01#1","C02#1","C10#1"]}
+{"id":"Q03","question":"Who has defended an AI assistant against prompt injection?","expected":["C02"],"refs":["C02#1"]}
+{"id":"Q04","question":"Who has measured search quality with recall@5?","expected":["C01","C05"],"refs":["C01#1","C05#3"]}
+{"id":"Q05","question":"Who leads a design system with accessibility checks in CI?","expected":["C04"],"refs":["C04#1"]}
+{"id":"Q06","question":"Who moved into software from mechanical engineering?","expected":["C05"],"refs":["C05#0","C05#2"]}
+{"id":"Q07","question":"Who has partitioned large PostgreSQL tables?","expected":["C09"],"refs":["C09#1","C09#3"]}
+{"id":"Q08","question":"Who is a junior developer with under two years of experience?","expected":["C08"],"refs":["C08#0","C08#1"]}
+{"id":"Q09","question":"Who owns an LLM orchestration service with retries and fallbacks between providers?","expected":["C02"],"refs":["C02#1"]}
+{"id":"Q10","question":"Who has fused vector and full-text search with reciprocal rank fusion?","expected":["C02"],"refs":["C02#1"]}
+{"id":"Q11","question":"Who cut API latency by tuning slow queries and adding read replicas?","expected":["C09"],"refs":["C09#2"]}
+{"id":"Q12","question":"Who builds backend services in Java and Spring Boot?","expected":["C09"],"refs":["C09#1","C09#2"]}
+{"id":"Q13","question":"Who migrated CI from Jenkins to GitHub Actions?","expected":["C09"],"refs":["C09#1"]}
+{"id":"Q14","question":"Who validates model outputs with JSON Schema and a repair step?","expected":["C01","C10"],"refs":["C01#1","C10#1"]}
+{"id":"Q15","question":"Who runs a chat endpoint on AWS Lambda with provisioned concurrency?","expected":["C01"],"refs":["C01#1"]}
+{"id":"Q16","question":"Who has built offline sync for collaborative document editors?","expected":["C02"],"refs":["C02#2"]}
+{"id":"Q17","question":"Who built a trip assistant that can hold bookings?","expected":["C10"],"refs":["C10#1"]}
+{"id":"Q18","question":"Who has used AWS Step Functions?","expected":["C09","C10"],"refs":["C09#1","C10#1"]}
+{"id":"Q19","question":"Which candidates maintain open-source libraries?","expected":["C01","C04","C05"],"refs":["C01#4","C04#3","C05#4"]}
+{"id":"Q20","question":"Who lists RAG and agents as skills but describes only vague AI work?","expected":["C03"],"refs":["C03#1","C03#4"]}
+{"id":"X01","question":"Who holds a commercial pilot license?","expected":[],"refs":[]}
+{"id":"X02","question":"Who has worked as a pastry chef?","expected":[],"refs":[]}
+{"id":"X03","question":"Who has repaired marine diesel engines?","expected":[],"refs":[]}

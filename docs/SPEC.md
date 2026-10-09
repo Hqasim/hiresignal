@@ -747,7 +747,7 @@ apps/web/src/
 
 | File | Contents |
 |---|---|
-| `retrieval.jsonl` | 20 questions with expected candidate aliases (and refs where obvious), written after the resumes |
+| `retrieval.jsonl` | 20 questions with expected candidate aliases (and refs where obvious), written after the resumes, plus 3 out-of-scope questions (`expected: []`) that must return insufficient evidence; they set the similarity floor |
 | `injection.jsonl` | 40 items: 20 malicious (override, role hijack, evaluator targeting, delimiter spoofing, hidden markup, zero-width-wrapped, Unicode tag smuggling, paraphrased social engineering) and 20 benign hard negatives (security engineers describing injection defenses, quoted error messages, "ignore" in normal prose) |
 | `pii.jsonl` | 15 snippets with labelled entities |
 

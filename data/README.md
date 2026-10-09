@@ -46,6 +46,17 @@ Phase 3 drafted these as JSON Lines, one item per line. The Phase 9 eval runner 
 | `pii.jsonl`       | 15 snippets `{ id, text, personName, entities: [{ type, value }] }` covering all 7 PII types: US and international phones, profile URLs, street plus city lines, schools, graduation years, accented and apostrophe names.                                                                                                                                                                  | `apps/api/src/domain/redaction/pii-dataset.test.ts`: every labelled value is in its text, and none survives `redact()` (the 0-leak gate).                                                                                                |
 | `injection.jsonl` | 40 items `{ id, label, category, text }`. 20 are malicious: instruction override, role hijack, evaluator targeting, output forcing, delimiter spoofing, hidden markup, zero-width wrapping, Unicode tag smuggling, fullwidth obfuscation, paraphrased social engineering. 20 are benign hard negatives: security vocabulary, quoted errors, "ignore" in prose, ordinary markup and Unicode. | `apps/api/src/domain/guard/injection-dataset.test.ts`: every malicious item except social engineering raises a rule signal, hidden markup and tag smuggling are quarantined by the rules alone, and no benign item raises a high signal. |
 
+### Golden questions (`retrieval.jsonl`)
+
+Phase 6 wrote 23 recruiter questions for ask, after the resumes, one per line as `{ id, question, expected, refs }`:
+
+- **`Q01`–`Q20` are answerable.** `expected` lists the candidates a good retrieval surfaces among its top 5 chunks (recall@5), and `refs` the chunks that hold the evidence. They range from one obvious candidate (Q07, partitioned Postgres tables: C09) to comparisons (Q02, tool calling in production: C01, C02 and C10). Q20 targets C03's buzzword-only Skills list.
+- **`X01`–`X03` are out of scope** (`expected: []`): nothing in the pool answers them, so ask must say there is insufficient evidence. X03 (marine diesel engines) is a hard negative, close to C05's mechanical-engineering past.
+- **`Q01`–`Q04` double as the web app's suggested questions, and Q01 is the E2E ask question,** so the demo and the E2E test need no extra recording.
+- C06 and C07 are never expected, because quarantined resumes are never retrievable.
+
+`apps/api/src/infrastructure/dataset/retrieval-set.test.ts` checks that every expected alias exists and every ref is a real chunk of its candidate. `npm run ask:golden` replays the questions and prints recall@5 and MRR.
+
 Invisible characters (zero-width, BOM, tag characters) are stored as JSON `\u` escapes, never as literal characters, so a reviewer can see them in a diff.
 
 As of 2026-10-09, the rules alone (L0–L2) score this set as follows:
