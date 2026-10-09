@@ -32,8 +32,8 @@ export const CHUNK_COLUMNS = `c.candidate_id, k.alias, c.ordinal, c.section, c.c
   c.content, c.start_offset, c.end_offset`;
 
 /**
- * Maps a chunk row and derives its ref (`C04#3`). `content` is only ever written from
- * `RedactedText`, so its brand is restored here.
+ * Maps a chunk row and derives its ref (`C04#3`). `content` and `context_header` are only ever
+ * written from `RedactedText`, so their brand is restored here.
  *
  * @example
  * toRetrievedChunk(ChunkRowSchema.parse(row)).ref; // 'C04#3'
@@ -44,7 +44,7 @@ export function toRetrievedChunk(row: ChunkRow): RetrievedChunk {
     candidateId: row.candidate_id,
     alias: row.alias,
     section: row.section,
-    contextHeader: row.context_header,
+    contextHeader: rehydrateRedactedText(row.context_header),
     content: rehydrateRedactedText(row.content),
     startOffset: row.start_offset,
     endOffset: row.end_offset,

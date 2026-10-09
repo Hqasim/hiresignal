@@ -66,7 +66,7 @@ export function aCandidate(
     chunks.push({
       ordinal,
       section: spec.section,
-      contextHeader,
+      contextHeader: rehydrateRedactedText(contextHeader),
       content: rehydrateRedactedText(spec.text),
       startOffset: resume.length,
       endOffset: resume.length + spec.text.length,

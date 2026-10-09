@@ -2,6 +2,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { CHUNK_MAX_TOKENS } from '../../config/ai';
+import { chunkResume } from '../../domain/chunking/chunk-resume';
 import { prepareResume } from '../../domain/ingestion/prepare-resume';
 import { JobSlugSchema } from '../../domain/jobs/job';
 import { findEducationSection } from '../../domain/redaction/education-section';
@@ -113,4 +115,18 @@ describe('data/resumes', () => {
       { type: 'GRAD_YEAR', count: 2 },
     ]);
   });
+
+  it.each(prepared.map((resume) => [resume.alias, resume] as const))(
+    '%s chunks into exact slices that fit the token limit, one per role or section',
+    (alias, { redaction }) => {
+      const chunks = chunkResume(redaction.text, { alias, maxTokens: CHUNK_MAX_TOKENS });
+      const roles = redaction.text.split('\n').filter((line) => line.startsWith('### '));
+
+      expect(chunks.length).toBeGreaterThanOrEqual(roles.length + 3);
+      for (const chunk of chunks) {
+        expect(redaction.text.slice(chunk.startOffset, chunk.endOffset)).toBe(chunk.content);
+        expect(chunk.tokenEstimate).toBeLessThanOrEqual(CHUNK_MAX_TOKENS);
+      }
+    },
+  );
 });

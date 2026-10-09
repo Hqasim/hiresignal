@@ -1,3 +1,5 @@
+import type { $brand } from 'zod';
+
 declare const redacted: unique symbol;
 
 /**
@@ -21,6 +23,45 @@ export type RedactedText = string & { readonly [redacted]: true };
  * const resume = rehydrateRedactedText(row.redacted_resume);
  */
 export function rehydrateRedactedText(stored: string): RedactedText {
-  // One of two casts that produce RedactedText (the other is in redact()); see the TSDoc above.
+  // Trusts the storage invariant in the TSDoc above. The other brand sites are redact() and the
+  // derived constructors below (ADR 0014).
   return stored as RedactedText;
+}
+
+/**
+ * A candidate alias such as `C04`, matched by its brand so this module needn't import
+ * `candidates/` (which imports this one). Aliases are generated labels, never PII.
+ */
+type CandidateAliasLabel = string & $brand<'CandidateAlias'>;
+
+/** The separators {@link joinRedactedText} may insert: code literals, so they hold no PII. */
+export type RedactedTextSeparator = ' · ' | '\n';
+
+/**
+ * A substring of redacted text, which is still redacted. Chunk contents and headings are cut from
+ * the redacted resume this way (ADR 0014, ADR 0019).
+ *
+ * @example
+ * sliceRedactedText(resume, chunk.startOffset, chunk.endOffset);
+ */
+export function sliceRedactedText(text: RedactedText, start: number, end: number): RedactedText {
+  // Derived, not produced: every character came from redact() output.
+  return text.slice(start, end) as RedactedText;
+}
+
+/**
+ * Joins redacted text, candidate aliases and a fixed separator. The result is still redacted,
+ * because each part either came from `redact()` or is a generated label. Context headers such as
+ * `C04 · Experience · Engineer, Acme` and the embedder's `header + content` input are built this
+ * way (ADR 0014, ADR 0019).
+ *
+ * @example
+ * joinRedactedText([alias, sectionTitle], ' · '); // 'C04 · Experience'
+ */
+export function joinRedactedText(
+  parts: readonly (RedactedText | CandidateAliasLabel)[],
+  separator: RedactedTextSeparator,
+): RedactedText {
+  // Derived, not produced: see the TSDoc above.
+  return parts.join(separator) as RedactedText;
 }

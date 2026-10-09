@@ -11,8 +11,11 @@ export interface ResumeChunk {
   ordinal: number;
   /** Lowercase section name, for example `experience` or `projects`. */
   section: string;
-  /** Embedded with the content so short chunks keep their context, for example `C04 · Experience · …`. */
-  contextHeader: string;
+  /**
+   * Embedded with the content so short chunks keep their context, for example
+   * `C04 · Experience · …`. Built from the alias and redacted headings, so it is redacted too.
+   */
+  contextHeader: RedactedText;
   content: RedactedText;
   startOffset: number;
   endOffset: number;

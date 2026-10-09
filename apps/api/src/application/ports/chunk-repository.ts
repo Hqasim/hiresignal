@@ -10,7 +10,7 @@ export interface RetrievedChunk {
   candidateId: CandidateId;
   alias: CandidateAlias;
   section: string;
-  contextHeader: string;
+  contextHeader: RedactedText;
   content: RedactedText;
   /** Offsets of `content` in the candidate's redacted resume, for highlighting. */
   startOffset: number;
