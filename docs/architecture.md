@@ -63,7 +63,9 @@ flowchart TD
   retry["withRetry<br/>1 retry · 429 retryDelay ≤ 10 s · backoff + jitter"] --> logging
   logging["withCallLogging<br/>one llm_calls row per attempt"] --> mode{LLM_MODE}
   mode -->|live| gemini["GeminiLlmClient<br/>@google/genai"]
-  mode -->|record| recording["RecordingLlmClient<br/>Gemini + write fixture"]
+  mode -->|record| first{"fixture exists?"}
+  first -->|yes, logged as replay| replay
+  first -->|no, logged as live| recording["RecordingLlmClient<br/>Gemini + write fixture"]
   mode -->|replay| replay["ReplayLlmClient<br/>fixtures/llm/&lt;task&gt;/&lt;hash&gt;.json"]
   recording --> gemini
 ```
@@ -75,6 +77,8 @@ flowchart TD
 - **Structured output** goes through [`generateStructured`](../apps/api/src/application/llm/generate-structured.ts): Zod schema → JSON Schema → reply → Zod parse, with one repair turn.
 - **Embeddings** get call logging and record/replay, but no retry or fallback: there is no second embedding tier. [`GeminiEmbedder`](../apps/api/src/infrastructure/llm/gemini/gemini-embedder.ts) sends one `Content` per text with retrieval prefixes, checks one 768-d vector per input, and normalizes.
 - **Record/replay** keys each fixture by `sha256` of the model and everything that decides the answer ([ADR 0009](adr/0009-record-replay-llm-adapter.md)). `npm run llm:smoke` records one structured call per tier and one embedding; a unit test replays them offline.
+- **Record mode records only what's missing** ([`fixture-first.ts`](../apps/api/src/infrastructure/llm/replay/fixture-first.ts), ADR 0009 update): a request with a fixture replays it, and only new requests reach Gemini. Each side has its own call logging, so `llm_calls` and the seed tally count only real Gemini calls.
+- **`LlmClient` returns `LlmResult`:** the provider's response plus the `routedReason` that `withRouting` decided, so ask can report why a tier answered.
 
 ## Safety layer
 
@@ -183,6 +187,40 @@ sequenceDiagram
 - **The model never writes the score.** Code verifies every quote against the retrieved chunk content, and the stored spans come from code. A requirement that still fails after one repair becomes `unclear`, worth 0.
 - **Seeding precomputes.** [`createScreenPool`](../apps/api/src/application/screening/screen-pool.ts) screens every clean or flagged candidate after ingestion and skips any that already has a scorecard ([ADR 0015](adr/0015-precomputed-results-and-a-daily-call-cap.md)).
 - **HTTP.** `GET /api/jobs`, `/api/jobs/:slug`, `/api/jobs/:slug/candidates` and `GET /api/candidates/:id` serve stored data. `POST …/shortlist` reveals the name. `POST …/screen` re-runs screening live behind the daily-cap middleware (429 with `Retry-After`).
+
+## Ask the talent pool
+
+[`createAskTalentPool`](../apps/api/src/application/ask/ask-talent-pool.ts) answers a recruiter's question across a job's pool (SPEC §9.7; [ADR 0008](adr/0008-hybrid-retrieval-with-rrf.md)):
+
+```mermaid
+sequenceDiagram
+  participant R as POST /api/jobs/:slug/ask
+  participant UC as createAskTalentPool
+  participant E as Embedder
+  participant DB as Postgres
+  participant LLM as LlmClient (routed)
+  R->>R: daily cap · AskRequest (1–500 chars)
+  R->>UC: question
+  UC->>UC: scanQuestion: L0 → NFKC → L1 + L2
+  Note over UC: high signal → InjectionRejectedError (422), nothing embedded
+  UC->>E: embedQuery (query prefix)
+  UC->>DB: hybridSearch across the job, keyword match any, top 12
+  alt best similarity < SIMILARITY_FLOOR (0.65)
+    UC-->>R: insufficient evidence, no model call
+  else
+    UC->>LLM: ask.answer: ask@1 system + spotlighted question + chunks, AskAnswer schema, routingContext
+    LLM-->>UC: answer, citations, insufficientEvidence (+ routedReason)
+    UC->>UC: verifyAnswerCitations (refs, quotes, spans)
+    Note over UC: model says insufficient, or no citation verifies → insufficient evidence
+    UC-->>R: answer + verified citations (candidate id, alias, span)
+  end
+```
+
+- **One SQL statement, two arms.** Vector distance and full-text match, fused with reciprocal rank fusion, with cosine similarity returned for the floor. Ask ORs the question's words; the screening agent keeps AND, so its retrieval is unchanged. Ties break by alias and ordinal, so results don't depend on how rows are stored.
+- **The floor is a cost guard.** Tuned on the golden questions (answerable ≥ 0.661, out of scope ≤ 0.639), it skips the model call for questions nothing in the pool is close to.
+- **Routing.** Comparative questions and context that spans more than 6 candidates go to Flash; everything else to Flash-Lite. The response reports `model` and `routedReason`.
+- **Nothing unverified is shown.** Citations are checked like screening's (an exact quote from a chunk the model was shown) and mapped to the candidate and a resume span for highlighting.
+- **Golden questions.** `npm run ask:golden` runs the 23 questions in `data/evals/retrieval.jsonl` through the same wiring ([`ask-wiring.ts`](../apps/api/src/main/ask-wiring.ts)) and prints recall@5 and MRR for each keyword mode; the ask integration test replays them.
 
 ## Data model
 
