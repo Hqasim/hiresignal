@@ -6,8 +6,10 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { CHUNK_MAX_TOKENS } from '../../config/ai';
+import { QUESTION_MAX_CHARS } from '../../domain/ask/ask-limits';
 import { formatChunkRef, parseChunkRef } from '../../domain/candidates/chunk-ref';
 import { chunkResume } from '../../domain/chunking/chunk-resume';
+import { scanQuestion } from '../../domain/guard/scan-question';
 import { prepareResume } from '../../domain/ingestion/prepare-resume';
 import { JobSlugSchema } from '../../domain/jobs/job';
 import { readDataset } from './fs-dataset';
@@ -49,6 +51,14 @@ describe('data/evals/retrieval.jsonl', () => {
     expect(outOfScope.every((q) => q.id.startsWith('X') && q.refs.length === 0)).toBe(true);
     expect(new Set(questions.map((q) => q.id)).size).toBe(questions.length);
   });
+
+  it.each(questions.map((q) => [q.id, q] as const))(
+    '%s passes the question guard and fits the length limit',
+    (_id, { question }) => {
+      expect(scanQuestion(question).rejected).toBe(false);
+      expect(question.length).toBeLessThanOrEqual(QUESTION_MAX_CHARS);
+    },
+  );
 
   it.each(questions.map((q) => [q.id, q] as const))(
     '%s expects only candidates that exist and are retrievable',

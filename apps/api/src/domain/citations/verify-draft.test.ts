@@ -5,11 +5,11 @@ import { ChunkRefSchema } from '../candidates/chunk-ref';
 import type { Requirement } from '../jobs/job';
 import { computeScore } from '../scoring/compute-score';
 import { finalizeAssessments, NOT_ASSESSED_RATIONALE } from './finalize-assessments';
+import type { EvidenceChunk } from './verify-citation';
 import {
   type CitationErrorKind,
   describeCitationError,
   type DraftAssessment,
-  type EvidenceChunk,
   verifyDraft,
 } from './verify-draft';
 

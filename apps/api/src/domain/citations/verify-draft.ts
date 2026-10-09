@@ -1,5 +1,4 @@
 import type { CandidateAlias } from '../candidates/candidate';
-import { type ChunkRef, parseChunkRef } from '../candidates/chunk-ref';
 import type { Requirement, RequirementId } from '../jobs/job';
 import {
   type Citation,
@@ -8,13 +7,12 @@ import {
   type Rating,
 } from '../scoring/scorecard';
 import { assertNever } from '../shared/assert-never';
-import { locateQuote, normalizeWhitespace } from './locate-quote';
-
-/** A citation as the model wrote it: nothing about it is trusted yet. */
-export interface DraftCitation {
-  ref: string;
-  quote: string;
-}
+import {
+  type CitationFailure,
+  type DraftCitation,
+  type EvidenceChunk,
+  verifyCitation,
+} from './verify-citation';
 
 /** One requirement's rating as the model wrote it. */
 export interface DraftAssessment {
@@ -24,23 +22,9 @@ export interface DraftAssessment {
   citations: readonly DraftCitation[];
 }
 
-/** A chunk the agent actually retrieved for this candidate: the only text a citation may quote. */
-export interface EvidenceChunk {
-  ref: ChunkRef;
-  alias: CandidateAlias;
-  section: string;
-  /** The chunk's content: an exact slice of the redacted resume (not its context header). */
-  content: string;
-  /** Where `content` starts in the redacted resume, so citation spans are resume offsets. */
-  startOffset: number;
-}
-
 /** Why part of a draft failed verification (SPEC §9.6). */
 export type CitationErrorKind =
-  | 'unknown-ref'
-  | 'foreign-ref'
-  | 'quote-length'
-  | 'quote-not-found'
+  | CitationFailure
   | 'missing-requirement'
   | 'duplicate-requirement'
   | 'unknown-requirement'
@@ -77,7 +61,7 @@ export interface DraftVerification {
 export interface VerifyDraftInput {
   draft: readonly DraftAssessment[];
   requirements: readonly Requirement[];
-  /** The evidence set, keyed by ref. Chunks of other candidates are never in it. */
+  /** Every chunk the agent retrieved for this candidate, keyed by ref. Chunks of other candidates are never in it. */
   evidence: ReadonlyMap<string, EvidenceChunk>;
   /** The candidate being screened; a ref with another alias is a `foreign-ref`. */
   alias: CandidateAlias;
@@ -146,9 +130,9 @@ function verifyAssessment(
   const errors: CitationError[] = [];
   const citations: Citation[] = [];
   for (const draftCitation of drafted.citations) {
-    const outcome = verifyCitation(draftCitation, input);
-    if ('kind' in outcome) {
-      errors.push({ kind: outcome.kind, requirementId, ref: draftCitation.ref });
+    const outcome = verifyCitation(draftCitation, input.evidence, input.alias);
+    if ('failure' in outcome) {
+      errors.push({ kind: outcome.failure, requirementId, ref: draftCitation.ref });
     } else if (
       !citations.some((c) => c.ref === outcome.ref && c.span.start === outcome.span.start)
     ) {
@@ -159,39 +143,6 @@ function verifyAssessment(
     errors.push({ kind: 'uncited-rating', requirementId });
   }
   return { requirementId, rating: drafted.rating, rationale: drafted.rationale, citations, errors };
-}
-
-function verifyCitation(
-  draft: DraftCitation,
-  input: VerifyDraftInput,
-): Citation | { kind: CitationErrorKind } {
-  const parsed = parseChunkRef(draft.ref);
-  if (parsed !== null && parsed.alias !== input.alias) {
-    return { kind: 'foreign-ref' };
-  }
-  const chunk = input.evidence.get(draft.ref);
-  if (parsed === null || chunk === undefined) {
-    return { kind: 'unknown-ref' };
-  }
-  const length = normalizeWhitespace(draft.quote).length;
-  if (length < CITATION_QUOTE_MIN_CHARS || length > CITATION_QUOTE_MAX_CHARS) {
-    return { kind: 'quote-length' };
-  }
-  const local = locateQuote(chunk.content, draft.quote);
-  if (local === null) {
-    return { kind: 'quote-not-found' };
-  }
-  const quote = chunk.content.slice(local.start, local.end);
-  if (quote.length > CITATION_QUOTE_MAX_CHARS) {
-    // Only possible when the resume's own whitespace pads a quote near the limit.
-    return { kind: 'quote-length' };
-  }
-  return {
-    ref: chunk.ref,
-    section: chunk.section,
-    quote,
-    span: { start: chunk.startOffset + local.start, end: chunk.startOffset + local.end },
-  };
 }
 
 /**

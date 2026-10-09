@@ -1,9 +1,9 @@
 import type { CandidateId } from '../../domain/candidates/candidate';
 import { finalizeAssessments } from '../../domain/citations/finalize-assessments';
+import type { EvidenceChunk } from '../../domain/citations/verify-citation';
 import {
   describeCitationError,
   type DraftVerification,
-  type EvidenceChunk,
   verifyDraft,
 } from '../../domain/citations/verify-draft';
 import type { Job } from '../../domain/jobs/job';
