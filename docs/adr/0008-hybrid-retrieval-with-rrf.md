@@ -27,6 +27,7 @@ The data is small: 53 chunks from 8 clean candidates of one job, in Postgres wit
 - **`kw` arm:** chunks whose `content_tsv` (context header plus content, English stemming) matches the query, ranked by `ts_rank_cd` (cover density), top 20.
 - **Fusion:** each chunk scores `Σ 1 / (RRF_K + rank)` over the arms that found it, with `RRF_K` = 60 (Cormack et al., 2009). Ranks need no calibration between a cosine and a text rank, and a chunk both arms found beats one only one arm found. Ties are broken by similarity, then alias and ordinal, so results are deterministic.
 - **Cosine similarity is returned for every fused row,** keyword-only hits included, so ask can apply `SIMILARITY_FLOOR` to the best one.
+- **Both arms break ties by alias, then chunk ordinal.** `any` matching often gives several chunks the same `ts_rank_cd`. Without a tie-break, `row_number()` numbers them in physical row order, which differs between a fresh database and one re-seeded with `--reset`. The first ask recording (2026-10-10) was made on a re-seeded database, so none of its 20 answers replayed on a fresh one: Q01's 5th and 6th chunks had swapped, which changed the prompt and so the fixture key. An integration test now rewrites rows to reverse their stored order and checks the results don't move.
 - **Both arms filter** to the job and to candidates that aren't quarantined. Quarantined resumes have no chunks anyway; the filter is defense in depth.
 
 **The keyword arm's match mode is a parameter** (`KeywordMatch` on [`HybridSearchQuery`](../../apps/api/src/application/ports/chunk-repository.ts)):
@@ -60,8 +61,8 @@ The golden set is 20 answerable questions and 3 out-of-scope ones ([`data/evals/
 
 **Routing.** The same run measured what ask's routing policy would see ([ADR 0010](0010-rule-based-routing-with-tier-fallback.md)):
 
-- The context was 911–1,835 estimated tokens per question, so the 3,000-token rule never fires.
-- The 12 chunks spanned 4–8 candidates. At the spec's `ASK_ESCALATION_CANDIDATES` = 3, every question went to Flash, so Hamzah raised it to 6 (2026-10-10). Flash-Lite now answers 16 of the 20. Flash answers the three comparative questions (Q02, Q19, and Q10, whose "reciprocal **rank** fusion" matches the comparative pattern by accident, harmlessly) and Q12, whose chunks span 7 candidates.
+- The context was 911–2,037 estimated tokens per question, so the 3,000-token rule never fires.
+- The 12 chunks spanned 4–7 candidates. At the spec's `ASK_ESCALATION_CANDIDATES` = 3, every question went to Flash, so Hamzah raised it to 6 (2026-10-10). Flash-Lite now answers 15 of the 20. Flash answers the three comparative questions (Q02, Q19, and Q10, whose "reciprocal **rank** fusion" matches the comparative pattern by accident, harmlessly) and Q11 and Q12, whose chunks span 7 candidates.
 
 ### `EXPLAIN` on the seeded data
 

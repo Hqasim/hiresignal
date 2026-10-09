@@ -343,7 +343,7 @@ withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model 
 | `CACHE_MIN_PREFIX_TOKENS` | 4096 | Implicit-cache minimum for current Flash models; the prefix test asserts ≥ this with margin |
 | `CACHE_PREFIX_MARGIN` | 0.1 | The prefix test demands 10% more than the minimum, because tokens are estimated |
 | `ASK_ESCALATION_CONTEXT_TOKENS` | 3000 | Escalate ask to Flash above this context size |
-| `ASK_ESCALATION_CANDIDATES` | 6 | Escalate when context spans more candidates than this; at 3, every golden question escalated, because 12 chunks span 4–8 of the 8 clean candidates (ADR 0008) |
+| `ASK_ESCALATION_CANDIDATES` | 6 | Escalate when context spans more candidates than this; at 3, every golden question escalated, because 12 chunks span 4–7 of the 8 clean candidates for every answerable question (ADR 0008) |
 | `CLASSIFIER_QUARANTINE_CONFIDENCE` | 0.7 | Minimum confidence for a "malicious" verdict to quarantine |
 | `CLASSIFIER_MAX_OUTPUT_TOKENS` | 1024 | Output budget for `guard.classify`: a short verdict plus Gemini 3 thinking tokens |
 | `DAILY_LLM_CALL_CAP` | 300 (env) | Live calls per UTC day across the demo |

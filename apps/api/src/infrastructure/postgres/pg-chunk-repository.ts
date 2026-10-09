@@ -30,8 +30,9 @@ import { toVectorLiteral } from './vector-literal';
  *
  * Two arms rank the eligible chunks independently:
  * - `vec`: nearest neighbours by cosine distance. `<=>` is `1 − cos(a, b)`, and the embeddings are
- *   unit vectors, so ordering by it ascending is ordering by similarity descending. HNSW serves
- *   it when the planner thinks that's cheaper than a scan.
+ *   unit vectors, so ordering by it ascending is ordering by similarity descending. As written it
+ *   is an exact scan of the job's chunks, which is right at demo size (ADR 0008 has the plan and
+ *   what changes at scale).
  * - `kw`: full-text matches ranked by `ts_rank_cd` (cover density) over the generated
  *   `content_tsv`, which includes the context header. `$8` picks how the query text matches:
  *   - `all`: `websearch_to_tsquery`, which ANDs every word. Right for the screening agent's short
@@ -46,6 +47,11 @@ import { toVectorLiteral } from './vector-literal';
  * It uses ranks, not raw scores, so a cosine and a text rank need no calibration against each
  * other, and a chunk found by both arms beats one found by either alone. `k` damps the advantage
  * of the very top ranks.
+ *
+ * Both arms break ties by alias, then chunk ordinal. Without that, chunks with the same
+ * `ts_rank_cd` (common with `any` matching) are numbered in physical row order, which differs
+ * between a fresh database and a re-seeded one, and the prompt built from the results, and so its
+ * fixture key, would differ with it.
  *
  * Both arms filter to the job and drop quarantined candidates (which have no chunks anyway; this
  * is defense in depth). Cosine similarity is returned for every fused row, including keyword-only
@@ -63,17 +69,17 @@ q   as (select $1::vector as v,
                                   from unnest(tsvector_to_array(to_tsvector('english', $2))) lexeme)
                  else null
                end as tsq),
-vec as (select c.id, row_number() over (order by c.embedding <=> q.v) as r
+vec as (select c.id, row_number() over (order by c.embedding <=> q.v, k.alias, c.ordinal) as r
         from resume_chunks c join candidates k on k.id = c.candidate_id, q
         where k.job_id = $3 and k.guard_status <> 'quarantined'
           and ($4::uuid is null or c.candidate_id = $4)
-        order by c.embedding <=> q.v limit $5),
-kw  as (select c.id, row_number() over (order by ts_rank_cd(c.content_tsv, q.tsq) desc) as r
+        order by c.embedding <=> q.v, k.alias, c.ordinal limit $5),
+kw  as (select c.id, row_number() over (order by ts_rank_cd(c.content_tsv, q.tsq) desc, k.alias, c.ordinal) as r
         from resume_chunks c join candidates k on k.id = c.candidate_id, q
         where k.job_id = $3 and k.guard_status <> 'quarantined'
           and ($4::uuid is null or c.candidate_id = $4)
           and c.content_tsv @@ q.tsq
-        order by ts_rank_cd(c.content_tsv, q.tsq) desc limit $5),
+        order by ts_rank_cd(c.content_tsv, q.tsq) desc, k.alias, c.ordinal limit $5),
 fused as (select id, sum(1.0 / ($6 + r)) as rrf_score
           from (select * from vec union all select * from kw) arms
           group by id)

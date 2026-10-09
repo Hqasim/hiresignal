@@ -95,9 +95,9 @@ export const ASK_ESCALATION_CONTEXT_TOKENS = 3000;
 
 /**
  * Ask escalates to Flash when the context spans more candidates than this (SPEC §9.1). Twelve
- * chunks from a pool of eight clean candidates span 4–8 of them for every golden question, so 3
- * sent all 20 to Flash. At 6, a question whose evidence covers most of the pool escalates (Q12),
- * and Flash-Lite answers 16 of 20 (as of 2026-10-10, ADR 0008).
+ * chunks from a pool of eight clean candidates span 4–7 of them for every answerable golden
+ * question, so 3 sent all 20 to Flash. At 6, a question whose chunks cover most of the pool
+ * escalates (Q11, Q12), and Flash-Lite answers 15 of 20 (as of 2026-10-10, ADR 0008).
  */
 export const ASK_ESCALATION_CANDIDATES = 6;
 

@@ -218,6 +218,47 @@ describe('hybrid search', () => {
     },
   );
 
+  it('breaks ties by alias, so results never depend on the order rows are stored in', async () => {
+    const jobs = createPgJobRepository(db.pool);
+    const candidates = createPgCandidateRepository(db.pool);
+    const tieJob = await jobs.upsert(aNewJob({ slug: JobSlugSchema.parse('tie-job') }));
+    const ids: CandidateId[] = [];
+    // Four chunks with identical text and embeddings: every rank is a tie.
+    for (const alias of ['C05', 'C06', 'C07', 'C08']) {
+      const { id } = await candidates.insertIngested(
+        aCandidate(tieJob.id, alias, [
+          { section: 'experience', text: 'Wrote a Kubernetes operator', theta: 0 },
+        ]),
+      );
+      ids.push(id);
+    }
+    const tied = (keywordMatch: 'any' | 'all' | 'off') =>
+      chunks.hybridSearch(
+        search({
+          jobId: tieJob.id,
+          queryText: 'kubernetes operator',
+          keywordMatch,
+          poolPerArm: 2,
+          limit: 2,
+        }),
+      );
+    const before = await Promise.all((['any', 'all', 'off'] as const).map(tied));
+
+    // An update writes new row versions at the end of the table, reversing the stored order.
+    for (const id of [...ids].reverse().slice(1)) {
+      await db.pool.query('update resume_chunks set ordinal = ordinal where candidate_id = $1', [
+        id,
+      ]);
+    }
+    const after = await Promise.all((['any', 'all', 'off'] as const).map(tied));
+
+    for (const results of [before, after]) {
+      for (const hits of results) {
+        expect(hits.map((hit) => hit.ref)).toEqual(['C05#0', 'C06#0']);
+      }
+    }
+  });
+
   it('returns chunk offsets and the redacted text for citations', async () => {
     const [top] = await chunks.hybridSearch(search({ limit: 1 }));
 
