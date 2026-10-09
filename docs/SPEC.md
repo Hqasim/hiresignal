@@ -200,7 +200,7 @@ Each decision becomes an ADR (§13.2).
 ```mermaid
 flowchart LR
   A[Markdown resume] --> B[Invisible-char scan] --> C[Normalize NFKC] --> D[Redact PII → RedactedText]
-  D --> E[Injection rules] --> F[LLM classifier · Flash-Lite] --> G{Quarantine policy}
+  D --> E[Injection rules] --> F["LLM classifier · Flash-Lite<br/>(skipped after a high signal)"] --> G{Quarantine policy}
   G -->|quarantined| H[("Store redacted text + verdict, no chunks")]
   G -->|clean / flagged| I[Section-aware chunking] --> J[Embed · 768-d] --> K[(Store candidate + chunks)]
 ```
@@ -339,6 +339,7 @@ withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model 
 | `ASK_ESCALATION_CONTEXT_TOKENS` | 3000 | Escalate ask to Flash above this context size |
 | `ASK_ESCALATION_CANDIDATES` | 3 | Escalate when context spans more candidates than this |
 | `CLASSIFIER_QUARANTINE_CONFIDENCE` | 0.7 | Minimum confidence for a "malicious" verdict to quarantine |
+| `CLASSIFIER_MAX_OUTPUT_TOKENS` | 1024 | Output budget for `guard.classify`: a short verdict plus Gemini 3 thinking tokens |
 | `DAILY_LLM_CALL_CAP` | 300 (env) | Live calls per UTC day across the demo |
 | `LLM_TIMEOUT_MS` | 25000 | Per attempt |
 | `LLM_MAX_RETRIES` | 1 | Retries per tier before falling back |
@@ -484,7 +485,7 @@ The routing policy is a pure function in `domain/routing/` with table-driven tes
 - Variable content (candidate alias, section outline, tool results) always comes **after** the prefix. No timestamps, request IDs or candidate data in the prefix.
 - A unit test asserts the prefix is identical across candidates and its estimated token count is ≥ `CACHE_MIN_PREFIX_TOKENS` plus a 10% margin.
 - Gemini implicit caching is automatic on current models. `cached_tokens` comes from the response usage metadata (`cachedContentTokenCount`). The ops page shows cache ratio = Σ cached / Σ input for `screen.*` tasks. If a tier reports zero cached tokens, the docs say so honestly.
-- **Spotlighting:** `spotlight(text, label)` wraps untrusted text in `<untrusted_${label}>…</untrusted_${label}>` and neutralizes any tag-like sequence inside it that matches `/<\/?\s*untrusted_[a-z_]*/gi`, so content can't close the wrapper.
+- **Spotlighting:** `spotlight(text, label)` wraps untrusted text in `<untrusted_${label}>…</untrusted_${label}>` and neutralizes any tag-like sequence inside it that matches `/<\s*\/?\s*untrusted_[a-z_]*/gi` (its `<` becomes `&lt;`), so content can't close the wrapper. It accepts only `RedactedText` or `UntrustedText`.
 
 ### 9.3 PII redaction (`domain/redaction/`)
 
@@ -515,8 +516,8 @@ The routing policy is a pure function in `domain/routing/` with table-driven tes
 
 | Layer | Where | Detects | Severity |
 |---|---|---|---|
-| L0 Invisible characters | `domain/guard/invisible.ts`, on raw text before normalization | Zero-width (U+200B–U+200D, U+2060, U+FEFF), bidi controls (U+202A–U+202E, U+2066–U+2069), Unicode tag characters (U+E0000–U+E007F, "ASCII smuggling") | Tag chars: high. Others: medium. The characters are stripped after recording. |
-| L1 Hidden markup | `domain/guard/hidden-markup.ts`, on redacted text | HTML comments, `display:none`, `font-size:0`, white or near-white text styles, zero-opacity text | High if the hidden text contains an instruction pattern, otherwise medium |
+| L0 Invisible characters | `domain/guard/invisible.ts`, on raw text before normalization | Zero-width (U+200B–U+200D, U+2060, U+FEFF), bidi controls (U+202A–U+202E, U+2066–U+2069), Unicode tag characters (U+E0000–U+E007F, "ASCII smuggling") | Tag chars: high. Others: medium. The characters are stripped after recording. A leading BOM and a zero-width joiner between two emoji are benign and aren't flagged. |
+| L1 Hidden markup | `domain/guard/hidden-markup.ts`, on redacted text | HTML comments (unterminated too), Markdown `[//]: #` comments, `display:none`, `visibility:hidden`, the `hidden` attribute, `font-size` ≤ 1px, near-white or transparent text (unless a non-white background is declared), opacity ≤ 0.05 | High if the hidden text contains an instruction pattern, otherwise medium |
 | L2 Pattern rules | `domain/guard/rules.ts`, on redacted text | Instruction override ("ignore … previous/prior/above instructions"), role hijack ("you are now", "system:"), evaluator targeting ("rate/score/rank this candidate", "AI/LLM/screener … must"), output forcing ("respond only with", "score of 10"), delimiter spoofing (`</untrusted`, `<\|im_start\|>`, `[INST]`) | Medium (visible text), high (inside hidden markup) |
 | L3 Classifier | `application/guard/classify-injection.ts`, Flash-Lite, on spotlighted redacted text | Social engineering and paraphrased attacks the rules miss | Structured verdict `{ verdict: 'benign'\|'suspicious'\|'malicious', confidence, rationale }` |
 
@@ -524,8 +525,8 @@ Every signal records `id`, `layer`, `severity`, `label`, a span (`start`, `end` 
 
 **Policy** (`domain/guard/policy.ts`, pure, table-tested):
 
-- **Quarantined** if any high-severity signal exists, or the classifier says `malicious` with confidence ≥ `CLASSIFIER_QUARANTINE_CONFIDENCE`.
-- **Flagged** if the classifier says `suspicious`, or medium signals exist and the classifier isn't `benign`.
+- **Quarantined** if any high-severity signal exists, or the classifier says `malicious` with confidence ≥ `CLASSIFIER_QUARANTINE_CONFIDENCE`. After a high signal the classifier isn't called at all (`classifier: null`): its answer couldn't change the outcome, and a known attack shouldn't reach a model (ADR 0013).
+- **Flagged** if the classifier says `suspicious` or `malicious` below the threshold, or medium signals exist and the classifier isn't `benign` (or didn't run).
 - **Clean** otherwise. Medium signals that the classifier judged benign are kept as `dismissed` (so a resume that says "built prompt-injection defenses" isn't punished).
 
 **Defense in depth beyond detection:**
@@ -543,7 +544,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
 
 1. Run the L0 scan on the raw text, then strip the invisible characters and apply NFKC normalization.
 2. Redact PII, producing `RedactedText`.
-3. Run L1 and L2 on the redacted text, then the L3 classifier, then the policy.
+3. Run L1 and L2 on the redacted text, then the L3 classifier (skipped when a high signal already quarantines), then the policy.
 4. If quarantined, store the candidate with the redacted text and verdict, and stop.
 5. Otherwise chunk section by section. `##` headings are sections and `###` headings are roles. A chunk is one role or section, split between bullets so it stays at or under `CHUNK_MAX_TOKENS`. Each chunk gets a context header, and the offsets of `content` within `redacted_resume` are recorded.
 6. Embed `context_header + content` in batches, as `title: none | text: …` with one `Content` per chunk, at 768 dimensions, then L2-normalize (ADR 0007).
