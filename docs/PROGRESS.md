@@ -12,7 +12,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | 3   | Safety layer: redaction and injection guard | ☑ Done        | 2026-10-09 | Redaction and guard ≥ 95% covered; every rule has attack and hard-negative cases |
 | 4   | Synthetic data and ingestion                | ☑ Done        | 2026-10-09 | Offline replay seed in 2.5 s; all ten guard outcomes match SPEC §12              |
 | 5   | Screening agent and scorecards              | ☑ Done        | 2026-10-09 | 8 scorecards, 73/73 citations verified; C01 and C02 rank first; replay in 2.1 s  |
-| 6   | Ask the talent pool (hybrid RAG)            | ☐ Not started |            |                                                                                  |
+| 6   | Ask the talent pool (hybrid RAG)            | ☑ Done        | 2026-10-10 | 23 golden questions replay offline; recall@5 = 1.000, MRR = 0.950 (hybrid)       |
 | 7   | API hardening and ops endpoints             | ☐ Not started |            |                                                                                  |
 | 8   | Frontend                                    | ☐ Not started |            |                                                                                  |
 | 9   | Evals, E2E and CI hardening                 | ☐ Not started |            |                                                                                  |
@@ -28,6 +28,55 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+
+## Phase 6 evidence (2026-10-10)
+
+Phase 6's DoD is local: all 20 golden questions replay offline, and recall@5 is measured and recorded here.
+
+- **All 23 golden questions replay offline** (20 answerable, 3 out of scope, `data/evals/retrieval.jsonl`):
+  - `npm run ask:golden` with `GEMINI_API_KEY` empty ends with `Model calls: 112 (live 0, fallbacks 0, failed 0)`.
+  - `test/integration/ask.test.ts` replays them on a fresh database through the CLI's own wiring (`createAskGolden`) and asserts:
+    - every answerable question is `answered` with at least one verified citation, and every citation's span selects exactly its quote in the cited candidate's redacted resume
+    - C06 and C07 are never retrieved or cited
+    - X01–X03 come back `below-floor` with no model call; `llm_calls` holds exactly 20 `ask.answer` rows
+    - the route mix: 15 default, 3 comparative intent, 2 candidate count
+    - recall@5 ≥ 1.000, MRR ≥ 0.95, vector-only below hybrid, and the floor splits all 23 correctly
+    - `ask.answered` is logged for every question, and no log entry contains a question or an answer
+- **recall@5 as of 2026-10-10** (`npm run ask:golden`, ADR 0008):
+
+  | Keyword match | recall@5 | MRR   |
+  | ------------- | -------- | ----- |
+  | `all`         | 0.983    | 1.000 |
+  | `any` (ask)   | 1.000    | 0.950 |
+  | `off`         | 0.958    | 0.938 |
+  - Vector-only misses C01 in Q14 and C04 in Q19; `any` recovers both.
+  - `all` matched anything on only 3 of 20 questions.
+  - The set is close to saturated (8 candidates, top 5 chunks), so treat these as a regression gate, not a quality claim.
+
+- **The answers:** 20 answered, 34 verified citations, 0 dropped. Flash-Lite answered 15; Flash answered Q02, Q10, Q19 (comparative intent) and Q11, Q12 (chunks spanning 7 candidates).
+- **Similarity floor:** answerable best similarities are ≥ 0.661 (Q14, Q15) and out-of-scope ones ≤ 0.639 (X02), so `SIMILARITY_FLOOR` = 0.65.
+- **Live calls this phase, all run by Hamzah:**
+  - Stage A, 2026-10-10: 23 query embeddings (`--retrieval-only`).
+  - Stage B: 20 answers, which had to be recorded again, because the hybrid SQL's tie order depended on row storage (see Phase 6 changes).
+  - The re-recording: 26 live attempts. Flash's free quota of 20 requests per day ran out, so Q10 and Q11 fell back to Flash-Lite; those two fixtures were deleted.
+  - The next day, after the quota reset: 3 attempts, for 2 Flash answers.
+  - That is 72 live calls against the 43 planned. Ingestion and screening made 0, thanks to record-missing (`seed:record` with a dummy key reported `live 0`).
+  - A grep of the 20 answer fixtures found no name, email, phone or profile link.
+- **`npm run test:integration` passes:** 89 tests in 6 files (Phase 5: 74 in 5).
+  - The seed test still replays every screening fixture after the keyword-match and tie-break changes.
+  - A new chunk-repository test rewrites rows to reverse their stored order and checks the results don't move. It fails on the old SQL.
+- **`npm run verify` is green:**
+  - 1,066 unit tests: contracts 29, api 1,033, web 4. Phase 5 had 901.
+  - 0 dependency-cruiser violations (337 modules)
+  - every coverage gate passes
+- **The route, checked by hand** against the local server in replay mode:
+  - Q01 returns three verified citations (C05, C10, C01) from `gemini-3.5-flash-lite`, `routedReason: default`, replayed from the fixture the CLI recorded.
+  - X01 returns insufficient evidence with `model: null`.
+  - A question with Unicode tag characters gets a 422 `INJECTION_REJECTED` problem.
+  - A malformed body gets a 400.
+  - The server log's `ask.answered` lines hold ids, counts, similarity and route only.
+- **The bundle builds** (`dist/lambda.mjs` 3.1 MB) **and boots:** `npm run smoke:bundle` → 200.
+- **Not pushed yet.** CI and deploy aren't part of this phase's DoD. The 12 Phase 6 commits wait for Hamzah's approval, on top of the unpushed Phases 4 and 5.
 
 ## Phase 5 evidence (2026-10-09)
 
@@ -248,6 +297,7 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 - [0005 Neon Postgres + pgvector as the only datastore](adr/0005-neon-postgres-pgvector-only-datastore.md)
 - [0006 node-postgres everywhere](adr/0006-node-postgres-everywhere.md)
 - [0007 Embedding model, dimensions and normalization](adr/0007-embedding-model-dimensions-and-normalization.md)
+- [0008 Hybrid retrieval with RRF](adr/0008-hybrid-retrieval-with-rrf.md)
 - [0009 Record/replay LLM adapter](adr/0009-record-replay-llm-adapter.md)
 - [0010 Rule-based routing with tier fallback](adr/0010-rule-based-routing-with-tier-fallback.md)
 - [0011 Prompt caching via byte-stable prefixes](adr/0011-prompt-caching-via-byte-stable-prefixes.md)
@@ -261,6 +311,32 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 
 - [0019 Section-aware chunking with exact offsets](adr/0019-section-aware-chunking-with-exact-offsets.md)
 - [0020 Evidence-gathering agent with a separate synthesis call](adr/0020-evidence-gathering-agent-with-separate-synthesis.md)
+
+Phase 6 changes agreed with Hamzah (2026-10-09/10) and recorded in SPEC:
+
+- **Record mode records only missing fixtures** (§9.8, ADR 0009 update). A fixture-first split between retry and call logging replays any request that has a fixture, logged as `replay` and not throttled. To force a re-recording, delete that task's fixtures.
+- **Two-stage recording, to avoid wasted calls:**
+  - `npm run ask:golden -- --mode record --retrieval-only` records only the question embeddings.
+  - The retrieval is tuned offline.
+  - `npm run seed:record` (which now chains `ask:golden --mode record`) records only the answers.
+- **An answer with no verified citation becomes insufficient evidence** (§9.7 step 5). So does one where the model said so.
+- **`SIMILARITY_FLOOR` 0.55 → 0.65** and **`ASK_ESCALATION_CANDIDATES` 3 → 6** (Hamzah's choice; at 3 every question escalated). Both are in §7.5, with their evidence in ADR 0008.
+- **§12:** `retrieval.jsonl` adds 3 out-of-scope questions, which set the floor.
+- **§10:** `AskRequest` is trimmed, 1–500 characters. `AskResponse` citations carry `span`, and `model` and `routedReason` are `null` when the floor answered.
+- **§7.2:** `LlmClient` returns `LlmResult` = `LlmResponse` + `routedReason` (ADR 0010 update).
+- **§7.5 gains** `ASK_KEYWORD_MATCH` (`any`) and `ASK_MAX_OUTPUT_TOKENS` (4096).
+- **§9.7:** ask's keyword arm ORs the question's words; the screening agent keeps AND.
+
+Phase 6 choices recorded in commit messages and ADRs:
+
+- **`HybridSearchQuery.keywordMatch`** (`all` | `any` | `off`): `off` is the vector-only ablation for Phase 9. The screening tools pass `all`, so their results and fixture keys are unchanged.
+- **Both search arms break ties by alias, then ordinal.** Without that, tied `ts_rank_cd` values were numbered in physical row order, which differs between a fresh and a re-seeded database. That cost one re-recording of the 20 answers.
+- **The question guard** (`domain/guard/scan-question.ts`) runs ingestion's L0 → NFKC → L1 + L2 and rejects only on a high signal, as §9.7 says. There's no classifier call on questions.
+- **`verifyCitation` is shared** by screening and ask (`domain/citations/verify-citation.ts`); a `null` alias means any candidate.
+- **The ask prompt `ask@1`** has a byte-stable system instruction with no job or candidate data. It is below the implicit-cache minimum, so it isn't cached. Examples use the fictional `X01`, like screening.
+- **`createRetrieveForQuestion`** is retrieval on its own, used by the golden report for the per-mode ablation. Retrievals run one after another, so a new question is embedded live only once.
+- **Retrieval metrics and the golden report** live in `apps/api/evals/`, ready for Phase 9's runner. `evals/` joins the tsconfig and the unit test project.
+- **`readJsonBody`:** an unparseable body is a 400, never a 500.
 
 Phase 5 changes agreed with Hamzah in the plan (2026-10-09) and recorded in SPEC:
 
@@ -388,16 +464,16 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 
 ## Deferred and cut-list items
 
-- **Seed fixtures for ask:** Phase 6 extends `seed:record`. The classifier, document-embedding and screening fixtures are recorded (Phases 4 and 5).
 - **Measuring a live `POST /screen` on Lambda:** it hasn't run in production yet. The recording logs latencies that include the 6 s seed throttle, so they aren't model latencies. Measure after the next deploy (see Known issues).
 - **Seeding production** (`seed-demo` workflow, replay with `--reset` against Neon): Phase 10.
-- **The question guard for Ask** (L0–L2 on the question, `InjectionRejectedError`): Phase 6. Spotlight labels for questions and chunks arrive with their prompts (Phases 5–6).
 - **Classifier precision and recall, and the rules-only vs rules + classifier ablation:** the Phase 9 eval runner, over `data/evals/injection.jsonl`.
 - **Phase 7 keeps** the body limit, logger serializer test, ops routes and contract tests for every route. The daily cap was built in Phase 5.
 - **A smaller cold start:** load `@google/genai` lazily on the first live call, if the cold start matters (see Known issues).
 - **Playwright `@smoke` step in `deploy.yml`:** Phase 9, because Playwright isn't installed yet. `curl --fail` smoke tests cover the API and web until then.
 - **`LlmCallRepository.summary` and `recent`:** Phase 7, with the ops DTOs they return.
-- **`EXPLAIN` output for hybrid search and notes on `hnsw.iterative_scan`:** ADR 0008 in Phase 6, once real data is seeded.
+- **An index-friendly vector arm** (`ORDER BY embedding <=> $1`, `hnsw.iterative_scan`, `job_id` on chunks): only at scale (ADR 0008). It would need a re-recording of the screening fixtures.
+- **A per-tier daily budget** (proposal for Phase 7): skip Flash once its free quota (20 requests per day) is spent, instead of failing over after each 503 or 429. See Known issues.
+- **Retrieval ablation and recall gates in the eval runner:** Phase 9 reuses `evals/retrieval-metrics.ts` and `evals/golden-report.ts`.
 - **A retry on stale connections in the health probe:** only if Lambda logs ever show `health.db_unreachable` after a thaw (ADR 0006).
 - **Scripts arriving with their phases:**
   - `eval` and `test:e2e` (Phase 9)
@@ -405,6 +481,14 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **No cut-list items used.**
 
 ## Known issues
+
+- **Gemini Flash's free tier allows 20 requests per day** (seen in AI Studio, 2026-10-10), far below `DAILY_LLM_CALL_CAP` (300).
+  - A live re-screen spends 1–2 Flash calls, and 5 of the 20 golden questions escalate to Flash.
+  - Once the quota is spent, Flash calls fail (503s and timeouts were logged) and fall back to Flash-Lite. The demo keeps working at lower quality, but every failed attempt also counts against the daily cap.
+  - Recording is affected too: a full screening re-record needs at least 8 Flash calls, so plan recordings around the daily reset (midnight Pacific).
+- **The similarity floor's margin is narrow:** 0.022 on each side of 0.65 (ADR 0008). It's a cost guard. A new kind of question can land on the wrong side, and then the model's insufficient-evidence flag and citation verification decide.
+- **Q10 matches comparative intent by accident** ("reciprocal **rank** fusion" contains `rank`), so it routes to Flash. This is harmless, and it's pinned by the ask integration test's route mix.
+- **The golden set is close to saturated** (recall@5 = 1.000 with 8 candidates). Add harder questions before reading it as a quality claim (Phase 9).
 
 - **Regex detectors have documented gaps** (`docs/threat-model.md`, Known limits):
   - names outside the header, non-US addresses
@@ -500,12 +584,24 @@ Hamzah recorded the fixtures live (17 calls, 0 fallbacks). A replay seed takes 2
 
 Hamzah recorded the screening fixtures live (105 calls, 0 fallbacks, 0 repairs). The ranking matches §12, all 73 citations verify, and implicit caching hit 55% on Flash-Lite and 42% on Flash. No deploy was needed. The 12 commits are local, waiting for Hamzah's approval to push. Phases 4 and 5 are both unpushed, so the first CI run will cover both.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 6` (Ask the talent pool). Phase 6 builds:
+**2026-10-10, Phase 6 done.** Ask the talent pool is complete and replays offline:
 
-- the final hybrid SQL with cosine similarity, and a tuned `SIMILARITY_FLOOR`
-- the ask use case and route, behind the daily cap that already exists
-- the question guard
-- 20 golden questions in `data/evals/retrieval.jsonl`
-- ADR 0008
+- `POST /api/jobs/:slug/ask`, behind the daily cap
+- the question guard (a 422 on a high signal)
+- hybrid retrieval with OR matching for questions and deterministic tie-breaks
+- a tuned similarity floor (0.65): out-of-scope questions make no model call
+- routing with `routedReason` in the response
+- verified citations mapped to candidates and spans; an answer without one is withheld
+- 23 golden questions with `npm run ask:golden`, and ADR 0008
 
-Hamzah runs `npm run seed:record` again to record the ask fixtures.
+Record mode now records only missing fixtures, so ingestion and screening were never re-recorded. Hamzah recorded 23 embeddings and 20 answers. One extra round of 20 was needed after the tie-order bug, and two Flash answers waited a day for Flash's 20-per-day free quota. recall@5 = 1.000 and MRR = 0.950. The 12 commits are local, waiting for Hamzah's approval to push. Phases 4, 5 and 6 are all unpushed, so the first CI run will cover all three, including the new ask integration test.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 7` (API hardening and ops endpoints). Phase 7 builds:
+
+- typed error mapping and the 16 KB body limit (ask is the first JSON-body route)
+- the logger's no-content serializer test
+- `/api/ops/summary` and `/api/ops/calls` (`LlmCallRepository.summary` and `recent`)
+- contract tests for every route
+- curl examples in the runbook
+
+Consider the per-tier Flash budget from Known issues. Push Phases 4–6 first, if Hamzah approves, so CI checks them.
