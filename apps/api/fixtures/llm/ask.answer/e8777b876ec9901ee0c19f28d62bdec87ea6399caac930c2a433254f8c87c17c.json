@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "e8777b876ec9901ee0c19f28d62bdec87ea6399caac930c2a433254f8c87c17c",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:04:34.317Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidates C01 and C10 validate model outputs with JSON Schema or structured outputs and a repair step. C01 introduced \\\"structured outputs with JSON Schema and a repair step\\\", and C10 defined \\\"structured outputs for every model response and added a repair step\\\".\",\n  \"citations\": [\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Introduced structured outputs with JSON Schema and a repair step, which cut malformed model responses from 4% to under 0.2%.\"\n    },\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Defined structured outputs for every model response and added a repair step and a fallback model, keeping the error rate under 0.5% at 20,000 conversations a day.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0T9T96BSzy6ui9CA/DbphXAq4lj6Y8aQc1ifPbKbluVO1SsV1w/z3Os/U+E37HvXtCQgglvQfsTMwVX7aGgj54TnDA0eUwJjHnG/Lwfn/sdLrvJY847R9g4/Q="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidates C01 and C10 validate model outputs with JSON Schema or structured outputs and a repair step. C01 introduced \\\"structured outputs with JSON Schema and a repair step\\\", and C10 defined \\\"structured outputs for every model response and added a repair step\\\".\",\n  \"citations\": [\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Introduced structured outputs with JSON Schema and a repair step, which cut malformed model responses from 4% to under 0.2%.\"\n    },\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Defined structured outputs for every model response and added a repair step and a fallback model, keeping the error rate under 0.5% at 20,000 conversations a day.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1569
+  },
+  "usage": {
+    "inputTokens": 2473,
+    "outputTokens": 199,
+    "cachedTokens": 0
+  }
+}

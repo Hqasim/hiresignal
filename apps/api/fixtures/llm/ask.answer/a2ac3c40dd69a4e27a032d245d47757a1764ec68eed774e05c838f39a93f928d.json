@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "a2ac3c40dd69a4e27a032d245d47757a1764ec68eed774e05c838f39a93f928d",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:02:13.775Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C09 has experience partitioning large PostgreSQL tables, specifically designing double-entry payment ledger tables with monthly partitioning and speaking about partitioning large ledger tables without downtime.\",\n  \"citations\": [\n    {\n      \"ref\": \"C09#1\",\n      \"quote\": \"Designed the payments ledger in PostgreSQL: double-entry tables, partitioning by month and the reconciliation jobs, processing 3 million transactions a day.\"\n    },\n    {\n      \"ref\": \"C09#3\",\n      \"quote\": \"Spoke at a regional Java meetup about partitioning large ledger tables without downtime.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0T+Q32mQk3S5t5Abbpvh6vsTl6Dgd/ybVpk/Hp9OQ8DYIxzXMKHOtj0IOlRcHxkShjoC1VBs0AU5irB360hjYyjayXOOftx4Fj3ZOf1lgdhTg9HOOu07w0WA0="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C09 has experience partitioning large PostgreSQL tables, specifically designing double-entry payment ledger tables with monthly partitioning and speaking about partitioning large ledger tables without downtime.\",\n  \"citations\": [\n    {\n      \"ref\": \"C09#1\",\n      \"quote\": \"Designed the payments ledger in PostgreSQL: double-entry tables, partitioning by month and the reconciliation jobs, processing 3 million transactions a day.\"\n    },\n    {\n      \"ref\": \"C09#3\",\n      \"quote\": \"Spoke at a regional Java meetup about partitioning large ledger tables without downtime.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1652
+  },
+  "usage": {
+    "inputTokens": 2314,
+    "outputTokens": 149,
+    "cachedTokens": 0
+  }
+}

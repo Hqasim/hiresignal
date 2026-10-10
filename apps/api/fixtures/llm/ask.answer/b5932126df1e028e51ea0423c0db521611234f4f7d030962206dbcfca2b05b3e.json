@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "b5932126df1e028e51ea0423c0db521611234f4f7d030962206dbcfca2b05b3e",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:04:52.486Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C10 built a trip assistant that can check availability and hold bookings.\",\n  \"citations\": [\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Shipped tool calling so the assistant can check availability and hold bookings; tools are typed with Zod, scoped to the signed-in user and logged.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TJ4MMyPNSS79Y376MjMDfDsb92QaZATpY5ZOHwVBq8XRPR0+N37JyFne5rXDzVfkqpMF1wT0YLCJ6KZbGKt9Bsl7e1/tbxbi2prFJ5BTo3cOnOyF2jUfPpc0="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C10 built a trip assistant that can check availability and hold bookings.\",\n  \"citations\": [\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Shipped tool calling so the assistant can check availability and hold bookings; tools are typed with Zod, scoped to the signed-in user and logged.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1734
+  },
+  "usage": {
+    "inputTokens": 2508,
+    "outputTokens": 97,
+    "cachedTokens": 0
+  }
+}

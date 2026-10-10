@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "499c538dcf9518ab60d4cf93e5d5eeef28aca5fd00036e5ef15a675ec99189f2",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:01:55.763Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C05 measured search quality by comparing vector-only and hybrid search, which improved recall@5 from 0.71 to 0.86. Additionally, C01 built an evaluation harness for retrieval and answers that measures metrics including recall@5.\",\n  \"citations\": [\n    {\n      \"ref\": \"C05#3\",\n      \"quote\": \"hybrid search improved recall@5 from 0.71 to 0.86.\"\n    },\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Built the evaluation harness for retrieval and answers (recall@5, citation accuracy) and made it a required CI check.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0ThPdJhlOSfgqt/Peq137vpHAOSdkk/qX0sff5PpT0eMKdoEKLUKyWy+4freIBqLjnee+cWQDcyM49YLGmaVAEXUMK68Ziu/x5n1Q+4sDvJG/kL27V+nMcqSM="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C05 measured search quality by comparing vector-only and hybrid search, which improved recall@5 from 0.71 to 0.86. Additionally, C01 built an evaluation harness for retrieval and answers that measures metrics including recall@5.\",\n  \"citations\": [\n    {\n      \"ref\": \"C05#3\",\n      \"quote\": \"hybrid search improved recall@5 from 0.71 to 0.86.\"\n    },\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Built the evaluation harness for retrieval and answers (recall@5, citation accuracy) and made it a required CI check.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1629
+  },
+  "usage": {
+    "inputTokens": 2258,
+    "outputTokens": 172,
+    "cachedTokens": 0
+  }
+}

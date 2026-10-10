@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "4ceec71d7c171821b1a60e48573959a6577c83a8faea05cd41affc117b23c23f",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:02:07.677Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C05 transitioned into software after working as a mechanical engineer, as indicated by their summary noting \\\"Software engineer who moved into software after six years as a mechanical engineer\\\" and their prior experience as a \\\"Mechanical Engineer, Ironvale Manufacturing\\\".\",\n  \"citations\": [\n    {\n      \"ref\": \"C05#0\",\n      \"quote\": \"Software engineer who moved into software after six years as a mechanical engineer.\"\n    },\n    {\n      \"ref\": \"C05#2\",\n      \"quote\": \"Mechanical Engineer, Ironvale Manufacturing (2015–2021)\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TTnWBwntLk9vrutp6bDfjJsoNylCwYEf+YxlaIXoIIQf3FZMXmXObVj0I9JQOXJ0D63uIR3v7pUYyPaRnkVY873g3QWUvJBJTl3jlDVbZEP4e/gfiU1j0o98="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C05 transitioned into software after working as a mechanical engineer, as indicated by their summary noting \\\"Software engineer who moved into software after six years as a mechanical engineer\\\" and their prior experience as a \\\"Mechanical Engineer, Ironvale Manufacturing\\\".\",\n  \"citations\": [\n    {\n      \"ref\": \"C05#0\",\n      \"quote\": \"Software engineer who moved into software after six years as a mechanical engineer.\"\n    },\n    {\n      \"ref\": \"C05#2\",\n      \"quote\": \"Mechanical Engineer, Ironvale Manufacturing (2015–2021)\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1555
+  },
+  "usage": {
+    "inputTokens": 2140,
+    "outputTokens": 155,
+    "cachedTokens": 0
+  }
+}

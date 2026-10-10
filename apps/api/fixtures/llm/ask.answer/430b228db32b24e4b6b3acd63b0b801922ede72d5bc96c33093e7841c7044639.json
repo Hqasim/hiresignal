@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "430b228db32b24e4b6b3acd63b0b801922ede72d5bc96c33093e7841c7044639",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:02:19.918Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C08 is identified as a junior developer with about a year and a half of professional experience.\",\n  \"citations\": [\n    {\n      \"ref\": \"C08#0\",\n      \"quote\": \"Junior developer with about a year and a half of professional experience, mostly React front-end work.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TsX6TYXa+eUGlWsRcO79LbD2YDl5z+SkjmbO3VQNTk2wS4JaS4mefyYtM606deLT/ITJCdQus0jijZwxO8Dc6oBkleXb2N4yeSr9PnS1KLAFKUf3fPmdzapk="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C08 is identified as a junior developer with about a year and a half of professional experience.\",\n  \"citations\": [\n    {\n      \"ref\": \"C08#0\",\n      \"quote\": \"Junior developer with about a year and a half of professional experience, mostly React front-end work.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1789
+  },
+  "usage": {
+    "inputTokens": 2086,
+    "outputTokens": 91,
+    "cachedTokens": 0
+  }
+}

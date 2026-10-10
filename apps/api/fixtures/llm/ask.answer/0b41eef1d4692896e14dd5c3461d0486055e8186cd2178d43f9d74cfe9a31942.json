@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "0b41eef1d4692896e14dd5c3461d0486055e8186cd2178d43f9d74cfe9a31942",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:04:58.222Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidates C09 and C10 have experience using AWS Step Functions. C09 moved settlement reports to AWS Lambda and Step Functions, and C10 runs an assistant's API on AWS Lambda with Step Functions.\",\n  \"citations\": [\n    {\n      \"ref\": \"C09#1\",\n      \"quote\": \"Moved settlement reports to AWS Lambda and Step Functions, cutting their cost by 70%.\"\n    },\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Run the assistant's API on AWS Lambda with Step Functions for long-running booking holds.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TJU0ltjCR4ijlTs/HkILmH8u22FJTZAjlq7E9BCl09uGlVxttTiUvohPDNI94PKGn8tMt8tSdlYh68GUJZqeBaiTdI0gfsx7lvdji2io2R4gOB57JI7tQjRQ="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidates C09 and C10 have experience using AWS Step Functions. C09 moved settlement reports to AWS Lambda and Step Functions, and C10 runs an assistant's API on AWS Lambda with Step Functions.\",\n  \"citations\": [\n    {\n      \"ref\": \"C09#1\",\n      \"quote\": \"Moved settlement reports to AWS Lambda and Step Functions, cutting their cost by 70%.\"\n    },\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Run the assistant's API on AWS Lambda with Step Functions for long-running booking holds.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1481
+  },
+  "usage": {
+    "inputTokens": 2237,
+    "outputTokens": 157,
+    "cachedTokens": 0
+  }
+}

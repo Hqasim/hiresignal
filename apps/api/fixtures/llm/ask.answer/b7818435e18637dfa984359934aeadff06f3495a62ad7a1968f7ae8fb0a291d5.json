@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "b7818435e18637dfa984359934aeadff06f3495a62ad7a1968f7ae8fb0a291d5",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:04:40.815Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C01 runs a chat endpoint on AWS Lambda with provisioned concurrency, noting that they \\\"Moved the AI services to AWS Lambda behind API Gateway, with provisioned concurrency for the chat endpoint; p95 latency dropped from 3.1 s to 1.4 s.\\\"\",\n  \"citations\": [\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Moved the AI services to AWS Lambda behind API Gateway, with provisioned concurrency for the chat endpoint; p95 latency dropped from 3.1 s to 1.4 s.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TjgwNsQlrmKwklWSkUihiUxK3Wd3KyYpQM4M9Cep9XQiJkeTYWdZ4Bl5dTTMb18SnRKPjUXqBqviocEPNBj9df0KdxhmPF1lunv3NtqlsUKUTKTz4XVAOThI="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C01 runs a chat endpoint on AWS Lambda with provisioned concurrency, noting that they \\\"Moved the AI services to AWS Lambda behind API Gateway, with provisioned concurrency for the chat endpoint; p95 latency dropped from 3.1 s to 1.4 s.\\\"\",\n  \"citations\": [\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Moved the AI services to AWS Lambda behind API Gateway, with provisioned concurrency for the chat endpoint; p95 latency dropped from 3.1 s to 1.4 s.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 2070
+  },
+  "usage": {
+    "inputTokens": 2341,
+    "outputTokens": 147,
+    "cachedTokens": 0
+  }
+}

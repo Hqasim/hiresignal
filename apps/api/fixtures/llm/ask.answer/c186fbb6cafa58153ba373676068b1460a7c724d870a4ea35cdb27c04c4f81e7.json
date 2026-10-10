@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "c186fbb6cafa58153ba373676068b1460a7c724d870a4ea35cdb27c04c4f81e7",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash",
+  "recordedAt": "2026-10-10T11:53:23.144Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"answer\":\"Candidate C09 cut API latency by tuning slow queries and adding read replicas while working as a Backend Engineer at Stratus Freight.\",\"citations\":[{\"ref\":\"C09#2\",\"quote\":\"Tuned slow queries and added read replicas, which cut p99 API latency from 900 ms to 180 ms.\"}],\"insufficientEvidence\":false}",
+          "thoughtSignature": "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"
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"answer\":\"Candidate C09 cut API latency by tuning slow queries and adding read replicas while working as a Backend Engineer at Stratus Freight.\",\"citations\":[{\"ref\":\"C09#2\",\"quote\":\"Tuned slow queries and added read replicas, which cut p99 API latency from 900 ms to 180 ms.\"}],\"insufficientEvidence\":false}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 5221
+  },
+  "usage": {
+    "inputTokens": 2797,
+    "outputTokens": 797,
+    "cachedTokens": 0
+  }
+}

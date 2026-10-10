@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "29e26af38b9f51847616da3b8ee7fb5545672024cbd2bdb2a00eb80aa0583150",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:05:49.321Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C03 lists RAG and agents in their summary and skills, but their experience and project descriptions are limited to vague statements like involved in AI initiatives across the organization and Explored building a chatbot with large language models.\",\n  \"citations\": [\n    {\n        \"ref\": \"C03#0\",\n        \"quote\": \"Leveraging cutting-edge generative AI, RAG, agents and cloud-native architecture to deliver transformative business value.\"\n    },\n    {\n        \"ref\": \"C03#1\",\n        \"quote\": \"Involved in AI initiatives across the organization.\"\n    },\n    {\n        \"ref\": \"C03#3\",\n        \"quote\": \"Explored building a chatbot with large language models.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TEHCvSQvitpn9hH5jV1xaIaJZy0JXDiB0GsTQHfEuiBUH6G8wiyBEtBmRVc1f0LATDdR/TRMh2KNhbdLJ7X/3a08Gr4pkkG9DDPXL5CC/MV2OFQA4GcShaVs="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C03 lists RAG and agents in their summary and skills, but their experience and project descriptions are limited to vague statements like involved in AI initiatives across the organization and Explored building a chatbot with large language models.\",\n  \"citations\": [\n    {\n        \"ref\": \"C03#0\",\n        \"quote\": \"Leveraging cutting-edge generative AI, RAG, agents and cloud-native architecture to deliver transformative business value.\"\n    },\n    {\n        \"ref\": \"C03#1\",\n        \"quote\": \"Involved in AI initiatives across the organization.\"\n    },\n    {\n        \"ref\": \"C03#3\",\n        \"quote\": \"Explored building a chatbot with large language models.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1372
+  },
+  "usage": {
+    "inputTokens": 2388,
+    "outputTokens": 186,
+    "cachedTokens": 0
+  }
+}

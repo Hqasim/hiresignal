@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "1b953e0f50a9d08cc9775ab1420aaf339f69c655101227334f4f9c411a76703d",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:02:25.556Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C02 owns an LLM orchestration service that handles tasks such as model selection, retries, and fallbacks between providers as stated in their experience: C02#1.\",\n  \"citations\": [\n    {\n      \"ref\": \"C02#1\",\n      \"quote\": \"Own the LLM orchestration service that every product team calls: model selection, retries, fallbacks between providers, token budgets and per-tenant usage metering.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TWlHkMZCgYzwknLTfNncRm7xrHmHCtS7Va9cQUgvin485ymiLAW57glbfwEX3cP1iOdZ6vNDVoN3M/mx/tyrxOEgfMxGnF6apZFMoDpPSDBi859witGozDoA="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C02 owns an LLM orchestration service that handles tasks such as model selection, retries, and fallbacks between providers as stated in their experience: C02#1.\",\n  \"citations\": [\n    {\n      \"ref\": \"C02#1\",\n      \"quote\": \"Own the LLM orchestration service that every product team calls: model selection, retries, fallbacks between providers, token budgets and per-tenant usage metering.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1436
+  },
+  "usage": {
+    "inputTokens": 2427,
+    "outputTokens": 120,
+    "cachedTokens": 0
+  }
+}

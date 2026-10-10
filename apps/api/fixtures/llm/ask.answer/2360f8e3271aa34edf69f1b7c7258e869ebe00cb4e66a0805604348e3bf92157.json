@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "2360f8e3271aa34edf69f1b7c7258e869ebe00cb4e66a0805604348e3bf92157",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash",
+  "recordedAt": "2026-10-09T20:04:26.546Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"answer\": \"Candidate C09 has extensive experience building backend services using Java and Spring Boot, having designed and built Java and Spring Boot REST and gRPC APIs during their tenure at Copperline Payments.\", \"citations\": [{\"ref\": \"C09#1\", \"quote\": \"Built Java and Spring Boot REST and gRPC APIs for merchant onboarding, with OpenAPI contracts and consumer-driven contract tests.\"}], \"insufficientEvidence\": false}",
+          "thoughtSignature": "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"
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"answer\": \"Candidate C09 has extensive experience building backend services using Java and Spring Boot, having designed and built Java and Spring Boot REST and gRPC APIs during their tenure at Copperline Payments.\", \"citations\": [{\"ref\": \"C09#1\", \"quote\": \"Built Java and Spring Boot REST and gRPC APIs for merchant onboarding, with OpenAPI contracts and consumer-driven contract tests.\"}], \"insufficientEvidence\": false}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 20244
+  },
+  "usage": {
+    "inputTokens": 2261,
+    "outputTokens": 663,
+    "cachedTokens": 0
+  }
+}

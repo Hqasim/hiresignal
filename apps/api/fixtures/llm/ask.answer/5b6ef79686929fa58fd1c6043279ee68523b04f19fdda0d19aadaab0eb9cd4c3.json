@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "5b6ef79686929fa58fd1c6043279ee68523b04f19fdda0d19aadaab0eb9cd4c3",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:04:45.916Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C02 built offline sync for collaborative document editors, as noted in their experience: C02 built React and TypeScript editors for collaborative documents, including offline sync.\",\n  \"citations\": [\n    {\n      \"ref\": \"C02#2\",\n      \"quote\": \"Built React and TypeScript editors for collaborative documents, including offline sync.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TVmnJJY2g0CHwI8dkH+TngBij7WGG4d28axD/WDTMeyX0tt7diADNpuB4OkCVj5WlgR85cf5gKUyWBbRctoH+oNsVmcjDxrzHvq7olmfeGP9r2HZwsfMdFfg="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C02 built offline sync for collaborative document editors, as noted in their experience: C02 built React and TypeScript editors for collaborative documents, including offline sync.\",\n  \"citations\": [\n    {\n      \"ref\": \"C02#2\",\n      \"quote\": \"Built React and TypeScript editors for collaborative documents, including offline sync.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1167
+  },
+  "usage": {
+    "inputTokens": 2566,
+    "outputTokens": 97,
+    "cachedTokens": 0
+  }
+}

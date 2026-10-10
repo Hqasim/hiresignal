@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "4a0916189c1f7c27abd7df85c714e05f261b96d2136bf90372d73e95f9706966",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:00:55.241Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidates C05, C10, and C01 have built retrieval-augmented generation systems using embeddings and vector stores. C05 built a tool using Gemini embeddings stored in PostgreSQL with pgvector (C05#3). C10 led a team building a retrieval-augmented assistant embedded with Gemini and searched with PostgreSQL and pgvector (C10#1). C01 led the build of a support assistant featuring OpenAI and Gemini embeddings and hybrid search on PostgreSQL with pgvector (C01#1).\",\n  \"citations\": [\n    {\n      \"ref\": \"C05#3\",\n      \"quote\": \"Built a retrieval-augmented question-answering tool over 4,000 pages of equipment manuals: section-aware chunking, Gemini embeddings stored in PostgreSQL with pgvector, and answers that cite page numbers.\"\n    },\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Led a team of four building a retrieval-augmented trip assistant: hotel and policy documents chunked by section, embedded with Gemini, and searched with hybrid vector and keyword search in PostgreSQL with pgvector.\"\n    },\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Led the build of a retrieval-augmented support assistant that answers questions over 1.2 million account documents; designed the chunking, OpenAI and Gemini embeddings, and hybrid search on PostgreSQL with pgvector.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0THhy6Ha9X0FXryD5w139Xi038TPTrBKaobQo9l4sTNp1ZqsP+eaytznzuNgGorlcXLgpD14MPRvNCR4fhmeg+o4HL0m38c4dPiXucAQ399riKV62HisZ/hqY="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidates C05, C10, and C01 have built retrieval-augmented generation systems using embeddings and vector stores. C05 built a tool using Gemini embeddings stored in PostgreSQL with pgvector (C05#3). C10 led a team building a retrieval-augmented assistant embedded with Gemini and searched with PostgreSQL and pgvector (C10#1). C01 led the build of a support assistant featuring OpenAI and Gemini embeddings and hybrid search on PostgreSQL with pgvector (C01#1).\",\n  \"citations\": [\n    {\n      \"ref\": \"C05#3\",\n      \"quote\": \"Built a retrieval-augmented question-answering tool over 4,000 pages of equipment manuals: section-aware chunking, Gemini embeddings stored in PostgreSQL with pgvector, and answers that cite page numbers.\"\n    },\n    {\n      \"ref\": \"C10#1\",\n      \"quote\": \"Led a team of four building a retrieval-augmented trip assistant: hotel and policy documents chunked by section, embedded with Gemini, and searched with hybrid vector and keyword search in PostgreSQL with pgvector.\"\n    },\n    {\n      \"ref\": \"C01#1\",\n      \"quote\": \"Led the build of a retrieval-augmented support assistant that answers questions over 1.2 million account documents; designed the chunking, OpenAI and Gemini embeddings, and hybrid search on PostgreSQL with pgvector.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 2136
+  },
+  "usage": {
+    "inputTokens": 2397,
+    "outputTokens": 331,
+    "cachedTokens": 0
+  }
+}

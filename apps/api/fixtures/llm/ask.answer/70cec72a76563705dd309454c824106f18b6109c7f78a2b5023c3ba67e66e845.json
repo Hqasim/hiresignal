@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "70cec72a76563705dd309454c824106f18b6109c7f78a2b5023c3ba67e66e845",
+  "task": "ask.answer",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-09T20:02:01.689Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"answer\": \"Candidate C04 leads a design system and drove an accessibility programme with axe checks in CI: C04 leads the React and TypeScript design system and drove the accessibility programme to WCAG 2.2 AA, with axe checks in CI.\",\n  \"citations\": [\n    {\n      \"ref\": \"C04#1\",\n      \"quote\": \"Lead the React and TypeScript design system used by six product teams: 80 components, documented in Storybook, with visual regression tests.\"\n    },\n    {\n      \"ref\": \"C04#1\",\n      \"quote\": \"Drove the accessibility programme to WCAG 2.2 AA, with axe checks in CI and screen-reader testing on every release.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+          "thoughtSignature": "EmAKXgFpFH0TCUuKRRWOVIuRi2KpP6RP6lDdP5oywQIecGMXf8dwf4FH3hzRym4fi2x0B4/sZ8AOepyUZvFoIn4CIzGkPrY7mt4QnJFXRroGyN8itGzw0ImpEg6I9u+ioBg="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"answer\": \"Candidate C04 leads a design system and drove an accessibility programme with axe checks in CI: C04 leads the React and TypeScript design system and drove the accessibility programme to WCAG 2.2 AA, with axe checks in CI.\",\n  \"citations\": [\n    {\n      \"ref\": \"C04#1\",\n      \"quote\": \"Lead the React and TypeScript design system used by six product teams: 80 components, documented in Storybook, with visual regression tests.\"\n    },\n    {\n      \"ref\": \"C04#1\",\n      \"quote\": \"Drove the accessibility programme to WCAG 2.2 AA, with axe checks in CI and screen-reader testing on every release.\"\n    }\n  ],\n  \"insufficientEvidence\": false\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1568
+  },
+  "usage": {
+    "inputTokens": 2466,
+    "outputTokens": 179,
+    "cachedTokens": 0
+  }
+}
