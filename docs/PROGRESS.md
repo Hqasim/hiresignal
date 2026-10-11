@@ -14,7 +14,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | 5   | Screening agent and scorecards              | ☑ Done        | 2026-10-09 | 8 scorecards, 73/73 citations verified; C01 and C02 rank first; replay in 2.1 s  |
 | 6   | Ask the talent pool (hybrid RAG)            | ☑ Done        | 2026-10-10 | 23 golden questions replay offline; recall@5 = 1.000, MRR = 0.950 (hybrid)       |
 | 7   | API hardening and ops endpoints             | ☑ Done        | 2026-10-11 | 12 routes, each with contract cases; one problem shape checked for every error   |
-| 8   | Frontend                                    | ☐ Not started |            |                                                                                  |
+| 8   | Frontend                                    | ☑ Done        | 2026-10-12 | The §3 tour works end to end in Chrome on seeded data; 0 console errors          |
 | 9   | Evals, E2E and CI hardening                 | ☐ Not started |            |                                                                                  |
 | 10  | Launch and documentation                    | ☐ Not started |            |                                                                                  |
 
@@ -28,6 +28,36 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+
+## Phase 8 evidence (2026-10-12)
+
+Phase 8's DoD is local: every page works against the local API with seeded data, there are no console errors, everything is keyboard-navigable, and the component tests are green.
+
+- **Every page works against the local API with seeded data.** The stack was `npm run db:migrate` (0 applied), `npm run seed -- --reset` in replay (`Model calls: 105 (live 0, fallbacks 0, failed 0)`) and `npm run dev`. A script drove headless Chrome 154 over the DevTools protocol through the SPEC §3 tour. (The Claude in Chrome extension wasn't connected.)
+  - **`/`** redirects to `/jobs/senior-fullstack-ai`. Eight ranked rows: C01, C02 and C10 at 100 (4/4 met · 4 strong), then C05 69 (4/4 · 1 strong), C09 58, C03 50 (**4/4 met · 0 strong**), C04 50 and C08 27. C06 and C07 are in the Quarantined section, "Not scored". Seven requirements are listed.
+  - **C01:** clicking a citation chip set `aria-pressed`, highlighted its quote, scrolled the quote into view inside the resume pane, and moved focus to it. Six redaction tokens show as pills, from `[PERSON_1]` to `[GRAD_YEAR_1]`. The agent trace (7 tool calls) opened from the keyboard.
+  - **Shortlist** turned the heading into "Priya Raman (C01)". **Re-run screening** replayed the seed's fixture and reported "Screening finished" (score 100).
+  - **C06:** two red regions labelled "Injection (L1, L2)" (the HTML comment and the white-text span), 14 highlighted segments, 8 signals in the guard panel, "No score: quarantined resumes are never scored." and no re-run button. The comment shows as literal text, `-->` included.
+  - **C02** lists its dismissed `L2 · medium` signal and the classifier verdict. **C10** lists 12 redacted values in 7 types, and its L0 signal as "Not highlighted: found in the original text, before redaction."
+  - **Ask:** the Q01 suggestion returned an answer from `gemini-3.5-flash-lite` (default route) with 3 citations (C05, C10, C01). Following the first opened C05 at `?cite=1177-1381` with that quote highlighted. The X01 suggestion returned "Not enough evidence" with "No model was called".
+  - **Ops** showed 0 / 300 live calls, the reset at 00:00 UTC, 134 replayed attempts, "–" for the cache ratio and p95 with the reason, and 50 recent calls.
+  - **About:** the links to GitHub, `/api/docs` and the docs resolve. An unknown URL shows "Page not found" inside the shell.
+- **No console errors.** The final run logged 0 errors and 0 warnings across every page: 48 messages, all Vite `debug` and the React DevTools `info` notice. The first run found three problems, fixed in `fix(web): issues found walking the tour in Chrome`:
+  - a React Router `HydrateFallback` warning on every load
+  - a `favicon.ico` 404
+  - horizontal scroll at 360 px on the jobs page (672 px) and the ops page (779 px)
+- **Responsive from 360 px.** With a 360 × 780 mobile viewport, `scrollWidth` is 360 px on the jobs, C01, C06, Ask, Ops and About pages. Wide tables scroll inside their own container.
+- **Keyboard-navigable.** Tab order on the jobs page: skip link, brand, the four nav links, "Full job description", the guide's two links and Dismiss, then the candidate links in rank order. On C01 the ten citation chips follow in requirement order, then the trace toggle. The script checked every focused element for a visible ring (box-shadow or outline), and none lacked one. Component tests cover Enter on a citation chip, Enter on the trace toggle, Tab to a chip, and Ctrl+Enter in Ask.
+- **Component tests are green:** 109 web tests in 15 files (Phase 7: 4). The five from SPEC §14 are `ScorecardPanel` (5), `RedactedResumeView` (4, plus 15 for `segmentResume`), `AskPanel` (6), `GuardBadge` (4) and `CandidateTable` (6). The others cover the shell, error boundary and redirects, the job, candidate and ops pages, shortlist, re-run with quota, the trace, the api client, formatting and `?cite=`.
+- **`npm run verify` is green:**
+  - 1,277 unit tests: contracts 40, api 1,128, web 109. Phase 7 had 1,164.
+  - 0 dependency-cruiser violations (426 modules)
+  - every coverage gate passes
+- **`npm run test:integration` passes:** 96 tests in 6 files (Phase 7: 95). The new seed test asserts C03 at 4 met / 0 strong and C01 at 4 / 4, and the `listRanked` test checks that only ids and ratings leave the JSONB.
+- **Code splitting** (`npm run build`): every page is its own chunk.
+  - candidate page 28.8 kB (9.6 kB gzip), ops 8.0 kB, job 7.5 kB, ask 6.2 kB, about 4.7 kB
+  - the shell 373 kB (119 kB gzip), and the contracts with Zod a shared 102 kB (30 kB gzip)
+- **Not pushed yet.** CI and deploy aren't part of this phase's DoD.
 
 ## Phase 7 evidence (2026-10-11)
 
@@ -357,6 +387,24 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 - [0019 Section-aware chunking with exact offsets](adr/0019-section-aware-chunking-with-exact-offsets.md)
 - [0020 Evidence-gathering agent with a separate synthesis call](adr/0020-evidence-gathering-agent-with-separate-synthesis.md)
 - [0021 OpenAPI document assembled from the contracts](adr/0021-openapi-document-from-contracts.md)
+- [0022 Resume highlight layers rendered from API spans](adr/0022-resume-highlight-layers-from-api-spans.md)
+
+Phase 8 decisions agreed with Hamzah (2026-10-11) and recorded in SPEC:
+
+- **`MustHaves` gains `strong`** (§10, ADR 0012 update), so C03 reads "4/4 met · 0 strong". `summarizeMustHaves` in `domain/scoring` counts it, and `computeScore` uses the same function. It is derived on read from the ratings stored in `scorecards.result`, so there is no migration and no fixture change.
+- **§3 matches the seeded data.** Two candidates are quarantined and none is flagged; C02 and C10 show dismissed signals. The Ask step uses golden Q01, because the old question had no fixture. The suggested questions come from the golden set, and the Phase 9 E2E ask journey can use Q01.
+- **§11:** the must-haves column shows met and strong; the citation deep link `?cite=<start>-<end>`.
+
+Phase 8 choices recorded in commit messages and ADRs:
+
+- **Highlighting is a pure segmentation** of the redacted resume at every span and token boundary, rendered as text nodes (ADR 0022). Overlapping injection spans merge into one labelled region. Redaction tokens are found by the `[TYPE_N]` grammar, because the API sends no token spans.
+- **`/` and `/ask` redirect to the first job,** so the header hard-codes no slug. v1 has one job.
+- **Mutations:** shortlisting writes the response into the cached detail. Re-screening refetches the detail and the ranked lists, so the new score comes from the API. Both invalidate only the ranked lists, not the whole cache.
+- **The error boundary sits on a pathless route under the layout,** so a failing page keeps the shell. A thrown message is never shown.
+- **One accent** (a muted blue `--primary` and `--ring`). `--muted-foreground` was darkened so it stays legible on the muted banner.
+- **Ligatures are off in the resume view,** so `-->` shows as typed.
+- **`@testing-library/user-event` 14.6.7** (dev, no install scripts). The shadcn primitives badge, skeleton, table, alert, textarea, separator and collapsible came from the pinned CLI, with no new runtime dependency.
+- **The About page links only to docs that exist.** `docs/responsible-ai.md` joins it in Phase 10.
 
 Phase 7 decisions agreed with Hamzah (2026-10-11) and recorded in SPEC:
 
@@ -546,13 +594,16 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **Scripts arriving with their phases:**
   - `eval` and `test:e2e` (Phase 9)
 - **`ValidationError` and the other `AppError` subclasses:** added by the phases that raise them (SPEC §7.4).
-- **No cut-list items used.**
+- **axe checks and the Playwright tour:** Phase 9. The headless-Chrome script used for the Phase 8 DoD lives outside the repo; Playwright replaces it.
+- **Dark mode** (a Could): the tokens exist under `.dark`, but nothing toggles them, and the amber, red and emerald highlight classes have no dark variants.
+- **The About page links `docs/responsible-ai.md`** once Phase 10 writes it.
+- **No cut-list items used.** The re-run button and trace timeline (item 3) and the full ops page (item 4) were both built.
 
 ## Known issues
 
 - **Embedding rows in `llm_calls` have no request id.** The `Embedder` port takes no `requestId`, so `withEmbeddingCallLogging` stores `null`, even for an ask's question embedding. As a result, the ops page can't tie an `embed.query` row to its request. The fix is to thread `requestId` through `embedQuery`; that changes no fixture key.
 - **The OpenAPI `OPERATIONS` table lists each route's error statuses by hand.** Tests catch a missing or extra route, but not a status that a route gained without the table being updated (ADR 0021).
-- **In replay mode, ask answers only the 23 golden questions.** Any other question gets 500 `FIXTURE_MISSING`, whose detail names `npm run seed:record`. Production runs live, so this affects only local and E2E use. The Phase 9 E2E ask question needs a fixture.
+- **In replay mode, ask answers only the 23 golden questions.** Any other question gets 500 `FIXTURE_MISSING`, whose detail names `npm run seed:record`. Production runs live, so this affects only local and E2E use. The Ask page suggests golden questions only, and the Phase 9 E2E ask journey can use Q01, which is recorded.
 
 - **Gemini Flash's free tier allows 20 requests per day** (seen in AI Studio, 2026-10-10), far below `DAILY_LLM_CALL_CAP` (300).
   - A live re-screen spends 1–2 Flash calls, and 5 of the 20 golden questions escalate to Flash.
@@ -567,7 +618,6 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
   - cross-script homoglyphs, external CSS, nested same-name tags
   - paraphrased social engineering, which only L3 catches
 - **C07 is quarantined only by the classifier** (`malicious` 0.99 on 2026-10-09); the rules alone would flag it. Changing the classifier prompt or model means re-recording, and the seed integration test catches a changed verdict.
-- **C03 meets 4/4 must-haves while scoring 50.** `mustHavesMet` counts `partial` as met (§9.6), and all seven of C03's ratings are `partial` (skills-list claims). The score reflects the gap, and the must-haves column alone overstates it. If the UI shows must-haves prominently, consider showing strong and partial separately (Phase 8).
 - **C01, C02 and C10 tie at 100,** so their order is by alias. The DoD holds (C01 and C02 first), but it rests on the tie-break.
 - **A live re-screen may approach the Lambda's 60 s timeout.** A screening is about 3 Flash-Lite agent turns, their query embeddings and one Flash synthesis that writes about 4,000 output tokens, thinking included. Measure it after a deploy. If it's too slow, cap the agent turns for live runs, or answer 202 and screen in the background.
 - **Changing any screening prompt** (a new `SCREENING_PROMPT_VERSION`) changes every screening fixture key: clear `screen.*` and run `npm run seed:record` (`docs/runbook.md`).
@@ -583,7 +633,7 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **Dependabot npm updates may fail for a few days.** Its default cooldown hides versions published in the last 3 days, and our exact pins (for example typescript-eslint 8.71.1) are newer than that. The error is `ETARGET … with a date before …`. It clears by itself.
 - **Dependabot PR #1 (`@types/node` 24 → 26) should be closed.** `dependabot.yml` now ignores `@types/node` majors, because the types must follow the Node 24 runtime.
 - **The `ubuntu-latest` runner label moves to Ubuntu 26 on 2026-10-19 (GitHub notice).** Watch the first CI run after that date.
-- **The web home-page chunk is 123 kB (39 kB gzip)**, mostly Zod via the contracts package. Revisit in Phase 8 if route chunks grow.
+- **The web shell chunk is 373 kB (119 kB gzip)** as of 2026-10-12, and the contracts with Zod a shared 102 kB (30 kB gzip). Pages are 5–29 kB each. Measure again if a page grows; Zod is the first thing to look at.
 - **The API's overall unit-coverage figure fell to about 43%** because the Postgres adapters run only in integration tests, which don't collect coverage. Only the domain and application gates are enforced, and they pass. Don't read the "All files" line as a regression.
 - **A machine that ran the Postgres 17 container needs a one-time reset:** `docker compose down --volumes; npm run db:up; npm run db:migrate`. Postgres 18 can't open a 17 data directory.
 
@@ -682,14 +732,24 @@ Phases 4–6 were pushed afterwards. CI run [38050841071](https://github.com/Hqa
 
 No live call and no deploy were needed. The 9 commits are local, waiting for Hamzah's approval to push.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 8` (Frontend). Phase 8 builds the SPA against these contracts:
+**2026-10-12, Phase 8 done.** The SPA is built against the contracts:
 
-- the jobs page, candidate detail (resume highlight layers, citation scroll-and-highlight, trace timeline), Ask, Ops and About
-- loading, empty, error and quota states
-- component tests
+- the app shell: skip link, navigation, synthetic-data banner, the footer health line, an error boundary that keeps the shell
+- the jobs page: the ranked table with "met · strong" must-haves (a new contract field) and a quarantined section
+- the candidate page: the redacted resume with citation, injection and token layers (ADR 0022), citation scroll-and-focus, `?cite=` deep links, the guard panel, the scorecard, shortlist, re-run and the agent trace
+- Ask with golden suggestions and cited answers, Ops, About
+- loading, empty, error and quota states everywhere; 360 px wide without page scroll
+
+A headless-Chrome walk through the §3 tour found three issues (a router warning, a favicon 404, overflow at 360 px), which were fixed; the final run logged 0 errors and 0 warnings. No live call and no deploy were needed. The 14 commits are local, waiting for Hamzah's approval to push, on top of the unpushed Phase 7.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 9` (Evals, E2E and CI hardening):
+
+- the eval runner with the four suites and the ablations, thresholds, `docs/evals.md`
+- Playwright journeys from §14 with axe, a `@smoke` subset, and the deploy step that runs it
+- the CI `evals` and `e2e` jobs, and the branch-protection runbook
 
 Things to plan for:
 
-- The ops page reads `OpsSummary` and `LlmCallListResponse`.
-- C03's must-haves need care (Known issues).
-- `/api/docs` can be linked from About.
+- The E2E ask journey can use golden Q01; locally any other question is `FIXTURE_MISSING`.
+- Shortlisting persists, so E2E needs a fresh `seed -- --reset` or a candidate it doesn't shortlist elsewhere.
+- Phases 7 and 8 are unpushed; the first CI run covers both.
