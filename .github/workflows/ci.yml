@@ -88,6 +88,42 @@ jobs:
         run: npm run db:migrate
       - run: npm run test:integration
 
+  evals:
+    name: Evals (replay, gated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: hiresignal
+          POSTGRES_PASSWORD: hiresignal
+          POSTGRES_DB: hiresignal
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U hiresignal -d hiresignal"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # The example's database URLs match the service container, and its model IDs match the
+      # committed fixtures, which replay keys include (SPEC §9.8).
+      - name: Use the example environment (replay, service container)
+        run: cp .env.example .env
+      - run: npm run db:migrate
+      - name: Seed from the fixtures (replay)
+        run: npm run seed
+      # Exits 1 when a gate in apps/api/evals/thresholds.ts fails; the tables go to the job summary.
+      - name: Run the eval suites against their gates
+        run: npm run eval
+
   e2e:
     name: E2E (Playwright + axe)
     runs-on: ubuntu-latest
