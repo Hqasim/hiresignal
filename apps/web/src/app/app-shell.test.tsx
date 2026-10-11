@@ -12,6 +12,9 @@ import { Layout } from './layout';
 import { RouteError } from './route-error';
 import { routes } from './router';
 
+/** Lazy route chunks compile on first import under Vitest, which can outlast waitFor's 1 s default. */
+const LAZY_ROUTE = { timeout: 5000 };
+
 const health: HealthResponse = { status: 'ok', db: 'up', llmMode: 'replay', gitSha: 'abc1234def' };
 const jobs: JobListResponse = {
   jobs: [
@@ -44,7 +47,7 @@ describe('app shell', () => {
 
     await waitFor(() => {
       expect(home.state.location.pathname).toBe('/jobs/senior-fullstack-ai');
-    });
+    }, LAZY_ROUTE);
   });
 
   it('redirects /ask to the first job’s Ask page', async () => {
@@ -52,13 +55,13 @@ describe('app shell', () => {
 
     await waitFor(() => {
       expect(ask.state.location.pathname).toBe('/jobs/senior-fullstack-ai/ask');
-    });
+    }, LAZY_ROUTE);
   });
 
   it('tells the user to seed when there are no jobs', async () => {
     renderApp('/', routes, { jobs: [] });
 
-    expect(await screen.findByText('No jobs yet')).toBeInTheDocument();
+    expect(await screen.findByText('No jobs yet', {}, LAZY_ROUTE)).toBeInTheDocument();
   });
 
   it.each([

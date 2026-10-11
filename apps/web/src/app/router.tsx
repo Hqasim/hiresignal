@@ -30,6 +30,13 @@ export const routes: RouteObject[] = [
               return { Component: AskRedirectPage };
             },
           },
+          {
+            path: 'jobs/:slug',
+            lazy: async () => {
+              const { JobPage } = await import('@/features/jobs/job-page');
+              return { Component: JobPage };
+            },
+          },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
