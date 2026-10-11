@@ -84,7 +84,7 @@ describe('renderEvalReport', () => {
 
   it('dates the run and gives the verdict before the details', () => {
     expect(report.split('\n')[0]).toBe(
-      'As of 2026-10-12: `npm run eval` in replay mode, 5 of 10 gates fail.',
+      'As of 2026-10-12 (UTC): `npm run eval` in replay mode, 5 of 10 gates fail.',
     );
   });
 

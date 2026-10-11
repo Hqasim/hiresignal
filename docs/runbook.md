@@ -206,6 +206,18 @@ npm run seed
 npm run ask:golden
 ```
 
+## Run the evals
+
+`npm run eval` runs the four eval suites (retrieval, injection, PII, scorecards) against the seeded job and `data/evals/`, in replay mode, so it is offline. Seed first. It prints the gates and each suite's tables, ablations included, and exits 1 if a gate in `apps/api/evals/thresholds.ts` fails. [`docs/evals.md`](evals.md) explains the method and holds the latest results.
+
+```powershell
+npm run seed
+npm run eval
+npm run eval -- --write    # also refreshes the results block of docs/evals.md; commit it
+```
+
+A gate only ever moves up. To raise one, change `thresholds.ts` in the commit that improves the result. To lower one, write an ADR first ([ADR 0023](adr/0023-evals-as-ratcheting-ci-gates.md)).
+
 ## Call the API
 
 Every route, with `curl.exe`; Windows PowerShell's `curl` is an alias for `Invoke-WebRequest`, so spell out `.exe`. Set `$api` to the local server (`npm run dev`, replay mode, after `npm run seed`) or to the live Function URL from [Live endpoints](PROGRESS.md#live-endpoints):
@@ -298,6 +310,8 @@ npm run seed:record
 ```
 
 `npm run seed:record` then runs `ask:golden` in record mode, so new golden questions get their embedding and answer fixtures. To record only the question embeddings, with no answer calls (for example before tuning the similarity floor), run `npm run ask:golden -- --mode record --retrieval-only`. After a change to the ask prompt (a new `ASK_PROMPT_VERSION`), clear `ask.answer` and run `npm run seed:record`.
+
+Last, `npm run seed:record` runs `eval` in record mode, which records a classifier verdict for every item of `data/evals/injection.jsonl` that has none. Items with a high rule signal never reach the classifier, so a full set is 35 Flash-Lite calls. To record just those, run `npm run eval -- --mode record`. A classifier prompt change (a new `PROMPT_VERSION` in `prompts/injection-classifier.ts`) means clearing `guard.classify`, which re-records the resumes' verdicts too. C07's quarantine depends on its verdict, and the seed integration test checks it.
 
 A screening recording makes roughly 150 live calls (8 candidates × up to 8 agent turns, their query embeddings, 8 syntheses and a few repairs, plus ingestion), about 15–20 minutes at one call per 6 s.
 

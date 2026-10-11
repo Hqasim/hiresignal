@@ -49,7 +49,7 @@ export function renderEvalReport(
       ? `all ${String(gates.length)} gates pass`
       : `${String(failed)} of ${String(gates.length)} gates fail`;
   return [
-    `As of ${meta.date}: \`npm run eval\` in ${meta.mode} mode, ${verdict}.`,
+    `As of ${meta.date} (UTC): \`npm run eval\` in ${meta.mode} mode, ${verdict}.`,
     '',
     '### Gates',
     '',

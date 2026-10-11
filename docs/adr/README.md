@@ -26,3 +26,4 @@ Decisions that shape HireSignal, in Nygard format ([ADR 0001](0001-record-archit
 | 0020 | [Evidence-gathering agent with a separate synthesis call](0020-evidence-gathering-agent-with-separate-synthesis.md) | Accepted |
 | 0021 | [OpenAPI document assembled from the contracts](0021-openapi-document-from-contracts.md)                            | Accepted |
 | 0022 | [Resume highlight layers rendered from API spans](0022-resume-highlight-layers-from-api-spans.md)                   | Accepted |
+| 0023 | [Evals as ratcheting CI gates over replayed fixtures](0023-evals-as-ratcheting-ci-gates.md)                         | Accepted |

@@ -835,7 +835,7 @@ apps/web/src/
 
 **E2E journeys:**
 
-1. The ranked list shows 10 candidates, with the quarantined one last.
+1. The ranked list shows the 8 scored candidates in score order, and the 2 quarantined ones in their own section, not scored.
 2. Clicking a citation highlights the resume span.
 3. The quarantined candidate shows its injection span and no score.
 4. Shortlist reveals the name.
@@ -849,11 +849,15 @@ apps/web/src/
 | Suite | Metrics | Initial gate |
 |---|---|---|
 | Retrieval | recall@5 (expected candidate among the top 5 results' candidates), MRR; ablation vector-only vs hybrid | Set just below the first measured hybrid result |
-| Injection | Precision, recall, F1 on malicious; false-positive rate on benign; ablation rules-only vs rules + classifier | Malicious recall = 100%; benign FPR ≤ 5% |
-| PII | Leaked entities across fixtures (must be 0); per-type recall | 0 leaks |
+| Injection | Precision, recall, F1 on malicious; false-positive rate on benign; ablation rules-only vs rules + classifier. An item counts as detected when the guard flags or quarantines it; quarantines are reported separately (ADR 0023) | Malicious recall = 100%; benign FPR ≤ 5% |
+| PII | Leaked entities (labelled values in `pii.jsonl`, and header-name words in the seeded resumes) must be 0; per-type recall | 0 leaks |
 | Scorecards | Schema-valid %, citation-valid %, no score without evidence | 100% / 100% / 100% |
 
 Output goes to a console table, to `$GITHUB_STEP_SUMMARY` (markdown), and to `docs/evals.md` with `--write`. Thresholds live in `apps/api/evals/thresholds.ts` and only ever ratchet up; lowering one needs an ADR.
+
+As built (Phase 9, ADR 0023): the suites are pure modules in `apps/api/evals/`, wired in `main/eval-wiring.ts` through the product's own code paths. The run reads the seeded job, so CI seeds first. In replay it exits 1 when a gate fails. `--mode record` records only missing classifier verdicts for new injection items, and `npm run seed:record` chains it. The scorecard suite re-checks every stored scorecard: coverage, schema, citations re-verified at their spans, evidence behind every `strong` or `partial` rating, and scores that recompute.
+
+**E2E as built** (Phase 9, ADR 0024): Playwright starts the API in replay and the built web app on `vite preview` itself, after a replay `seed --reset` (shortlisting has no undo). The `@smoke` subset is read-only: journeys 1–3, axe on the read-only pages, and the footer health and build. It never shortlists, asks or re-screens, so it makes no model call and changes no data.
 
 ---
 
