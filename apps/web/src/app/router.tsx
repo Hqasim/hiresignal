@@ -1,21 +1,43 @@
-import { createBrowserRouter } from 'react-router';
+import { createBrowserRouter, type RouteObject } from 'react-router';
 
 import { Layout } from './layout';
+import { NotFoundPage } from './not-found-page';
+import { RouteError } from './route-error';
 
-/** Route table. Each page is a lazy chunk, so the first load ships only the shell (SPEC §11). */
-export function createRouter() {
-  return createBrowserRouter([
-    {
-      element: <Layout />,
-      children: [
-        {
-          index: true,
-          lazy: async () => {
-            const { HomePage } = await import('@/features/health/home-page');
-            return { Component: HomePage };
+/**
+ * Every page, each a lazy chunk, so the first load ships only the shell (SPEC §11). The pages sit
+ * under a pathless route that holds the error boundary, so a failing page keeps the header and
+ * footer.
+ */
+export const routes: RouteObject[] = [
+  {
+    element: <Layout />,
+    children: [
+      {
+        errorElement: <RouteError />,
+        children: [
+          {
+            index: true,
+            lazy: async () => {
+              const { HomePage } = await import('@/features/jobs/home-page');
+              return { Component: HomePage };
+            },
           },
-        },
-      ],
-    },
-  ]);
+          {
+            path: 'ask',
+            lazy: async () => {
+              const { AskRedirectPage } = await import('@/features/jobs/home-page');
+              return { Component: AskRedirectPage };
+            },
+          },
+          { path: '*', element: <NotFoundPage /> },
+        ],
+      },
+    ],
+  },
+];
+
+/** The app's router. */
+export function createRouter() {
+  return createBrowserRouter(routes);
 }

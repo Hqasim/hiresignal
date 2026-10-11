@@ -1,7 +1,7 @@
 import { useHealth } from './api';
 import { HealthStatusView, type HealthViewState } from './health-status-view';
 
-/** Health card wired to `GET /api/health`. */
+/** Footer health line wired to `GET /api/health`. */
 export function HealthStatus() {
   const query = useHealth();
 

@@ -1,8 +1,6 @@
 import type { HealthResponse } from '@hiresignal/contracts';
 import { CircleAlert, CircleCheck, LoaderCircle, TriangleAlert } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
 /** Everything the view can show; the container maps query state onto it. */
 export type HealthViewState =
   | { kind: 'loading' }
@@ -10,29 +8,23 @@ export type HealthViewState =
   | { kind: 'error'; detail: string };
 
 /**
- * Presentational card for API health. Each state pairs an icon with text, so meaning never
- * depends on color alone, and the status line is announced politely to screen readers.
+ * Compact API health line for the footer. Each state pairs an icon with text, so meaning never
+ * depends on colour alone, and the status is announced politely to screen readers.
  */
 export function HealthStatusView({ state }: { state: HealthViewState }) {
   return (
-    <Card className="max-w-md">
-      <CardHeader>
-        <CardTitle>System status</CardTitle>
-        <CardDescription>Live check of the HireSignal API.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <p role="status" aria-live="polite" className="flex items-center gap-2 font-medium">
-          <StatusLine state={state} />
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <p role="status" aria-live="polite" className="flex items-center gap-1.5 font-medium">
+        <StatusLine state={state} />
+      </p>
+      {state.kind === 'ready' && (
+        <p>
+          Build <code>{state.health.gitSha.slice(0, 7)}</code> · LLM mode{' '}
+          <code>{state.health.llmMode}</code>
         </p>
-        {state.kind === 'ready' && (
-          <p className="text-sm text-muted-foreground">
-            Build <code>{state.health.gitSha.slice(0, 7)}</code> · LLM mode{' '}
-            <code>{state.health.llmMode}</code>
-          </p>
-        )}
-        {state.kind === 'error' && <p className="text-sm text-muted-foreground">{state.detail}</p>}
-      </CardContent>
-    </Card>
+      )}
+      {state.kind === 'error' && <p>{state.detail}</p>}
+    </div>
   );
 }
 
