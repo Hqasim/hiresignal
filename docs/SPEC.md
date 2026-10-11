@@ -92,11 +92,11 @@ Authentication and multi-tenancy · file upload and PDF/DOCX parsing · real can
 
 **60-second tour** (also the README walkthrough and the E2E journeys)
 
-1. Open `/jobs/senior-fullstack-ai`: a ranked list of 10 anonymized candidates. One is quarantined, one carries a warning flag.
+1. Open `/jobs/senior-fullstack-ai`: a ranked list of 10 anonymized candidates. Two are quarantined, in their own section: one hid its instruction in markup, the other wrote it in plain sight.
 2. Open the top candidate: a scorecard per requirement. Click a citation and the exact resume line highlights. PII shows as tokens like `[EMAIL_1]`.
-3. Open the quarantined candidate: the hidden instruction is highlighted in red with the detection layers that fired. No score was produced.
+3. Open the quarantined candidate C06: the hidden instruction is highlighted in red with the detection layers that fired. No score was produced. (C02 and C10 show the opposite case: rule signals that fired on benign text and were dismissed.)
 4. Click **Shortlist**: the candidate's name is revealed (the human decision point).
-5. Go to **Ask** and type "Who has shipped RAG to production?" You get an answer citing candidates and quotes.
+5. Go to **Ask** and pick the suggested question "Who has built retrieval-augmented generation with embeddings and a vector store?" (golden Q01). You get an answer citing candidates and quotes; each citation opens the candidate with the quote highlighted. The suggested questions come from the golden set, so they replay offline; locally and in E2E, any other question needs a recorded fixture.
 6. Open **Ops**: calls by model, cache hit ratio, p95 latency, fallbacks, and the remaining daily quota.
 
 ---
@@ -704,9 +704,9 @@ apps/web/src/
 | Route | Shows |
 |---|---|
 | `/` | Redirects to the job page; the first visit shows a dismissible "How to explore" card |
-| `/jobs/:slug` | Job summary and requirements. Candidate table: alias (or name if shortlisted), score bar, must-haves met, guard badge, shortlist state. Quarantined candidates in their own section. |
-| `/candidates/:id` | Two panes. **Left:** redacted resume rendered as text with highlight layers (citations amber, injection spans red with icon and label, redaction tokens as neutral pills). **Right:** scorecard (requirement rows with rating chip, rationale and clickable citation chips that scroll to and highlight the span), strengths, concerns, summary, and a collapsible agent trace timeline. Actions: Shortlist (reveals name), Re-run screening (Should). |
-| `/jobs/:slug/ask` | Question box, suggested questions, answer card with citation chips linking to candidates, insufficient-evidence state, routed model shown subtly |
+| `/jobs/:slug` | Job summary and requirements. Candidate table: alias (or name if shortlisted), score bar, must-haves met and how many are strong, guard badge, shortlist state. Quarantined candidates in their own section. |
+| `/candidates/:id` | Two panes. **Left:** redacted resume rendered as text with highlight layers (citations amber, injection spans red with icon and label, redaction tokens as neutral pills). **Right:** scorecard (requirement rows with rating chip, rationale and clickable citation chips that scroll to and highlight the span; `?cite=<start>-<end>` highlights a span on load), strengths, concerns, summary, and a collapsible agent trace timeline. Actions: Shortlist (reveals name), Re-run screening (Should). |
+| `/jobs/:slug/ask` | Question box, suggested questions (from the golden set), answer card with citation chips linking to the candidate and quote, insufficient-evidence state, routed model shown subtly |
 | `/ops` | Stat tiles (calls today / cap, cache ratio, p95 latency, fallbacks), route mix, latency by model, recent calls table |
 | `/about` | What, why, how it works (diagram), responsible-AI note, links |
 
