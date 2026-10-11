@@ -86,7 +86,7 @@ describe('GET /api/jobs/:slug/candidates', () => {
       ['C01', 40, 'clean'],
       ['C06', null, 'quarantined'],
     ]);
-    expect(candidates[0]?.mustHaves).toEqual({ met: 1, total: 1 });
+    expect(candidates[0]?.mustHaves).toEqual({ met: 1, strong: 1, total: 1 });
   });
 
   it('hides every name until a person shortlists the candidate', async () => {

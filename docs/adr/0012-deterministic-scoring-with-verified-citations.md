@@ -44,6 +44,14 @@ The model rates evidence, and code checks the evidence and computes the number.
   - Exact matching rejects harmless variation such as straight versus curly quotes, or a corrected typo. The prompt says to copy text exactly, and the repair call catches most cases.
   - A repair costs an extra Flash call.
 
+## Update (2026-10-11, Phase 8): strong must-haves
+
+`mustHavesMet` alone overstated C03: all seven of its ratings are `partial` (bare skills-list claims), so it meets 4/4 must-haves while scoring 50. The API now also reports `mustHaves.strong`, the must-haves rated `strong` (SPEC §10).
+
+- [`summarizeMustHaves`](../../apps/api/src/domain/scoring/summarize-must-haves.ts) counts `{ met, strong, total }` from the rubric and the ratings. `computeScore` uses it too, so "met" has one definition.
+- `strong` is derived on read, from the ratings already stored in `scorecards.result`. The ranked-list SQL projects only each requirement's id and rating out of the JSONB. There is no migration and no fixture change, and a migration-before-deploy window can't leave a new column empty (ADR 0018).
+- `met` and `total` still come from their stored columns; they agree with the derived counts because both use the same function.
+
 ## Alternatives considered
 
 - **Let the model output the score.** Rejected: the number would be unauditable and injectable, which is the failure this project exists to demonstrate a defense against.

@@ -2,6 +2,7 @@ import type { Scorecard as ScorecardDto } from '@hiresignal/contracts';
 
 import type { Job } from '../../../domain/jobs/job';
 import type { Scorecard } from '../../../domain/scoring/scorecard';
+import { summarizeMustHaves } from '../../../domain/scoring/summarize-must-haves';
 
 /**
  * Maps a stored scorecard to its DTO, joining each rating to its rubric line, in rubric order.
@@ -15,7 +16,11 @@ export function toScorecardDto(scorecard: Scorecard, job: Job): ScorecardDto {
   const rubric = new Map(job.requirements.map((requirement) => [requirement.id, requirement]));
   return {
     score: scorecard.score,
-    mustHaves: { met: scorecard.mustHavesMet, total: scorecard.mustHavesTotal },
+    mustHaves: {
+      met: scorecard.mustHavesMet,
+      strong: summarizeMustHaves(job.requirements, scorecard.result.requirements).strong,
+      total: scorecard.mustHavesTotal,
+    },
     requirements: scorecard.result.requirements.flatMap((assessment) => {
       const requirement = rubric.get(assessment.requirementId);
       if (requirement === undefined) {

@@ -68,10 +68,22 @@ describe('ranked candidate rows', () => {
         score: 72,
         must_haves_met: 3,
         must_haves_total: 4,
+        ratings: [
+          { requirementId: 'R1', rating: 'strong' },
+          { requirementId: 'R2', rating: 'partial' },
+        ],
       }),
     );
 
-    expect(mapped.latestScore).toEqual({ score: 72, mustHavesMet: 3, mustHavesTotal: 4 });
+    expect(mapped.latestScore).toEqual({
+      score: 72,
+      mustHavesMet: 3,
+      mustHavesTotal: 4,
+      ratings: [
+        { requirementId: 'R1', rating: 'strong' },
+        { requirementId: 'R2', rating: 'partial' },
+      ],
+    });
   });
 
   it('have no score when the left join found no scorecard', () => {
@@ -81,6 +93,7 @@ describe('ranked candidate rows', () => {
         score: null,
         must_haves_met: null,
         must_haves_total: null,
+        ratings: null,
       }),
     );
 

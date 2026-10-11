@@ -156,7 +156,7 @@ describe('POST /api/candidates/:id/screen', () => {
 
     expect(response.status).toBe(200);
     const { scorecard } = ScreenResponseSchema.parse(await response.json());
-    expect(scorecard).toMatchObject({ score: 75, mustHaves: { met: 1, total: 1 } });
+    expect(scorecard).toMatchObject({ score: 75, mustHaves: { met: 1, strong: 1, total: 1 } });
     expect(llm.requests.every((request) => request.requestId === 'req-screen')).toBe(true);
     expect(world.scorecards.scorecards).toHaveLength(1);
   });

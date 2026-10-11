@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Requirement } from '../jobs/job';
-import { computeScore, type RatedRequirement, RATING_VALUES } from './compute-score';
+import { computeScore, RATING_VALUES } from './compute-score';
 import type { Rating } from './scorecard';
+import type { RatedRequirement } from './summarize-must-haves';
 
 /** The SPEC §12 rubric: four weighted must-haves and three nice-to-haves (Σ weight = 13). */
 const RUBRIC: Requirement[] = [

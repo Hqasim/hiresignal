@@ -8,9 +8,10 @@ import {
 } from '../../domain/candidates/candidate';
 import { GuardStatusSchema } from '../../domain/guard/guard-status';
 import { GuardVerdictSchema } from '../../domain/guard/guard-verdict';
-import { JobIdSchema } from '../../domain/jobs/job';
+import { JobIdSchema, RequirementIdSchema } from '../../domain/jobs/job';
 import { rehydrateRedactedText } from '../../domain/redaction/redacted-text';
 import { RedactionSummarySchema } from '../../domain/redaction/redaction-summary';
+import { RatingSchema } from '../../domain/scoring/scorecard';
 
 /** A `candidates` row as node-postgres returns it, with JSONB validated. */
 export const CandidateRowSchema = z.object({
@@ -67,6 +68,10 @@ export const RankedCandidateRowSchema = z.object({
   score: z.number().int().nullable(),
   must_haves_met: z.number().int().nullable(),
   must_haves_total: z.number().int().nullable(),
+  /** Each requirement's id and rating, projected from `scorecards.result` in SQL. */
+  ratings: z
+    .array(z.object({ requirementId: RequirementIdSchema, rating: RatingSchema }))
+    .nullable(),
 });
 /** See {@link RankedCandidateRowSchema}. */
 export type RankedCandidateRow = z.infer<typeof RankedCandidateRowSchema>;
@@ -79,7 +84,7 @@ export type RankedCandidateRow = z.infer<typeof RankedCandidateRowSchema>;
  * const ranked = toRankedCandidate(RankedCandidateRowSchema.parse(row));
  */
 export function toRankedCandidate(row: RankedCandidateRow): RankedCandidate {
-  const { score, must_haves_met: met, must_haves_total: total } = row;
+  const { score, must_haves_met: met, must_haves_total: total, ratings } = row;
   return {
     id: row.id,
     alias: row.alias,
@@ -87,8 +92,8 @@ export function toRankedCandidate(row: RankedCandidateRow): RankedCandidate {
     guardStatus: row.guard_status,
     shortlistedAt: row.shortlisted_at,
     latestScore:
-      score === null || met === null || total === null
+      score === null || met === null || total === null || ratings === null
         ? null
-        : { score, mustHavesMet: met, mustHavesTotal: total },
+        : { score, mustHavesMet: met, mustHavesTotal: total, ratings },
   };
 }

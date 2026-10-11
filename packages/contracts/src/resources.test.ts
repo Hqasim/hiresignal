@@ -15,7 +15,7 @@ const summary = {
   guardStatus: 'clean',
   shortlisted: false,
   score: 62,
-  mustHaves: { met: 3, total: 4 },
+  mustHaves: { met: 3, strong: 1, total: 4 },
 };
 
 describe('CandidateSummarySchema', () => {
@@ -27,6 +27,7 @@ describe('CandidateSummarySchema', () => {
     ['a score over 100', { ...summary, score: 101 }],
     ['a malformed alias', { ...summary, alias: 'Candidate 4' }],
     ['an unknown guard status', { ...summary, guardStatus: 'suspicious' }],
+    ['must-haves without a strong count', { ...summary, mustHaves: { met: 3, total: 4 } }],
   ])('rejects %s', (_label, payload) => {
     expect(CandidateSummarySchema.safeParse(payload).success).toBe(false);
   });
@@ -50,7 +51,7 @@ describe('ScorecardSchema', () => {
   it('requires createdAt as an ISO timestamp', () => {
     const scorecard = {
       score: 62,
-      mustHaves: { met: 3, total: 4 },
+      mustHaves: { met: 3, strong: 1, total: 4 },
       requirements: [],
       strengths: [],
       concerns: [],

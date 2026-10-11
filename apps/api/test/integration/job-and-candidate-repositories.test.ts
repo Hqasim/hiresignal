@@ -234,7 +234,16 @@ describe('PgCandidateRepository.listRanked', () => {
       unscoredLater.id,
       quarantined.id,
     ]);
-    expect(ranked[1]?.latestScore).toEqual({ score: 40, mustHavesMet: 1, mustHavesTotal: 2 });
+    // Only each requirement's id and rating leave the JSONB result, never rationale or citations.
+    expect(ranked[1]?.latestScore).toEqual({
+      score: 40,
+      mustHavesMet: 1,
+      mustHavesTotal: 2,
+      ratings: [
+        { requirementId: 'R1', rating: 'strong' },
+        { requirementId: 'R2', rating: 'none' },
+      ],
+    });
     expect(ranked[2]?.latestScore).toBeNull();
     expect(ranked[4]?.guardStatus).toBe('quarantined');
     expect(await candidates.listRanked(job.id, { limit: 2 })).toHaveLength(2);
@@ -243,10 +252,22 @@ describe('PgCandidateRepository.listRanked', () => {
 
 /** Writes a minimal scorecard row directly; the scorecard repository has its own tests. */
 async function insertScore(candidateId: string, score: number, day: string): Promise<void> {
+  const result = {
+    requirements: [
+      {
+        requirementId: 'R1',
+        rating: 'strong',
+        rationale: 'Shipped it.',
+        citations: [],
+        note: null,
+      },
+      { requirementId: 'R2', rating: 'none', rationale: 'No evidence.', citations: [], note: null },
+    ],
+  };
   await db.pool.query(
     `insert into scorecards (candidate_id, score, must_haves_met, must_haves_total, result, trace,
                              prompt_version, models, created_at)
-     values ($1, $2, 1, 2, '{}', '[]', 'screening@test', '{}', $3)`,
-    [candidateId, score, `${day}T00:00:00Z`],
+     values ($1, $2, 1, 2, $3, '[]', 'screening@test', '{}', $4)`,
+    [candidateId, score, JSON.stringify(result), `${day}T00:00:00Z`],
   );
 }

@@ -47,9 +47,14 @@ export const AgentTraceEntrySchema = z.object({
 });
 export type AgentTraceEntry = z.infer<typeof AgentTraceEntrySchema>;
 
-/** Met and total must-have requirements. */
+/**
+ * Must-have requirements: `met` are rated strong or partial, `strong` (a subset of `met`) are
+ * backed by specific evidence. A resume of bare skills-list claims can meet every must-have with
+ * none strong, so show both.
+ */
 export const MustHavesSchema = z.object({
   met: z.int().nonnegative(),
+  strong: z.int().nonnegative(),
   total: z.int().nonnegative(),
 });
 export type MustHaves = z.infer<typeof MustHavesSchema>;

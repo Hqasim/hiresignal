@@ -7,15 +7,23 @@ import type {
 import type { CandidateDetail } from '../../../application/candidates/get-candidate-detail';
 import type { RankedCandidate } from '../../../application/ports/candidate-repository';
 import type { GuardSignal } from '../../../domain/guard/guard-verdict';
+import type { Requirement } from '../../../domain/jobs/job';
+import { summarizeMustHaves } from '../../../domain/scoring/summarize-must-haves';
 import { toScorecardDto } from './scorecard-dto';
 
 /**
  * Maps a ranked row to its summary. The name stays hidden until a person shortlists the candidate.
+ * `requirements` is the job's rubric: it tells which ratings are must-haves, to count the strong
+ * ones; `met` and `total` are the numbers stored with the scorecard.
  *
  * @example
- * toCandidateSummary(row); // { id, alias: 'C04', displayName: null, score: 62, … }
+ * toCandidateSummary(row, job.requirements);
+ * // { id, alias: 'C04', displayName: null, score: 62, mustHaves: { met: 2, strong: 1, total: 4 }, … }
  */
-export function toCandidateSummary(row: RankedCandidate): CandidateSummary {
+export function toCandidateSummary(
+  row: RankedCandidate,
+  requirements: readonly Requirement[],
+): CandidateSummary {
   return {
     id: row.id,
     alias: row.alias,
@@ -26,7 +34,11 @@ export function toCandidateSummary(row: RankedCandidate): CandidateSummary {
     mustHaves:
       row.latestScore === null
         ? null
-        : { met: row.latestScore.mustHavesMet, total: row.latestScore.mustHavesTotal },
+        : {
+            met: row.latestScore.mustHavesMet,
+            strong: summarizeMustHaves(requirements, row.latestScore.ratings).strong,
+            total: row.latestScore.mustHavesTotal,
+          },
   };
 }
 
@@ -43,17 +55,21 @@ export function toCandidateDetail({
   scorecard,
 }: CandidateDetail): CandidateDetailDto {
   return {
-    ...toCandidateSummary({
-      ...candidate,
-      latestScore:
-        scorecard === null
-          ? null
-          : {
-              score: scorecard.score,
-              mustHavesMet: scorecard.mustHavesMet,
-              mustHavesTotal: scorecard.mustHavesTotal,
-            },
-    }),
+    ...toCandidateSummary(
+      {
+        ...candidate,
+        latestScore:
+          scorecard === null
+            ? null
+            : {
+                score: scorecard.score,
+                mustHavesMet: scorecard.mustHavesMet,
+                mustHavesTotal: scorecard.mustHavesTotal,
+                ratings: scorecard.result.requirements,
+              },
+      },
+      job.requirements,
+    ),
     redactedResume: candidate.redactedResume,
     redactionSummary: candidate.redactionSummary.map(({ type, count }) => ({ type, count })),
     guard: {

@@ -54,8 +54,13 @@ export function jobRoutes(deps: JobRoutesDeps): Hono<AppBindings> {
         c.req.query(),
         'query',
       );
-      const rows = await deps.listCandidates({ slug: JobSlugSchema.parse(slug), limit });
-      const body: CandidateListResponse = { candidates: rows.map(toCandidateSummary) };
+      const { job, candidates } = await deps.listCandidates({
+        slug: JobSlugSchema.parse(slug),
+        limit,
+      });
+      const body: CandidateListResponse = {
+        candidates: candidates.map((row) => toCandidateSummary(row, job.requirements)),
+      };
       return c.json(body);
     });
 }

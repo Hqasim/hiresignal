@@ -5,6 +5,7 @@ import type { GuardVerdict } from '../../domain/guard/guard-verdict';
 import type { JobId } from '../../domain/jobs/job';
 import type { RedactedText } from '../../domain/redaction/redacted-text';
 import type { RedactionSummary } from '../../domain/redaction/redaction-summary';
+import type { RatedRequirement } from '../../domain/scoring/summarize-must-haves';
 
 interface IngestedCandidateFields {
   jobId: JobId;
@@ -34,6 +35,15 @@ export interface InsertIngestedResult {
   created: boolean;
 }
 
+/** The numbers of a candidate's latest scorecard that the ranked list shows. */
+export interface LatestScore {
+  score: number;
+  mustHavesMet: number;
+  mustHavesTotal: number;
+  /** Each requirement's rating, without rationale or citations, to count strong must-haves. */
+  ratings: RatedRequirement[];
+}
+
 /** One row of a job's ranked candidate list: no resume text, and the latest score if any. */
 export interface RankedCandidate {
   id: CandidateId;
@@ -41,7 +51,7 @@ export interface RankedCandidate {
   displayName: string;
   guardStatus: GuardStatus;
   shortlistedAt: Date | null;
-  latestScore: { score: number; mustHavesMet: number; mustHavesTotal: number } | null;
+  latestScore: LatestScore | null;
 }
 
 /** Persistence for candidates; also owns writing their chunks, in the same transaction. */

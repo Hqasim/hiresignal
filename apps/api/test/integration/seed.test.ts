@@ -5,7 +5,9 @@ import type { PoolScreening } from '../../src/application/screening/screen-pool'
 import type { Candidate } from '../../src/domain/candidates/candidate';
 import { parseChunkRef } from '../../src/domain/candidates/chunk-ref';
 import type { Scorecard } from '../../src/domain/scoring/scorecard';
+import { summarizeMustHaves } from '../../src/domain/scoring/summarize-must-haves';
 import { createPgCandidateRepository } from '../../src/infrastructure/postgres/pg-candidate-repository';
+import { createPgJobRepository } from '../../src/infrastructure/postgres/pg-job-repository';
 import { createPgScorecardRepository } from '../../src/infrastructure/postgres/pg-scorecard-repository';
 import { createSeeder, loadSeedDataset, type Seeder } from '../../src/main/seed-wiring';
 import { FakeClock } from '../fakes/fake-clock';
@@ -147,6 +149,22 @@ describe('npm run seed precomputes scorecards (replay)', () => {
 
     expect(ranked.slice(0, 2).map((row) => row.alias)).toEqual(['C01', 'C02']);
     expect(ranked.slice(-2).map((row) => row.alias)).toEqual(['C06', 'C07']);
+  });
+
+  it('lists C03 as meeting every must-have with none strong, and C01 with all four strong', async () => {
+    const ranked = await createPgCandidateRepository(db.pool).listRanked(first.jobId, {
+      limit: 10,
+    });
+    const job = await createPgJobRepository(db.pool).findById(first.jobId);
+    const mustHaves = (alias: string) => {
+      const row = ranked.find((r) => r.alias === alias);
+      return row?.latestScore && job
+        ? summarizeMustHaves(job.requirements, row.latestScore.ratings)
+        : null;
+    };
+
+    expect(mustHaves('C03')).toEqual({ met: 4, strong: 0, total: 4 });
+    expect(mustHaves('C01')).toEqual({ met: 4, strong: 4, total: 4 });
   });
 
   it('penalizes C03 for claims without evidence: below C01, C02 and C05, with nothing rated strong', () => {

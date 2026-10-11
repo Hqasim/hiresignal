@@ -588,7 +588,7 @@ So even a missed injection can't raise a score without real, verifiable evidence
   - Every requirement appears exactly once.
   - `strong` and `partial` ratings need at least one valid citation.
   - If anything fails, one `screen.repair` call lists the exact errors (if its reply never matches the schema, the first draft is kept). Anything still invalid is downgraded deterministically and strictly: a requirement with any remaining error becomes `unclear`, note `citation_failed`, keeping only its valid citations; a requirement the model left out is added as `unclear` (ADR 0012).
-- **Scoring** (`domain/scoring/`, pure): rating values are strong 1, partial 0.5, none 0, unclear 0. `score = round(100 × Σ(weight × value) / Σ weight)`. `mustHavesMet` counts must-have requirements rated strong or partial. Citation spans are computed from chunk offsets so the UI can highlight them.
+- **Scoring** (`domain/scoring/`, pure): rating values are strong 1, partial 0.5, none 0, unclear 0. `score = round(100 × Σ(weight × value) / Σ weight)`. `mustHavesMet` counts must-have requirements rated strong or partial; the API also reports how many are strong. Citation spans are computed from chunk offsets so the UI can highlight them.
 - **Human checkpoint:** nothing is auto-rejected. Shortlisting is the only decision, and only a person makes it.
 
 ### 9.7 Ask the talent pool (`application/ask/`)
@@ -661,7 +661,7 @@ Return cosine similarity alongside the fused rank for the floor check. As built,
 
 **Key DTOs** (contracts)
 
-- `CandidateSummary { id, alias, displayName | null, guardStatus, shortlisted, score | null, mustHaves: { met, total } | null }`
+- `CandidateSummary { id, alias, displayName | null, guardStatus, shortlisted, score | null, mustHaves: { met, strong, total } | null }`, where `met` counts must-haves rated strong or partial and `strong` those rated strong (derived from the stored ratings, ADR 0012)
 - `CandidateDetail { …summary, redactedResume, redactionSummary, guard: { status, signals[], dismissed[], classifier | null }, scorecard | null }`
 - `Scorecard { score, mustHaves, requirements: [{ requirementId, text, kind, weight, rating, rationale, citations: [{ ref, section, quote, span: { start, end } }] }], strengths, concerns, summary, promptVersion, models, createdAt, trace[] }`
 - `AskRequest { question }` (trimmed, 1–500 chars) and `AskResponse { answer, insufficientEvidence, citations: [{ ref, candidateId, alias, section, quote, span }], model | null, routedReason | null }`; `model` and `routedReason` are `null` when the similarity floor answered without a model call

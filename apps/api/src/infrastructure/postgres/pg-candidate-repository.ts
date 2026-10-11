@@ -67,14 +67,18 @@ export function createPgCandidateRepository(pool: DbPool): CandidateRepository {
     },
 
     async listRanked(jobId: JobId, options: { limit: number }): Promise<RankedCandidate[]> {
-      // The lateral join picks each candidate's newest scorecard; re-screening adds rows.
+      // The lateral join picks each candidate's newest scorecard; re-screening adds rows. Of its
+      // JSONB result, only each requirement's id and rating leave the database.
       const rows = await queryRows(
         pool,
         `select k.id, k.alias, k.display_name, k.guard_status, k.shortlisted_at,
-                s.score, s.must_haves_met, s.must_haves_total
+                s.score, s.must_haves_met, s.must_haves_total, s.ratings
          from candidates k
          left join lateral (
-           select score, must_haves_met, must_haves_total
+           select score, must_haves_met, must_haves_total,
+                  (select coalesce(jsonb_agg(jsonb_build_object(
+                            'requirementId', a ->> 'requirementId', 'rating', a ->> 'rating')), '[]')
+                   from jsonb_array_elements(result -> 'requirements') a) as ratings
            from scorecards
            where candidate_id = k.id
            order by created_at desc

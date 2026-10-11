@@ -114,6 +114,10 @@ export class InMemoryCandidateRepository implements CandidateRepository {
           score: latest.score,
           mustHavesMet: latest.mustHavesMet,
           mustHavesTotal: latest.mustHavesTotal,
+          ratings: latest.result.requirements.map(({ requirementId, rating }) => ({
+            requirementId,
+            rating,
+          })),
         };
   }
 }
