@@ -218,6 +218,24 @@ npm run eval -- --write    # also refreshes the results block of docs/evals.md; 
 
 A gate only ever moves up. To raise one, change `thresholds.ts` in the commit that improves the result. To lower one, write an ADR first ([ADR 0023](adr/0023-evals-as-ratcheting-ci-gates.md)).
 
+## Run E2E
+
+The Playwright journeys and axe scans run against a replay stack that Playwright starts itself ([`e2e/README.md`](../e2e/README.md), [ADR 0024](adr/0024-e2e-on-replay-stack-and-read-only-production-smoke.md)). Stop `npm run dev` first: port 3000 must be free, and a running dev server is never reused. The run reseeds the local database, so local shortlists are reset.
+
+```powershell
+npx playwright install chromium   # once per machine
+npm run db:up; npm run db:migrate
+npm run test:e2e
+```
+
+To run the read-only `@smoke` subset against a deployed site, as the deploy does:
+
+```powershell
+$env:E2E_BASE_URL = 'https://main.dcq94s69atcgh.amplifyapp.com'
+npm run test:smoke -w @hiresignal/e2e
+Remove-Item Env:E2E_BASE_URL
+```
+
 ## Call the API
 
 Every route, with `curl.exe`; Windows PowerShell's `curl` is an alias for `Invoke-WebRequest`, so spell out `.exe`. Set `$api` to the local server (`npm run dev`, replay mode, after `npm run seed`) or to the live Function URL from [Live endpoints](PROGRESS.md#live-endpoints):
@@ -336,6 +354,38 @@ Every push to `main` that passes CI deploys automatically (`.github/workflows/de
 5. run the read-only Playwright `@smoke` journeys and axe against the live site, which also check that the footer shows the new build ([ADR 0024](adr/0024-e2e-on-replay-stack-and-read-only-production-smoke.md)). A failure uploads the `playwright-smoke-report` artifact. They need seeded data: after a fixture change, run [Reseed production](#reseed-production).
 
 To redeploy the same commit, re-run the latest Deploy run: `gh run rerun <run-id>`. Migrations are idempotent, so re-running is safe.
+
+## Branch protection
+
+`main` is protected by a repository ruleset, kept in [`.github/rulesets/main.json`](../.github/rulesets/main.json). It does four things:
+
+- requires a pull request, with no approval needed for a solo maintainer
+- requires the six CI jobs to pass on a branch that is up to date with `main`: quality, unit, integration, evals, e2e and build, each tied to the GitHub Actions app so another app can't satisfy a check with a status of the same name
+- blocks force pushes and branch deletion
+- has no bypass actors
+
+Apply it once (a second POST creates a duplicate), then check it:
+
+```powershell
+gh api -X POST repos/Hqasim/hiresignal/rulesets --input .github/rulesets/main.json
+gh api repos/Hqasim/hiresignal/rulesets --jq '.[] | "\(.id) \(.name) \(.enforcement)"'
+gh api repos/Hqasim/hiresignal/rules/branches/main --jq '.[].type'
+```
+
+To change it, edit the JSON, then `gh api -X PUT repos/Hqasim/hiresignal/rulesets/<id> --input .github/rulesets/main.json`. A renamed CI job must be renamed here in the same pull request, or every pull request waits for a check that never reports.
+
+Once it is on, work on a branch and open a pull request (`gh pr create`). Merge with squash or rebase. Merging pushes to `main`, which runs CI and then the deploy as before.
+
+## CodeQL
+
+CodeQL's default setup scans the JavaScript and TypeScript and the workflows on every push and pull request (free for public repositories, SPEC §15). It is configured in the repository settings, not in a workflow file:
+
+```powershell
+gh api -X PATCH repos/Hqasim/hiresignal/code-scanning/default-setup -f state=configured -f query_suite=default
+gh api repos/Hqasim/hiresignal/code-scanning/default-setup --jq '.state, .languages'
+```
+
+Alerts appear under Security → Code scanning. CodeQL isn't a required check, so a slow analysis never blocks a merge. Review its alerts like Dependabot's.
 
 ## Rollback
 

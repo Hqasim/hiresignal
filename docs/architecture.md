@@ -1,6 +1,6 @@
 # Architecture
 
-How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-12 (Phase 8) it covers the system context, the API layers, the LLM platform, the safety layer, ingestion, screening, ask, the HTTP request pipeline, the web app and the data model.
+How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-12 (Phase 9) it covers the system context, the API layers, the LLM platform, the safety layer, ingestion, screening, ask, the HTTP request pipeline, the web app, the data model and the delivery pipeline.
 
 ## System context
 
@@ -358,3 +358,32 @@ erDiagram
 - **Quarantined candidates** keep their redacted text and verdict but never get chunks. The `IngestedCandidate` type enforces this, and every retrieval query filters them out as well.
 - **Scorecards are append-only.** Re-screening adds a row, and readers take the newest one (`scorecards_candidate_latest` index).
 - **`llm_calls` stores metadata only:** no prompts, resume text or model output.
+
+## Delivery pipeline
+
+Every change reaches `main` through a pull request that the six CI jobs gate ([runbook](runbook.md#branch-protection)). The deploy runs only after CI passes on `main` ([ADR 0017](adr/0017-static-spa-on-amplify-with-ci-deploys.md)). Nothing in CI holds a Gemini key: evals and E2E replay recorded fixtures ([ADR 0023](adr/0023-evals-as-ratcheting-ci-gates.md), [ADR 0024](adr/0024-e2e-on-replay-stack-and-read-only-production-smoke.md)).
+
+```mermaid
+flowchart LR
+  pr([Pull request]) --> ci
+  subgraph ci["CI (ci.yml), in parallel"]
+    quality[Quality<br/>format · lint · types · boundaries]
+    unit[Unit<br/>coverage gates]
+    integration[Integration<br/>Postgres + pgvector]
+    evals[Evals<br/>replay · gates]
+    e2e[E2E<br/>Playwright + axe · replay]
+    build[Build<br/>bundle · web · SAM lint]
+  end
+  ci -->|all green, merged| main([main])
+  main --> deploy
+  subgraph deploy["Deploy (deploy.yml), environment production"]
+    direction TB
+    oidc[OIDC] --> migrate[Migrate Neon] --> sam[SAM deploy] --> apismoke[curl /api/health]
+    apismoke --> amplify[Amplify deploy] --> websmoke[curl web + deep link] --> smoke["Playwright @smoke<br/>read-only · axe · build SHA"]
+  end
+  seed(["seed-demo.yml<br/>by hand"]) -->|"replay seed --reset<br/>zero Gemini calls"| neon[(Neon)]
+  migrate --> neon
+```
+
+- **The evals and E2E jobs each seed a fresh service container in replay mode,** so they test the committed fixtures, not whatever production holds.
+- **The production smoke is read-only:** it never shortlists, asks or re-screens. It needs the seeded demo data, which `seed-demo` loads with the same replay seed CI uses.
