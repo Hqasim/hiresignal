@@ -33,10 +33,68 @@ export interface LlmCallRecord {
   createdAt: Date;
 }
 
-/** The AI telemetry log (`llm_calls`). Phase 7 adds the ops summary and recent-calls queries. */
+/** A recorded call attempt with its row id, as the ops page lists it. */
+export interface StoredLlmCall extends LlmCallRecord {
+  id: number;
+}
+
+/**
+ * Aggregates over a set of call attempts (SPEC §10, §17).
+ *
+ * Counts include every attempt, live and replayed. Tokens, the cache ratio and latency cover
+ * `live` attempts only: a replayed call reads a fixture in about 0 ms and reports no real usage,
+ * so mixing it in would hide what Gemini actually did.
+ */
+export interface LlmCallStats {
+  calls: number;
+  live: number;
+  replay: number;
+  /** Attempts whose status isn't `ok`: errors, rate limits and timeouts. */
+  errors: number;
+  /** Attempts made on the fallback tier after the routed tier failed. */
+  fallbacks: number;
+  inputTokens: number;
+  outputTokens: number;
+  cachedTokens: number;
+  /** Cached ÷ input tokens over live calls that reported usage; `null` when there were none. */
+  cacheRatio: number | null;
+  /** Median live latency (`percentile_cont`); `null` without live calls. */
+  p50LatencyMs: number | null;
+  /** 95th-percentile live latency; `null` without live calls. */
+  p95LatencyMs: number | null;
+}
+
+/** {@link LlmCallStats} for one model. */
+export interface LlmModelStats extends LlmCallStats {
+  model: string;
+  tier: LlmCallTier;
+}
+
+/** How many generation attempts one routing rule sent to one tier. */
+export interface LlmRouteCount {
+  tier: ModelTier;
+  /** The routing rule, for example `default` or `comparative-intent`. */
+  routedReason: string;
+  calls: number;
+}
+
+/** The ops summary's numbers for a time window. */
+export interface LlmCallSummary {
+  totals: LlmCallStats;
+  /** One entry per model, ordered by tier, then model. */
+  byModel: LlmModelStats[];
+  /** Generation attempts by tier and routing rule, most frequent first; embeddings aren't routed. */
+  routeMix: LlmRouteCount[];
+}
+
+/** The AI telemetry log (`llm_calls`). */
 export interface LlmCallRepository {
   /** Appends one call attempt. */
   record(call: LlmCallRecord): Promise<void>;
   /** Counts `live` attempts at or after `since`; the daily-cap middleware passes UTC midnight. */
   countLiveSince(since: Date): Promise<number>;
+  /** Aggregates the attempts at or after `since`, computed by the database (`/api/ops/summary`). */
+  summary(since: Date): Promise<LlmCallSummary>;
+  /** The `limit` most recent attempts, newest first (`/api/ops/calls`). */
+  recent(limit: number): Promise<StoredLlmCall[]>;
 }

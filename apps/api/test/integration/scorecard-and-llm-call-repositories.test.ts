@@ -161,6 +161,156 @@ describe('PgLlmCallRepository', () => {
     ]);
   });
 
+  describe('summary and recent, for the ops page', () => {
+    const since = new Date('2026-10-20T00:00:00.000Z');
+    const at = (minute: number) => new Date(Date.UTC(2026, 9, 20, 9, minute));
+    const lite = { ...call, model: 'lite-model', tier: 'lite', routedReason: 'default' } as const;
+
+    beforeAll(async () => {
+      const calls = createPgLlmCallRepository(db.pool);
+      const attempts: LlmCallRecord[] = [
+        { ...lite, latencyMs: 100, inputTokens: 1000, outputTokens: 10, cachedTokens: 500 },
+        { ...lite, latencyMs: 200, inputTokens: 1000, outputTokens: 10, cachedTokens: null },
+        { ...lite, latencyMs: 300, status: 'rate_limited', inputTokens: null, outputTokens: null },
+        {
+          ...lite,
+          latencyMs: 400,
+          routedReason: 'comparative-intent',
+          isFallback: true,
+          inputTokens: 2000,
+          outputTokens: 20,
+          cachedTokens: 1000,
+        },
+        {
+          ...call,
+          model: 'flash-model',
+          tier: 'flash',
+          routedReason: 'comparative-intent',
+          status: 'timeout',
+          latencyMs: 900,
+          inputTokens: null,
+          outputTokens: null,
+        },
+        // A replay reads a fixture: counted, but its tokens and ~0 ms latency are left out.
+        { ...lite, source: 'replay', latencyMs: 1, inputTokens: 5000, cachedTokens: 5000 },
+        {
+          ...call,
+          task: 'embed.query',
+          model: 'embed-model',
+          tier: 'embedding',
+          latencyMs: 50,
+          inputTokens: null,
+          outputTokens: null,
+        },
+      ];
+      const rows = attempts.map((row, index) => ({
+        ...row,
+        requestId: 'req-ops',
+        createdAt: at(index),
+      }));
+      for (const row of rows) {
+        await calls.record(row);
+      }
+      // Just before the window: must not count.
+      await calls.record({ ...lite, latencyMs: 9999, createdAt: new Date(since.getTime() - 1) });
+    });
+
+    it('aggregates the window, with tokens and latency over live calls only', async () => {
+      const { totals } = await createPgLlmCallRepository(db.pool).summary(since);
+
+      expect(totals).toMatchObject({
+        calls: 7,
+        live: 6,
+        replay: 1,
+        errors: 2,
+        fallbacks: 1,
+        inputTokens: 4000,
+        outputTokens: 40,
+        cachedTokens: 1500,
+        cacheRatio: 0.375,
+      });
+      // Live latencies 50, 100, 200, 300, 400, 900: percentile_cont interpolates.
+      expect(totals.p50LatencyMs).toBeCloseTo(250);
+      expect(totals.p95LatencyMs).toBeCloseTo(775);
+    });
+
+    it('breaks the numbers down by model, ordered by tier', async () => {
+      const { byModel } = await createPgLlmCallRepository(db.pool).summary(since);
+
+      expect(byModel.map(({ model, calls, errors }) => [model, calls, errors])).toEqual([
+        ['embed-model', 1, 0],
+        ['flash-model', 1, 1],
+        ['lite-model', 5, 1],
+      ]);
+      const [embedding, flash, liteStats] = byModel;
+      expect(embedding).toMatchObject({ tier: 'embedding', cacheRatio: null, p50LatencyMs: 50 });
+      expect(flash).toMatchObject({ tier: 'flash', inputTokens: 0, cacheRatio: null });
+      expect(liteStats).toMatchObject({ live: 4, replay: 1, fallbacks: 1, cacheRatio: 0.375 });
+      expect(liteStats?.p50LatencyMs).toBeCloseTo(250);
+      expect(liteStats?.p95LatencyMs).toBeCloseTo(385);
+    });
+
+    it('counts generation attempts by tier and routing rule, most frequent first', async () => {
+      const { routeMix } = await createPgLlmCallRepository(db.pool).summary(since);
+
+      expect(routeMix).toEqual([
+        { tier: 'lite', routedReason: 'default', calls: 4 },
+        { tier: 'flash', routedReason: 'comparative-intent', calls: 1 },
+        { tier: 'lite', routedReason: 'comparative-intent', calls: 1 },
+      ]);
+    });
+
+    it('reports zeros and nulls for a window without calls', async () => {
+      const summary = await createPgLlmCallRepository(db.pool).summary(new Date('2030-01-01'));
+
+      expect(summary).toEqual({
+        totals: {
+          calls: 0,
+          live: 0,
+          replay: 0,
+          errors: 0,
+          fallbacks: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          cachedTokens: 0,
+          cacheRatio: null,
+          p50LatencyMs: null,
+          p95LatencyMs: null,
+        },
+        byModel: [],
+        routeMix: [],
+      });
+    });
+
+    it('lists the most recent calls first, with ids, up to the limit', async () => {
+      const recent = await createPgLlmCallRepository(db.pool).recent(3);
+
+      expect(recent.map((row) => [row.model, row.latencyMs])).toEqual([
+        ['embed-model', 50],
+        ['lite-model', 1],
+        ['flash-model', 900],
+      ]);
+      expect(recent[0]).toMatchObject({
+        requestId: 'req-ops',
+        task: 'embed.query',
+        source: 'live',
+      });
+      expect(recent.every((row) => Number.isInteger(row.id) && row.id > 0)).toBe(true);
+    });
+
+    it('breaks ties between calls logged in the same millisecond by id, newest first', async () => {
+      const calls = createPgLlmCallRepository(db.pool);
+      const same = new Date('2026-10-21T00:00:00.000Z');
+      await calls.record({ ...lite, latencyMs: 11, createdAt: same });
+      await calls.record({ ...lite, latencyMs: 22, createdAt: same });
+
+      const [first, second] = await calls.recent(2);
+
+      expect([first?.latencyMs, second?.latencyMs]).toEqual([22, 11]);
+      expect((first?.id ?? 0) > (second?.id ?? 0)).toBe(true);
+    });
+  });
+
   it.each([
     ['tier', 'pro'],
     ['status', 'exploded'],

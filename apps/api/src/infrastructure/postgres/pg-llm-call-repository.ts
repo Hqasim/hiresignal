@@ -1,7 +1,24 @@
 import { z } from 'zod';
 
-import type { LlmCallRecord, LlmCallRepository } from '../../application/ports/llm-call-repository';
+import type {
+  LlmCallRecord,
+  LlmCallRepository,
+  LlmCallSummary,
+  StoredLlmCall,
+} from '../../application/ports/llm-call-repository';
 import type { Queryable } from './create-pool';
+import {
+  CALL_COLUMNS,
+  CallRowSchema,
+  ModelStatsRowSchema,
+  RouteCountRowSchema,
+  STATS_COLUMNS,
+  StatsRowSchema,
+  toModelStats,
+  toRouteCount,
+  toStats,
+  toStoredCall,
+} from './pg-llm-call-rows';
 import { queryRows } from './query-rows';
 
 const CountRowSchema = z.object({ count: z.number().int().nonnegative() });
@@ -12,6 +29,7 @@ const CountRowSchema = z.object({ count: z.number().int().nonnegative() });
  * @example
  * const calls = createPgLlmCallRepository(pool);
  * const usedToday = await calls.countLiveSince(startOfUtcDay);
+ * const today = await calls.summary(startOfUtcDay); // the ops page's numbers, computed in SQL
  */
 export function createPgLlmCallRepository(db: Queryable): LlmCallRepository {
   return {
@@ -49,6 +67,54 @@ export function createPgLlmCallRepository(db: Queryable): LlmCallRepository {
         CountRowSchema,
       );
       return row?.count ?? 0;
+    },
+
+    async summary(since: Date): Promise<LlmCallSummary> {
+      // Three small aggregates over the same window, all served by llm_calls_created_at.
+      const [totals] = await queryRows(
+        db,
+        `select ${STATS_COLUMNS} from llm_calls where created_at >= $1`,
+        [since],
+        StatsRowSchema,
+      );
+      const byModel = await queryRows(
+        db,
+        `select model, tier, ${STATS_COLUMNS}
+         from llm_calls where created_at >= $1
+         group by model, tier
+         order by tier, model`,
+        [since],
+        ModelStatsRowSchema,
+      );
+      const routeMix = await queryRows(
+        db,
+        `select tier, routed_reason, count(*)::int as calls
+         from llm_calls where created_at >= $1 and tier <> 'embedding'
+         group by tier, routed_reason
+         order by calls desc, tier, routed_reason`,
+        [since],
+        RouteCountRowSchema,
+      );
+      if (totals === undefined) {
+        // An aggregate without `group by` always returns exactly one row.
+        throw new Error('llm_calls summary returned no totals row');
+      }
+      return {
+        totals: toStats(totals),
+        byModel: byModel.map(toModelStats),
+        routeMix: routeMix.map(toRouteCount),
+      };
+    },
+
+    async recent(limit: number): Promise<StoredLlmCall[]> {
+      // Ids break ties, because one request can log several attempts in the same millisecond.
+      const rows = await queryRows(
+        db,
+        `select ${CALL_COLUMNS} from llm_calls order by created_at desc, id desc limit $1`,
+        [limit],
+        CallRowSchema,
+      );
+      return rows.map(toStoredCall);
     },
   };
 }

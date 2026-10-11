@@ -41,6 +41,8 @@ export function withCallTally(inner: LlmCallRepository): {
         await inner.record(call);
       },
       countLiveSince: (since) => inner.countLiveSince(since),
+      summary: (since) => inner.summary(since),
+      recent: (limit) => inner.recent(limit),
     },
     tally: () => ({ ...counts }),
   };
