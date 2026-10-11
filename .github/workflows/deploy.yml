@@ -1,8 +1,8 @@
 # Deploys main to production after CI passes (SPEC §15).
-# Flow: OIDC → migrate Neon → SAM deploy → API smoke test → web build → Amplify deploy → web smoke test.
+# Flow: OIDC → migrate Neon → SAM deploy → API smoke test → web build → Amplify deploy → web smoke
+# test → Playwright @smoke journeys against the live site.
 # Migrations run before the code deploy, so they must be additive (ADR 0018).
-# The Gemini key and model IDs reach the Lambda as SAM parameters (ADR 0016). Phase 9 adds the
-# Playwright @smoke suite.
+# The Gemini key and model IDs reach the Lambda as SAM parameters (ADR 0016).
 name: Deploy
 
 on:
@@ -173,3 +173,23 @@ jobs:
           # A client-side route must serve index.html too (SPA rewrite rule).
           curl --fail --silent --show-error --max-time 30 "$ALLOWED_ORIGIN/jobs/smoke-test" | grep -q '<div id="root">'
           echo "Web app is live at $ALLOWED_ORIGIN"
+
+      # The read-only @smoke journeys and axe against the live site (ADR 0024). They never
+      # shortlist, ask or re-screen, so they make no model call and change no data. They need the
+      # seeded demo data (seed-demo.yml), and check that the footer shows this build.
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright smoke test (read-only journeys and axe)
+        env:
+          E2E_BASE_URL: ${{ vars.ALLOWED_ORIGIN }}
+          E2E_GIT_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: npm run test:smoke -w @hiresignal/e2e
+
+      - name: Upload the Playwright smoke report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-smoke-report
+          path: e2e/playwright-report/
+          retention-days: 7

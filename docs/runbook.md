@@ -333,6 +333,7 @@ Every push to `main` that passes CI deploys automatically (`.github/workflows/de
 2. `sam deploy`
 3. smoke-test `/api/health`, which must report `db: "up"`
 4. deploy the web app
+5. run the read-only Playwright `@smoke` journeys and axe against the live site, which also check that the footer shows the new build ([ADR 0024](adr/0024-e2e-on-replay-stack-and-read-only-production-smoke.md)). A failure uploads the `playwright-smoke-report` artifact. They need seeded data: after a fixture change, run [Reseed production](#reseed-production).
 
 To redeploy the same commit, re-run the latest Deploy run: `gh run rerun <run-id>`. Migrations are idempotent, so re-running is safe.
 

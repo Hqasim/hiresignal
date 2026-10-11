@@ -883,7 +883,7 @@ As built (Phase 9, ADR 0023): the suites are pure modules in `apps/api/evals/`, 
 5. Amplify manual deploy: `create-deployment` → upload zip → `start-deployment` → poll until `SUCCEED`.
 6. Smoke test: `curl --fail` on `/api/health`, then Playwright `@smoke` against the live URL.
 
-**`.github/workflows/seed-demo.yml`** (`workflow_dispatch`, plus an optional nightly schedule as a Could): replay seed with `--reset` against production. Zero Gemini calls.
+**`.github/workflows/seed-demo.yml`** (`workflow_dispatch`, plus an optional nightly schedule as a Could): replay seed with `--reset` against production. Zero Gemini calls. Built in Phase 9, so the deploy's `@smoke` step has data to check (ADR 0024). It shares the deploy's concurrency group.
 
 **Also:**
 
@@ -1163,7 +1163,7 @@ Claude prints the exact commands.
 ### Phase 9 — Evals, E2E and CI hardening
 
 1. Eval runner with the four suites and ablations; thresholds file; summary output; `--write` to `docs/evals.md`.
-2. Playwright journeys (§14) and axe; `@smoke` tag; `deploy.yml` runs the `@smoke` subset against production.
+2. Playwright journeys (§14) and axe; `@smoke` tag; `deploy.yml` runs the `@smoke` subset against production. `seed-demo.yml` is built here and run once, so production has the seeded data `@smoke` checks (ADR 0024).
 3. CI jobs `evals` and `e2e`; coverage gates enforced; artifacts uploaded.
 4. Runbook section on branch protection.
 
