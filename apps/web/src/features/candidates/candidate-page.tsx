@@ -7,13 +7,16 @@ import { ErrorState } from '@/components/error-state';
 import { LoadingState } from '@/components/loading-state';
 import { GuardBadge } from '@/features/jobs/guard-badge';
 
+import { AgentTraceTimeline } from './agent-trace-timeline';
 import { useCandidate } from './api';
 import { CITE_PARAM, parseCiteParam } from './cite-param';
 import { GuardPanel } from './guard-panel';
 import type { HighlightLayers } from './highlight';
 import { RedactedResumeView } from './redacted-resume-view';
 import { RedactionSummary } from './redaction-summary';
+import { RescreenButton } from './rescreen-button';
 import { ScorecardPanel } from './scorecard-panel';
+import { ShortlistButton } from './shortlist-button';
 
 /** `/candidates/:id`: the redacted resume beside the guard verdict and the scorecard (SPEC §11). */
 export function CandidatePage() {
@@ -76,6 +79,10 @@ function CandidateView({ candidate }: { candidate: CandidateDetail }) {
           )}
         </h1>
         <GuardBadge status={candidate.guardStatus} />
+        <div className="flex flex-wrap items-start gap-3 sm:ml-auto">
+          <ShortlistButton candidate={candidate} />
+          <RescreenButton candidate={candidate} />
+        </div>
       </header>
       <div className="grid gap-6 lg:grid-cols-2">
         <section aria-labelledby="resume-heading" className="space-y-3 rounded-lg border p-4">
@@ -101,6 +108,7 @@ function CandidateView({ candidate }: { candidate: CandidateDetail }) {
               scorecard={candidate.scorecard}
               activeSpan={activeSpan}
               onCite={onCite}
+              trace={<AgentTraceTimeline trace={candidate.scorecard.trace} />}
             />
           )}
           <RedactionSummary counts={candidate.redactionSummary} />
