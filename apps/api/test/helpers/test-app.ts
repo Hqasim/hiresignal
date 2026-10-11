@@ -4,6 +4,8 @@ import { createListCandidates } from '../../src/application/candidates/list-cand
 import { createShortlistCandidate } from '../../src/application/candidates/shortlist-candidate';
 import { createGetJob } from '../../src/application/jobs/get-job';
 import { createListJobs } from '../../src/application/jobs/list-jobs';
+import { createGetOpsSummary } from '../../src/application/ops/get-ops-summary';
+import { createListRecentCalls } from '../../src/application/ops/list-recent-calls';
 import type { LlmResponse } from '../../src/application/ports/llm-client';
 import { createCheckDailyCap } from '../../src/application/quota/check-daily-cap';
 import { createScreenCandidate } from '../../src/application/screening/screen-candidate';
@@ -98,6 +100,10 @@ export async function aTestApp(options: TestAppOptions = {}) {
       }),
       checkDailyCap,
     },
+    ops: {
+      getOpsSummary: createGetOpsSummary({ calls, clock, cap: options.cap ?? 100 }),
+      listRecentCalls: createListRecentCalls({ calls }),
+    },
   });
   return { app, world, llm, calls, clock, logger, database };
 }
@@ -174,4 +180,5 @@ export const UNUSED_RESOURCE_ROUTES = {
     checkDailyCap: unused,
   },
   ask: { askTalentPool: unused, checkDailyCap: unused },
+  ops: { getOpsSummary: unused, listRecentCalls: unused },
 };

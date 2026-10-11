@@ -11,6 +11,8 @@ import type { SeedJobResult } from '../application/ingest/seed-job';
 import { createGetJob } from '../application/jobs/get-job';
 import { createListJobs } from '../application/jobs/list-jobs';
 import type { LlmCallTally } from '../application/llm/llm-call-tally';
+import { createGetOpsSummary } from '../application/ops/get-ops-summary';
+import { createListRecentCalls } from '../application/ops/list-recent-calls';
 import type { Embedder } from '../application/ports/embedder';
 import type { LlmClient } from '../application/ports/llm-client';
 import type { Logger } from '../application/ports/logger';
@@ -118,6 +120,14 @@ export function createContainer(source: Readonly<Record<string, string | undefin
         settings: ASK_SETTINGS,
       }),
       checkDailyCap,
+    },
+    ops: {
+      getOpsSummary: createGetOpsSummary({
+        calls,
+        clock: systemClock,
+        cap: env.DAILY_LLM_CALL_CAP,
+      }),
+      listRecentCalls: createListRecentCalls({ calls }),
     },
   });
   return { env, logger, app, pool, llm, embedder };

@@ -12,6 +12,7 @@ import { askRoutes, type AskRoutesDeps } from './routes/ask';
 import { candidateRoutes, type CandidateRoutesDeps } from './routes/candidates';
 import { type HealthRouteDeps, healthRoutes } from './routes/health';
 import { jobRoutes, type JobRoutesDeps } from './routes/jobs';
+import { opsRoutes, type OpsRoutesDeps } from './routes/ops';
 
 /** Everything the HTTP layer needs. `main/container.ts` builds it; tests pass fakes. */
 export interface AppDeps {
@@ -23,6 +24,7 @@ export interface AppDeps {
   jobs: JobRoutesDeps;
   candidates: CandidateRoutesDeps;
   ask: AskRoutesDeps;
+  ops: OpsRoutesDeps;
 }
 
 /** Longest client-supplied `x-request-id` we accept; longer ones are replaced with a fresh UUID. */
@@ -65,6 +67,7 @@ export function createApp(deps: AppDeps): Hono<AppBindings> {
   app.route('/api', jobRoutes(deps.jobs));
   app.route('/api', candidateRoutes(deps.candidates));
   app.route('/api', askRoutes(deps.ask));
+  app.route('/api', opsRoutes(deps.ops));
 
   return app;
 }
