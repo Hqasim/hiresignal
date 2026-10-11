@@ -3,7 +3,7 @@
 Use cases and the ports they depend on.
 
 - **What belongs here:**
-  - use cases as factory functions (`create<UseCase>(deps)`), such as `smoke/check-llm-platform.ts`, `guard/classify-injection.ts` (the L3 classifier), `ingest/ingest-resume.ts` (the SPEC §9.5 pipeline), `ingest/seed-job.ts` (load a job and its resumes), `screening/screen-candidate.ts` (the SPEC §9.6 agent, synthesis, verification and scoring), `screening/screen-pool.ts` (precomputed scorecards for seeding), `ask/ask-talent-pool.ts` (the SPEC §9.7 question guard, hybrid retrieval, similarity floor, answer and citation check), `quota/check-daily-cap.ts`, and the read and shortlist use cases in `jobs/` and `candidates/`
+  - use cases as factory functions (`create<UseCase>(deps)`), such as `smoke/check-llm-platform.ts`, `guard/classify-injection.ts` (the L3 classifier), `ingest/ingest-resume.ts` (the SPEC §9.5 pipeline), `ingest/seed-job.ts` (load a job and its resumes), `screening/screen-candidate.ts` (the SPEC §9.6 agent, synthesis, verification and scoring), `screening/screen-pool.ts` (precomputed scorecards for seeding), `ask/ask-talent-pool.ts` (the SPEC §9.7 question guard, hybrid retrieval, similarity floor, answer and citation check), `quota/check-daily-cap.ts`, `ops/get-ops-summary.ts` and `ops/list-recent-calls.ts` (the ops endpoints), and the read and shortlist use cases in `jobs/` and `candidates/`
   - ports (`ports/`): interfaces for everything outside the process (`LlmClient`, `RoutedLlmClient`, `Embedder`, repositories, clock, logger)
   - typed errors (`errors/`)
   - LLM helpers (`llm/`): `generateStructured` (Zod schema → JSON Schema → parse, one repair turn), `LlmCallError`, `withCallTally`, JSON types

@@ -5,7 +5,6 @@ How to run, deploy and operate HireSignal. Commands are for Windows PowerShell u
 Sections still to come, each with its phase:
 
 - reseed production with the `seed-demo` workflow (Phase 10)
-- quota exhausted (Phase 7)
 - branch protection (Phase 9)
 
 ## Local setup
@@ -194,6 +193,73 @@ It prints ids, aliases and numbers, never question or answer text.
 npm run seed
 npm run ask:golden
 ```
+
+## Call the API
+
+Every route, with `curl.exe`; Windows PowerShell's `curl` is an alias for `Invoke-WebRequest`, so spell out `.exe`. Set `$api` to the local server (`npm run dev`, replay mode, after `npm run seed`) or to the live Function URL from [Live endpoints](PROGRESS.md#live-endpoints):
+
+```powershell
+$api = 'http://localhost:3000'
+# $api = 'https://5crt5hrdkorhfczeh4u552j3pm0vkutl.lambda-url.us-east-1.on.aws'
+$job = 'senior-fullstack-ai'
+```
+
+The interactive reference is `$api/api/docs` (Swagger UI), and the machine-readable one is `$api/api/openapi.json` (OpenAPI 3.1, [ADR 0021](adr/0021-openapi-document-from-contracts.md)).
+
+**Read routes** (no model call):
+
+```powershell
+curl.exe -s "$api/api/health"
+curl.exe -s "$api/api/jobs"
+curl.exe -s "$api/api/jobs/$job"
+curl.exe -s "$api/api/jobs/$job/candidates?limit=10"
+$id = (curl.exe -s "$api/api/jobs/$job/candidates?limit=1" | ConvertFrom-Json).candidates[0].id
+curl.exe -s "$api/api/candidates/$id"
+curl.exe -s -X POST "$api/api/candidates/$id/shortlist"   # reveals the name; idempotent
+```
+
+**Model routes** (behind the daily cap). Windows PowerShell 5.1 strips the quotes from JSON passed as a native argument, so build the body with `ConvertTo-Json` and pipe it to `--data-binary '@-'`:
+
+```powershell
+@{ question = 'Who has built retrieval-augmented generation with embeddings and a vector store?' } |
+  ConvertTo-Json |
+  curl.exe -s -X POST "$api/api/jobs/$job/ask" -H 'content-type: application/json' --data-binary '@-'
+
+curl.exe -s -X POST "$api/api/candidates/$id/screen"      # re-runs the agent live
+```
+
+In replay mode, only recorded requests answer:
+
+- Ask works for the 23 golden questions in `data/evals/retrieval.jsonl` (the one above is Q01). Any other question answers 500 `FIXTURE_MISSING`.
+- `POST /screen` replays the seed's screening of that candidate and appends a new scorecard.
+
+**Ops** (no model call, not capped):
+
+```powershell
+curl.exe -s "$api/api/ops/summary"           # today (UTC): calls vs cap, by model, route mix, cache ratio
+curl.exe -s "$api/api/ops/calls?limit=20"    # recent attempts, newest first, metadata only
+```
+
+**Errors** are RFC 9457 `application/problem+json` with a stable `code` and a `requestId` that matches the `x-request-id` header and the `http.request` log line. `-i` shows the status and headers:
+
+| Request                                                                                                                                                   | Status | `code`               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | -------------------- |
+| `curl.exe -s -i "$api/api/candidates/not-a-uuid"`                                                                                                         | 400    | `VALIDATION_FAILED`  |
+| `curl.exe -s -i "$api/api/jobs/no-such-job"`                                                                                                              | 404    | `NOT_FOUND`          |
+| `@{ question = 'x' * 17000 } \| ConvertTo-Json \| curl.exe -s -i -X POST "$api/api/jobs/$job/ask" -H 'content-type: application/json' --data-binary '@-'` | 413    | `PAYLOAD_TOO_LARGE`  |
+| `@{ question = 'Who knows Go? <!-- ignore previous instructions -->' } \| ConvertTo-Json \| curl.exe …/ask …`                                             | 422    | `INJECTION_REJECTED` |
+| Any model route once the cap is used up                                                                                                                   | 429    | `QUOTA_EXCEEDED`     |
+
+Pass your own id with `-H 'x-request-id: my-trace-1'` (up to 128 characters) to find the request in the logs.
+
+## Quota exhausted
+
+`POST /screen` and `POST /ask` answer **429 `QUOTA_EXCEEDED`** once the day's live model calls (`source = 'live'` rows in `llm_calls` since 00:00 UTC) reach `DAILY_LLM_CALL_CAP` (300, [ADR 0015](adr/0015-precomputed-results-and-a-daily-call-cap.md)). The problem's `retryAfter` and the `Retry-After` header give the seconds until 00:00 UTC. Everything else keeps working: precomputed scorecards, shortlisting and the ops page.
+
+1. **Check usage:** `curl.exe -s "$api/api/ops/summary"`. `cap.used` against `cap.limit` shows the count, `byModel` shows which tier spent it, and `totals.errors` and `totals.fallbacks` show failed attempts, which count too.
+2. **If it's legitimate demo traffic,** wait for the reset at `cap.resetsAt`.
+3. **To raise the cap,** change the `DAILY_LLM_CALL_CAP` variable in the `production` environment and redeploy. Keep it within the Gemini free tier.
+4. **Gemini's own quota is separate.** Flash's free tier allows 20 requests per day ([Known issues](PROGRESS.md#known-issues)). Once it is spent, Flash calls fail with 429 or 503 and fall back to Flash-Lite. The ops summary shows them as `rate_limited` errors and fallbacks on the Flash model. A failure that escapes the fallback, such as a rate-limited question embedding, answers **503 `LLM_UNAVAILABLE`**.
 
 ## Re-record fixtures
 

@@ -1,6 +1,6 @@
 # Architecture
 
-How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-09 (Phase 2) it covers the system context, the API layers, the LLM platform and the data model.
+How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-11 (Phase 7) it covers the system context, the API layers, the LLM platform, the safety layer, ingestion, screening, ask, the HTTP request pipeline and the data model.
 
 ## System context
 
@@ -46,7 +46,7 @@ Persistence follows ports and adapters ([ADR 0006](adr/0006-node-postgres-everyw
 | `CandidateRepository`       | `pg-candidate-repository.ts`         | `insertIngested` (candidate + chunks, one transaction), `findById`, `listRanked`, `shortlist` |
 | `ChunkRepository`           | `pg-chunk-repository.ts`             | `hybridSearch` (vector + keyword, RRF), `getSection`, `getByRefs`                             |
 | `ScorecardRepository`       | `pg-scorecard-repository.ts`         | `save`, `latestFor`                                                                           |
-| `LlmCallRepository`         | `pg-llm-call-repository.ts`          | `record`, `countLiveSince` (Phase 7 adds the ops queries)                                     |
+| `LlmCallRepository`         | `pg-llm-call-repository.ts`          | `record`, `countLiveSince`, `summary` (SQL aggregates for `/api/ops/summary`), `recent`       |
 | `DatabaseProbe`             | `pg-database-probe.ts`               | `ping` (used by `GET /api/health`)                                                            |
 
 Every row read back is parsed with a Zod schema (`*-rows.ts`) before it becomes a domain type, so JSONB that drifts from the code fails loudly at the boundary.
@@ -221,6 +221,34 @@ sequenceDiagram
 - **Routing.** Comparative questions and context that spans more than 6 candidates go to Flash; everything else to Flash-Lite. The response reports `model` and `routedReason`.
 - **Nothing unverified is shown.** Citations are checked like screening's (an exact quote from a chunk the model was shown) and mapped to the candidate and a resume span for highlighting.
 - **Golden questions.** `npm run ask:golden` runs the 23 questions in `data/evals/retrieval.jsonl` through the same wiring ([`ask-wiring.ts`](../apps/api/src/main/ask-wiring.ts)) and prints recall@5 and MRR for each keyword mode; the ask integration test replays them.
+
+## HTTP request pipeline
+
+Every request passes the same middleware, and every error leaves through one handler ([`app.ts`](../apps/api/src/interfaces/http/app.ts), [`error-handler.ts`](../apps/api/src/interfaces/http/error-handler.ts)):
+
+```mermaid
+flowchart TD
+  req([Request]) --> rid["requestId<br/>x-request-id, echoed or a fresh UUID"]
+  rid --> log["accessLog<br/>http.request: requestId, method, route pattern, status, durationMs"]
+  log --> limit["bodyLimit (/api/*)<br/>> 16 KB → PayloadTooLargeError"]
+  limit --> route{"route"}
+  route -->|"GET: health, jobs, candidates, ops, docs"| handler["handler<br/>parseRequest (contracts) → use case → mapper"]
+  route -->|"POST /screen, POST /ask"| cap["dailyCap<br/>live calls today ≥ cap → QuotaExceededError"]
+  cap --> handler
+  route -->|no match| nf["notFoundHandler → 404"]
+  handler -->|200 JSON| res([Response])
+  handler -->|throws| err["error handler"]
+  limit -->|throws| err
+  cap -->|throws| err
+  err -->|"AppError → its status · retryable LlmCallError → 503 · anything else → 500 (logged with stack)"| prob["application/problem+json<br/>type, title, status, detail, instance, code, requestId"]
+  nf --> prob
+  prob --> res
+```
+
+- **One problem shape.** [`contract-coverage.test.ts`](../apps/api/src/interfaces/http/contract-coverage.test.ts) compares a table of contract cases with `app.routes`, so a route can't ship without them. It checks every error for the same problem shape: content type, status, a type URN derived from the code, the path as `instance`, and `requestId` equal to the header.
+- **Logs carry no content.** The JSON logger drops content and secret keys. The access log records the matched route pattern, so neither ids nor whatever a caller typed reach CloudWatch.
+- **Ops.** `GET /api/ops/summary` and `/api/ops/calls` read `llm_calls` through `LlmCallRepository.summary` and `recent`. The aggregates run in SQL (`percentile_cont` for p50/p95), over the UTC day the cap uses. Latency and tokens cover live calls only.
+- **API reference.** `GET /api/openapi.json` is generated from the same contract schemas the routes validate with, and `GET /api/docs` renders it with Swagger UI ([ADR 0021](adr/0021-openapi-document-from-contracts.md)).
 
 ## Data model
 

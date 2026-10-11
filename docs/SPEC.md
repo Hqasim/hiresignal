@@ -292,7 +292,7 @@ export interface JobRepository { /* upsert, findById, findBySlug, list */ }
 export interface CandidateRepository { /* insertIngested (candidate + chunks, one transaction), findById, findBySourceHash, listRanked, shortlist, deleteByJob (seed --reset, owner role only) */ }
 export interface ChunkRepository { /* hybridSearch, listOutline (refs, sections and headers for the agent), getSection, getByRefs */ }
 export interface ScorecardRepository { /* save, latestFor */ }
-export interface LlmCallRepository { /* record, countLiveSince; summary and recent arrive in Phase 7 */ }
+export interface LlmCallRepository { /* record, countLiveSince, summary(since) (SQL aggregates for the ops summary), recent(limit) */ }
 export interface DatabaseProbe { ping(): Promise<void> }
 export interface Clock { now(): Date }
 ```
@@ -319,7 +319,7 @@ withRouting(policy)          → LlmClient → RoutedLlmClient: sets tier/model 
 
 ### 7.4 Errors
 
-`AppError` (abstract) carries `code`, `httpStatus`, `title` and a safe `detail`. Subclasses: `NotFoundError`, `ValidationError`, `CandidateQuarantinedError` (409: screening a quarantined resume is refused), `QuotaExceededError`, `LlmUnavailableError`, `LlmOutputInvalidError`, `InjectionRejectedError`, `FixtureMissingError`. One error middleware renders RFC 9457 `application/problem+json` with `requestId`. Unknown errors become a generic 500 and are logged with the stack trace, never returned.
+`AppError` (abstract) carries `code`, `httpStatus`, `title` and a safe `detail`. Subclasses: `NotFoundError`, `ValidationError`, `CandidateQuarantinedError` (409: screening a quarantined resume is refused), `PayloadTooLargeError` (413: the body limit), `QuotaExceededError`, `LlmUnavailableError`, `LlmOutputInvalidError`, `InjectionRejectedError`, `FixtureMissingError`. One error middleware renders RFC 9457 `application/problem+json` with `requestId`. A retryable `LlmCallError` that escapes the decorators (the embedder has no fallback tier) renders as 503 `LLM_UNAVAILABLE`; 5xx application errors are logged with their code (`http.request_failed`). Unknown errors become a generic 500 and are logged with the stack trace, never returned. `interfaces/http/contract-coverage.test.ts` checks that every route has contract cases and that every problem has the same shape.
 
 ### 7.5 Configuration
 
@@ -646,7 +646,7 @@ Return cosine similarity alongside the fused rank for the floor check. As built,
 | POST | `/api/candidates/:id/screen` | Re-run the agent live (Should) | yes, capped |
 | POST | `/api/candidates/:id/shortlist` | Shortlist and reveal name (idempotent) | no |
 | POST | `/api/jobs/:slug/ask` | RAG question across the pool | yes, capped |
-| GET | `/api/ops/summary` | Today: calls vs cap, by model (count, p50/p95 latency, tokens, cached), cache ratio, fallbacks, errors, route mix, live vs replay | no |
+| GET | `/api/ops/summary` | Today (UTC, like the cap): calls vs cap, by model (count, p50/p95 latency, tokens, cached), cache ratio, fallbacks, errors, route mix, live vs replay. Tokens, cache ratio and latency cover live calls only | no |
 | GET | `/api/ops/calls?limit=50` | Recent calls (no content) | no |
 | GET | `/api/openapi.json`, `/api/docs` | OpenAPI 3.1 and docs UI (Should; skip if library friction > 20 min and document in `docs/api.md`) | no |
 
@@ -655,7 +655,7 @@ Return cosine similarity alongside the fused rank for the floor check. As built,
 - JSON with camelCase fields.
 - Request and response shapes come from `@hiresignal/contracts`.
 - Errors use RFC 9457 problem+json `{ type, title, status, detail, instance, code, requestId }`. Every response carries `x-request-id`.
-- Body limit 16 KB.
+- Body limit 16 KB on `/api/*`: a larger body gets a 413 `PAYLOAD_TOO_LARGE` problem before any route reads it.
 - The daily-cap middleware wraps LLM routes: it counts today's `live` calls via `LlmCallRepository` and the `Clock`, and returns a 429 problem with `retryAfter` (seconds until the next UTC midnight) and a matching `Retry-After` header. It arrived in Phase 5 with the first LLM route.
 - The Function URL handles CORS; the app adds no CORS headers.
 
@@ -665,7 +665,9 @@ Return cosine similarity alongside the fused rank for the floor check. As built,
 - `CandidateDetail { …summary, redactedResume, redactionSummary, guard: { status, signals[], dismissed[], classifier | null }, scorecard | null }`
 - `Scorecard { score, mustHaves, requirements: [{ requirementId, text, kind, weight, rating, rationale, citations: [{ ref, section, quote, span: { start, end } }] }], strengths, concerns, summary, promptVersion, models, createdAt, trace[] }`
 - `AskRequest { question }` (trimmed, 1–500 chars) and `AskResponse { answer, insufficientEvidence, citations: [{ ref, candidateId, alias, section, quote, span }], model | null, routedReason | null }`; `model` and `routedReason` are `null` when the similarity floor answered without a model call
-- `OpsSummary`, `LlmCallRow`, `Problem`
+- `OpsSummary { day, generatedAt, cap: { used, limit, resetsAt }, totals: LlmCallStats, byModel: [LlmCallStats + { model, tier }], routeMix: [{ tier, routedReason, calls }] }`, where `LlmCallStats { calls, live, replay, errors, fallbacks, inputTokens, outputTokens, cachedTokens, cacheRatio | null, p50LatencyMs | null, p95LatencyMs | null }`
+- `LlmCallRow` (the `llm_calls` metadata columns plus `id`; strict, so no content field can pass) and `LlmCallListResponse { calls }`
+- `Problem`
 
 ---
 
@@ -929,7 +931,7 @@ CI never receives `GEMINI_API_KEY`. Local development uses `.env` (git-ignored) 
 
 ## 17. Observability
 
-- Structured JSON logs (AWS Lambda Powertools for TypeScript Logger, or pino locally) with `requestId`, route, status, duration. A log-serializer test proves that keys like `resume`, `prompt`, `content`, `question` and `answer` are dropped.
+- Structured JSON logs (AWS Lambda Powertools for TypeScript Logger, or pino locally) with `requestId`, route, status, duration. A log-serializer test proves that keys like `resume`, `prompt`, `content`, `question` and `answer` are dropped. As built (Phase 7), the logger is a small JSON-lines writer ([`json-console-logger.ts`](../apps/api/src/infrastructure/logging/json-console-logger.ts)): fields are scalar by type, and any key on its content or secrets denylist is dropped, compared case-insensitively and in full. Every request logs one `http.request` line: `requestId`, method, the route pattern (never the raw path), status and `durationMs`.
 - `llm_calls` is the AI telemetry source: task, model, tier, routed reason, fallback, source, status, tokens, cached tokens, latency, prompt version.
 - The ops page and `/api/ops/summary` compute today's metrics with SQL (`percentile_cont` for p50/p95).
 - `/api/health` reports DB reachability, `LLM_MODE` and git SHA. The web app calls it on load, which also warms Lambda and Neon.
@@ -1140,7 +1142,7 @@ Claude prints the exact commands.
 1. Typed error mapping complete; request-ID middleware; structured logger with the no-content serializer test; body limit.
 2. Daily-cap middleware (`Clock`-driven tests). Built in Phase 5 with `POST /screen`; Phase 7 covers it in the contract tests of every LLM route.
 3. Ops summary and calls routes (SQL aggregates).
-4. OpenAPI document and docs UI (Should).
+4. OpenAPI document and docs UI (Should). Built from the contracts with `z.toJSONSchema`, with no new dependency; Swagger UI from jsDelivr, pinned with SRI (ADR 0021).
 5. Route contract tests for every endpoint (happy path plus main errors); curl examples in `docs/runbook.md`.
 
 **DoD:** every route is covered by contract tests; problem+json is consistent everywhere.
