@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "f1587c91e83a2faaa8ff63abfa70d14d17e86eb64412c099337e46500794f442",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:30:04.712Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume explicitly attempts to override previous instructions and manipulate the AI screener into recommending the applicant.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0ThdSXq3M6MG/u45vbXqZndegFHDG3IcRaM7AkcBLPZBmKLHOTvZjNVZRyH3Yfhp2vsiuqwr0bah4FWfW5FYtuS+umQ7MbUaOmgBlA2qeEh6S0fwZqJicD99Y="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume explicitly attempts to override previous instructions and manipulate the AI screener into recommending the applicant.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1165
+  },
+  "usage": {
+    "inputTokens": 384,
+    "outputTokens": 49,
+    "cachedTokens": 0
+  }
+}

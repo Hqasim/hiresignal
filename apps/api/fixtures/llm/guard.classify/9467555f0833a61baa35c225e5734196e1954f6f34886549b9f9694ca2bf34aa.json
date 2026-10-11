@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "9467555f0833a61baa35c225e5734196e1954f6f34886549b9f9694ca2bf34aa",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:46.613Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text describes professional experience working on AI systems and compliance controls in normal prose without any attempt to manipulate the screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0T5dCawhvfWeqdHYE2hORq3wdlmuZOzNCmXVTIkYYBEYGSDub7WUyaggX+i7R1hmtq5vXch6DTTPCBKONzVyS7k45mnttpf9oudytSy/OAyKOCSnKjkEBq9bo="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text describes professional experience working on AI systems and compliance controls in normal prose without any attempt to manipulate the screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1057
+  },
+  "usage": {
+    "inputTokens": 381,
+    "outputTokens": 54,
+    "cachedTokens": 0
+  }
+}

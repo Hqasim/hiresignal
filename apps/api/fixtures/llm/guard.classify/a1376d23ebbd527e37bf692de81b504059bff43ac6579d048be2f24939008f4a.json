@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "a1376d23ebbd527e37bf692de81b504059bff43ac6579d048be2f24939008f4a",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:30:58.662Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume includes an explicit instruction tag attempting to override the evaluator's scoring and force a top match.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TcRHmgNCmDGVfYWzTDo6pJoOdbb7j7qeLIW8++IVuXV+AeXFBLxc7yUDsYcghsYYhT1Ip4Svbc2N5ba+dNie7MRckEMhrmvTcUi3cxLySHdrOmX3vw1XAexA="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume includes an explicit instruction tag attempting to override the evaluator's scoring and force a top match.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1099
+  },
+  "usage": {
+    "inputTokens": 382,
+    "outputTokens": 51,
+    "cachedTokens": 0
+  }
+}

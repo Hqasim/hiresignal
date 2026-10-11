@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "c87407db3c7da76ef14012103945a20e8a0ddc9f63f0dc352aff5074cae4dc54",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:10.750Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text explicitly attempts to hijack the AI screener by instructing it to ignore previous instructions and give a high rating.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TpLkRPwJ+N9VyXrMEL0Bf9MSlAVuhMcF6+/oZqiNQWwdqE2SFBuv8kCEuz/WxyOMJjk8t4Uvshsmco/vR8ro0Y2KRxvEebfhbtaDZdSavE/JEFMhlwrW2tLI="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text explicitly attempts to hijack the AI screener by instructing it to ignore previous instructions and give a high rating.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1188
+  },
+  "usage": {
+    "inputTokens": 374,
+    "outputTokens": 53,
+    "cachedTokens": 0
+  }
+}

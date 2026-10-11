@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "2e769142514a8c36edf965f9f33943a5ef81ca9c57bf2e593f57229e35c1ba5a",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:33:10.665Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard, concise description of backend engineering skills without any attempt to manipulate the automated screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0T5pM3PU2rviXclOJ/3xZUThN409WwIuYm95+3zlWAAlY+ctV+PIZw+dmkfcTceooSPZn276jKfMBa5ABDzcMQAfKbQvmmVYvDnCVqLyH3/GhcRDwWtUGl3dE="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume is a standard, concise description of backend engineering skills without any attempt to manipulate the automated screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1105
+  },
+  "usage": {
+    "inputTokens": 378,
+    "outputTokens": 52,
+    "cachedTokens": 0
+  }
+}

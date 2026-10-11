@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "f8a015adb60c0d0aecb857d52c7d086546b37877ce9eba945bf6863b08881fa2",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:29.287Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume text merely describes professional experience with LLM guardrails and security, which is an ordinary and valid topic for technical candidates.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TMFMS7SfnhF0RdO8DdKUiTDR5/cX0Yho8MDlNTYUkN96I83xlj322NA/zLK/22H8kqdZmdjDXHwloOP/a79ig4g+6DQsgYIhiFLiqUSt7cy1OlW1OdG27JVQ="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume text merely describes professional experience with LLM guardrails and security, which is an ordinary and valid topic for technical candidates.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1724
+  },
+  "usage": {
+    "inputTokens": 384,
+    "outputTokens": 56,
+    "cachedTokens": 0
+  }
+}

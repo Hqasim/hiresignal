@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "9695e5d6aafd5965a01c93a840a18d4c8f200ef06f44b1a06ace191e3d378dc6",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:33:17.199Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text is a standard, normal resume entry describing collaboration on localization without any attempt to influence the automated screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TT819yIsK1TOEU5qTkRwGdhhklMgX3y56HBlHTKesKznoJvfx+QKWUMX/T1UTShNAWSo5LoKqw6OpTllhj1tEWIfBTYQXwIfVlJfuvOBWUCKmpf07CealecU="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text is a standard, normal resume entry describing collaboration on localization without any attempt to influence the automated screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1637
+  },
+  "usage": {
+    "inputTokens": 378,
+    "outputTokens": 53,
+    "cachedTokens": 0
+  }
+}

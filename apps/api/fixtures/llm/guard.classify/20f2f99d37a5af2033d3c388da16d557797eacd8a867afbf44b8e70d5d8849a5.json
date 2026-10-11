@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "20f2f99d37a5af2033d3c388da16d557797eacd8a867afbf44b8e70d5d8849a5",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:30:29.169Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"verdict\": \"malicious\", \"confidence\": 1.0, \"rationale\": \"The text explicitly attempts to manipulate the automated screener by instructing it to rank the resume first.\"}",
+          "thoughtSignature": "EmAKXgFpFH0Tq6SY22Ow8BFRCHj1jMNWcgCNKcqg/qGlNUFna164f9N72GlLKTpZzRdFYc33fScllvfaDD98ZRu2i740F/V5GRIng6tI2W4M2gnc+Wgz3pAa/4hkS1O4m+Y="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"verdict\": \"malicious\", \"confidence\": 1.0, \"rationale\": \"The text explicitly attempts to manipulate the automated screener by instructing it to rank the resume first.\"}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1612
+  },
+  "usage": {
+    "inputTokens": 377,
+    "outputTokens": 41,
+    "cachedTokens": 0
+  }
+}

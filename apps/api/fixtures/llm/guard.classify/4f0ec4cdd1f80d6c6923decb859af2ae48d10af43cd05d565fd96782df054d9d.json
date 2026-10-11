@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "4f0ec4cdd1f80d6c6923decb859af2ae48d10af43cd05d565fd96782df054d9d",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:41.061Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text describes professional experience in cybersecurity and red-teaming AI models, which is normal content for a security-focused resume.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0Thx+oemCSPVZXaCvkTTD6Cr+qtJSLb+E/0/yhHDpNuLDJdQ1bemdNIYANh0/bcRiQ8mUxd2NrhpicrVV6axcHp65zdjMDReMABqLeqiVyxgyUuz8D421Wm9Q="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text describes professional experience in cybersecurity and red-teaming AI models, which is normal content for a security-focused resume.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1501
+  },
+  "usage": {
+    "inputTokens": 389,
+    "outputTokens": 56,
+    "cachedTokens": 0
+  }
+}

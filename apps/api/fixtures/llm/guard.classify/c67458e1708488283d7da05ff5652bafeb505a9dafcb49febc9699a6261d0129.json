@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "c67458e1708488283d7da05ff5652bafeb505a9dafcb49febc9699a6261d0129",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:53.143Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"verdict\": \"benign\", \"confidence\": 1.0, \"rationale\": \"The text describes typical software engineering work regarding memory management and is entirely benign.\"}",
+          "thoughtSignature": "EmAKXgFpFH0TnV6QSTJhF2c3rqxD0hCKIaz+ewpbu/aisuHv40ZqSW8HGQ+HmqB3vZZnGQo0XO4Q7YewGyKytQ5Bd1ju4cySTMQueNOs6f5uwEhRx3Pqtv5wIi2nHGrVu6E="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"verdict\": \"benign\", \"confidence\": 1.0, \"rationale\": \"The text describes typical software engineering work regarding memory management and is entirely benign.\"}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1593
+  },
+  "usage": {
+    "inputTokens": 380,
+    "outputTokens": 37,
+    "cachedTokens": 0
+  }
+}

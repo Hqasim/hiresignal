@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "4135581fc13271d3e5e8b58589cf5d830224aacf443340f7de55f44d2d9583ba",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:32:22.545Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text is an ordinary resume bullet point mentioning a performance score without any attempt to manipulate an AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TMIEPV4/8979HdtE5hZAP5DCbAWHfpT/aoT0ubvw9k7TK5djamEDHArYsAo9cuTALWIVDNdGldaDNvWsPlpqc22Kf64V7oxh+qBBKPoUFHAqUZNS28p+cWBM="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text is an ordinary resume bullet point mentioning a performance score without any attempt to manipulate an AI screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 996
+  },
+  "usage": {
+    "inputTokens": 384,
+    "outputTokens": 52,
+    "cachedTokens": 0
+  }
+}

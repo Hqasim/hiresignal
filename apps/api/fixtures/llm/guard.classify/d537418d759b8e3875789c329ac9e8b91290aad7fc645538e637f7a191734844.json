@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "d537418d759b8e3875789c329ac9e8b91290aad7fc645538e637f7a191734844",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:32:52.648Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 0.95,\n  \"rationale\": \"The resume uses inline CSS styling to hide or display text, which is a common formatting technique for web-based resumes rather than an attempt to manipulate an AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TejRdNcUHfZqxq/zW621G+0czr5ILPlin9ib9goSKhFYOacqCf7hBEfZQEVxIdD1Zgh+z8pe0Q9D2NW/camkQvrPt1nze6W2fXQuwGJgLgtZlwGSlBQDS/6o="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 0.95,\n  \"rationale\": \"The resume uses inline CSS styling to hide or display text, which is a common formatting technique for web-based resumes rather than an attempt to manipulate an AI screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1096
+  },
+  "usage": {
+    "inputTokens": 385,
+    "outputTokens": 65,
+    "cachedTokens": 0
+  }
+}

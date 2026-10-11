@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "a5a9a46ff606a6c577519f2d1c6cfa050ad2164253664047a56fd7ff97b78556",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:58.870Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 0.99,\n  \"rationale\": \"The resume text describes a technical troubleshooting task related to a JSON parsing error without attempting to manipulate the AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TlLwtcxSxal5gzQXxenqP/RoGrZXat4uSDPuPDwSV2jQqO6VVo5IOPCG+jWwv1Twsis/Cawy7288J+30uXfCJFDxVEiG2nLMZkPMPxR2/UUJKZCl3T3gGvss="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 0.99,\n  \"rationale\": \"The resume text describes a technical troubleshooting task related to a JSON parsing error without attempting to manipulate the AI screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1311
+  },
+  "usage": {
+    "inputTokens": 383,
+    "outputTokens": 54,
+    "cachedTokens": 0
+  }
+}

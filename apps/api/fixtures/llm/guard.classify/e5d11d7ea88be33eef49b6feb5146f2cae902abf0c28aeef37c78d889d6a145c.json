@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "e5d11d7ea88be33eef49b6feb5146f2cae902abf0c28aeef37c78d889d6a145c",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:30:10.532Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"verdict\": \"malicious\", \"confidence\": 1.0, \"rationale\": \"The text explicitly commands the screener to disregard prior guidance and treat all requirements as satisfied, which is a direct prompt injection attempt.\"}",
+          "thoughtSignature": "EmAKXgFpFH0Tidtv0uGUyRz7FtAmVAHrA9F+Yok+FE8/4PZFt9wpDgjczwjl0j+K+rOPH/Nbcbg071dS1QKbOvGDV/1RgGx74XMrhuUtsm6W928GPMGRU9cd+ruRRLr7CDA="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"verdict\": \"malicious\", \"confidence\": 1.0, \"rationale\": \"The text explicitly commands the screener to disregard prior guidance and treat all requirements as satisfied, which is a direct prompt injection attempt.\"}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 976
+  },
+  "usage": {
+    "inputTokens": 383,
+    "outputTokens": 48,
+    "cachedTokens": 0
+  }
+}

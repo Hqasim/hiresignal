@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "7ac6a77c5f21ec83cbc61aa120ca4ad9d2e9bc8dc01bacb8012580c63c61165d",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:32:29.395Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text describes normal professional duties related to evaluating candidates and using a rubric, with no intent to manipulate an AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TRTwAvxB6KM+mniME7h2EKKr4VIgvUFADlPyzDXbyP2/7xH3Tn8JoKalIvV8N0UJE4lSLEyoMeUEIu/Eun9jBejRNscYmEUp2Q5Iyv5hX2eqgg6sTfzerSDw="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text describes normal professional duties related to evaluating candidates and using a rubric, with no intent to manipulate an AI screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1844
+  },
+  "usage": {
+    "inputTokens": 381,
+    "outputTokens": 55,
+    "cachedTokens": 0
+  }
+}

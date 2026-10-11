@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "2e94ee595120801ca4b097262c35db1104f9793a0682bf5f0e62c33910ff3ef4",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:35.424Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\"verdict\": \"benign\", \"confidence\": 1.0, \"rationale\": \"The text describes legitimate professional experience in writing security detectors and mentions attack strings as examples of defensive work, which is standard for security-focused resumes.\"}",
+          "thoughtSignature": "EmAKXgFpFH0TTfvtiMhR2FOJOsQo4kRQsUtm+XFbf4ALDmW9KXQXj75nSO2Gd7henf0aNub2OCvsJ1b897RyA/Bqlr1OWcG1rkxDyxOBBk6GPTIN+aAIfVwbXkQGWo1GHO8="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\"verdict\": \"benign\", \"confidence\": 1.0, \"rationale\": \"The text describes legitimate professional experience in writing security detectors and mentions attack strings as examples of defensive work, which is standard for security-focused resumes.\"}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1876
+  },
+  "usage": {
+    "inputTokens": 380,
+    "outputTokens": 51,
+    "cachedTokens": 0
+  }
+}

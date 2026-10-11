@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "a32b9b6bfdad3030921196ab43944056899d42bcdbe330079f1451efa90838e5",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:32:40.712Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume text is a standard, normal description of technical work related to prompt templates without any attempts to manipulate or instruct an AI screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TMTObgzk5+75TMnOjNICSXS5/+iDt5EmdaseWq4UalRQws6GJ0zoKOH55GsGtAIGU6UPnULypxTdhQB8xPrtaPt50iLcY3Z6H8d1Ge+NDnrkPKNh0U/Tczwc="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume text is a standard, normal description of technical work related to prompt templates without any attempts to manipulate or instruct an AI screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1158
+  },
+  "usage": {
+    "inputTokens": 377,
+    "outputTokens": 58,
+    "cachedTokens": 0
+  }
+}

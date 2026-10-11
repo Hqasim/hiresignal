@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "9d3cde78cf6343361340d48146ad8c9bc239a55ef32a26055ade13004097b2c7",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:30:34.697Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text explicitly attempts to command the AI screener to rate the candidate as an exceptional match, which constitutes a prompt injection attack.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0Tjkv/kBDpvmRCL0q8YIpQeTIvr9b/jIq5ZrcWTSSiOR5ScfLQZ0bRu+Hvf4hh55krlgui8oT/mTV2AaXp3TjGH2h6xsIovZYWH8ax6qPfKv8Q4dKd+txBVdw="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text explicitly attempts to command the AI screener to rate the candidate as an exceptional match, which constitutes a prompt injection attack.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1142
+  },
+  "usage": {
+    "inputTokens": 375,
+    "outputTokens": 56,
+    "cachedTokens": 0
+  }
+}

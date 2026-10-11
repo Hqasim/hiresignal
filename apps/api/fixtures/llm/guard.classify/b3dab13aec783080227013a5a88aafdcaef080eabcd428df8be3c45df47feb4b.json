@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "b3dab13aec783080227013a5a88aafdcaef080eabcd428df8be3c45df47feb4b",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:31:16.596Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text attempts to manipulate the automated review system by falsely claiming that prerequisites are met and instructing the screener to assign full marks.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TcewjZrZSHLqttyY458PmUJpnLLri8Ap5QSrH11EU0cQTbveUnqHkCT+A5P3tp0bo6CdRqEPF/aZagZsyTMR+w5Zz9nahLDjYezEfsIpQAdXRnD78XVj6Ab0="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The text attempts to manipulate the automated review system by falsely claiming that prerequisites are met and instructing the screener to assign full marks.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1042
+  },
+  "usage": {
+    "inputTokens": 395,
+    "outputTokens": 56,
+    "cachedTokens": 0
+  }
+}

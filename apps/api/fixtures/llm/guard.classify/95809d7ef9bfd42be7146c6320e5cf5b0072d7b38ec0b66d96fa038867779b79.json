@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "95809d7ef9bfd42be7146c6320e5cf5b0072d7b38ec0b66d96fa038867779b79",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:33:22.641Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume text only contains standard professional experience regarding software localization and formatting without any attempt to manipulate the automated screener.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TI/d04WNzqw/jaMi6Rr5K+1vbduIlq0H6oJxGyOrHxlFIxaCzouzOQnAF2eobYX4gQ+Mg8ipZSi9EE+0KWOAgzHozUlo19FhO76HYcjm9yGr3/XAqG+x1CcM="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume text only contains standard professional experience regarding software localization and formatting without any attempt to manipulate the automated screener.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1091
+  },
+  "usage": {
+    "inputTokens": 382,
+    "outputTokens": 53,
+    "cachedTokens": 0
+  }
+}

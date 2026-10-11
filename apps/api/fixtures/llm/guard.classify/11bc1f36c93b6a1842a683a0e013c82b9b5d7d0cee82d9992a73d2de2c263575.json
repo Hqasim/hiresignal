@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "11bc1f36c93b6a1842a683a0e013c82b9b5d7d0cee82d9992a73d2de2c263575",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:32:10.567Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume describes standard technical configuration tasks using the word ignore in a normal software development context.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TMdnxRiXDmOgxmXsLyZsCiRLZeaGkjYN4qxRTOPfguXPTn3pkEKTpiaU9MJNxYoEp9sypOH7byheRHswSdKTWQgzo+LHfC9+l2A+iOyE53vVnHgCErGwqh6s="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"benign\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume describes standard technical configuration tasks using the word ignore in a normal software development context.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1011
+  },
+  "usage": {
+    "inputTokens": 380,
+    "outputTokens": 48,
+    "cachedTokens": 0
+  }
+}

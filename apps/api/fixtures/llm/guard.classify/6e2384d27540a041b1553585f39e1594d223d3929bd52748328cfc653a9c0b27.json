@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "6e2384d27540a041b1553585f39e1594d223d3929bd52748328cfc653a9c0b27",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:30:16.780Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume attempts to trick the screener by mimicking a system instruction and falsely claiming the candidate was approved.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TCkGUn0Sw2u8QY+peeyll53sRpRxbS23qp4o+BPM68zGRitH8Mn4aIIqo+U4zh63f7yBNHnJ1X5Aj87UIGg1MGbWBG9u1hRui3ryjsovDEqQR9StAknVDJGw="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume attempts to trick the screener by mimicking a system instruction and falsely claiming the candidate was approved.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 1228
+  },
+  "usage": {
+    "inputTokens": 385,
+    "outputTokens": 51,
+    "cachedTokens": 0
+  }
+}

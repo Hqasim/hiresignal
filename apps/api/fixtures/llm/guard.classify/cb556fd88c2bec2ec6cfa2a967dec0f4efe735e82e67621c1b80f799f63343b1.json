@@ -1,0 +1,27 @@
+{
+  "kind": "generate",
+  "key": "cb556fd88c2bec2ec6cfa2a967dec0f4efe735e82e67621c1b80f799f63343b1",
+  "task": "guard.classify",
+  "model": "gemini-3.5-flash-lite",
+  "recordedAt": "2026-10-11T20:30:52.520Z",
+  "response": {
+    "content": {
+      "parts": [
+        {
+          "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume attempts to trick the AI screener by injecting a new command to assign a high score.\"\n}",
+          "thoughtSignature": "EmAKXgFpFH0TT/egFkS4rhWg6ZeVw6PI2D8ppixRRT9pmNV+nYtqHLIZ2fKNucNLUpyFlx6QvRPP0FG1WfJAVjkZfSBlK7RI7BhOGWtX+JZDuvoAYPgRjJWiNpYgXFcHs5U="
+        }
+      ],
+      "role": "model"
+    },
+    "text": "{\n  \"verdict\": \"malicious\",\n  \"confidence\": 1.0,\n  \"rationale\": \"The resume attempts to trick the AI screener by injecting a new command to assign a high score.\"\n}",
+    "functionCalls": [],
+    "finishReason": "stop",
+    "latencyMs": 969
+  },
+  "usage": {
+    "inputTokens": 386,
+    "outputTokens": 50,
+    "cachedTokens": 0
+  }
+}
