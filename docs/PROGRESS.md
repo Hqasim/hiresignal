@@ -13,7 +13,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | 4   | Synthetic data and ingestion                | ☑ Done        | 2026-10-09 | Offline replay seed in 2.5 s; all ten guard outcomes match SPEC §12              |
 | 5   | Screening agent and scorecards              | ☑ Done        | 2026-10-09 | 8 scorecards, 73/73 citations verified; C01 and C02 rank first; replay in 2.1 s  |
 | 6   | Ask the talent pool (hybrid RAG)            | ☑ Done        | 2026-10-10 | 23 golden questions replay offline; recall@5 = 1.000, MRR = 0.950 (hybrid)       |
-| 7   | API hardening and ops endpoints             | ☐ Not started |            |                                                                                  |
+| 7   | API hardening and ops endpoints             | ☑ Done        | 2026-10-11 | 12 routes, each with contract cases; one problem shape checked for every error   |
 | 8   | Frontend                                    | ☐ Not started |            |                                                                                  |
 | 9   | Evals, E2E and CI hardening                 | ☐ Not started |            |                                                                                  |
 | 10  | Launch and documentation                    | ☐ Not started |            |                                                                                  |
@@ -28,6 +28,51 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+
+## Phase 7 evidence (2026-10-11)
+
+Phase 7's DoD is local: every route is covered by contract tests, and problem+json is consistent everywhere.
+
+- **Every route is covered by contract tests.** [`contract-coverage.test.ts`](../apps/api/src/interfaces/http/contract-coverage.test.ts) compares its table with `app.routes`: 12 routes, 34 cases. A route registered without cases fails the run.
+  - Each route has a happy path, validated against its contracts schema.
+  - Health and the docs have no error case. Health reports a down database as `degraded` (200), and that is tested.
+  - The error cases cover 400, 404, 409, 413, 422, 429, 500 and 503 across the routes.
+  - The per-route files (`routes/*.test.ts`) still test behaviour in depth. `routes/ops.test.ts` is new.
+- **problem+json is consistent everywhere.** Every error case, and the unknown-route 404, asserts all of these:
+  - `content-type: application/problem+json`, and a body that passes `ProblemSchema`
+  - `status` equals the HTTP status
+  - `type` is `urn:hiresignal:problem:<code>`
+  - `instance` is the request path
+  - `requestId` equals `x-request-id`
+  - no stack trace, no driver message and no provider name
+  - `Retry-After` matches `retryAfter` on a 429
+- **The body limit also holds inside the Lambda bundle.** `npm run smoke:bundle` returns `200` for health, then `413 PAYLOAD_TOO_LARGE` for a 17 KB `POST …/ask` Function URL event. Unit tests pin the boundary: 16,384 bytes pass and 16,385 are refused, both with `content-length` and streamed without it.
+- **The log serializer test** (SPEC §17): 22 denylisted keys, in mixed case, are dropped from both `info` and `error` entries. `inputTokens`, `cachedTokens`, `questionLength` and `contentHash` survive.
+- **The ops SQL is checked against Postgres 18** in `test/integration/scorecard-and-llm-call-repositories.test.ts`:
+  - exact `percentile_cont` results (live latencies of 50–900 ms give p50 250 and p95 775)
+  - the window cutoff
+  - replay rows left out of tokens and latency
+  - the cache ratio (0.375)
+  - the route mix
+  - an empty window (zeros and nulls)
+  - `recent` ordering, with the id tie-break
+- **`npm run test:integration` passes:** 95 tests in 6 files (Phase 6: 89).
+- **`npm run verify` is green:**
+  - 1,164 unit tests: contracts 39, api 1,121, web 4. Phase 6 had 1,066.
+  - 0 dependency-cruiser violations (354 modules)
+  - every coverage gate passes
+  - The new use cases, error handler, access log, ops and docs routes and mappers are at 100% of lines. `openapi-document.ts` is at 35/36: the uncovered line is the throw for an unknown path parameter.
+- **Checked by hand** against `npm run dev` in replay mode, with the runbook's `curl.exe` commands in Windows PowerShell:
+  - jobs and candidates
+  - Q01 on `ask`: `gemini-3.5-flash-lite`, `default`, 3 citations
+  - `POST /screen`, which replays the seed's screening of C01
+  - `/api/ops/summary` and `/api/ops/calls`, which show those calls as `replay`
+  - the 400, 413 and 422 problems
+  - `/api/openapi.json` (25 KB) and `/api/docs`
+- **The docs page renders under its CSP.** In headless Chrome, `/api/docs` loaded, Swagger UI fetched the document and rendered all 10 operations, and no error panel appeared.
+- **The server log holds no request content.** Its 19 `http.request` lines carry route patterns only (`/api/jobs/:slug/ask`, …; an unknown URL logs `/*`). A grep for the questions asked found none.
+- **The bundle builds:** `dist/lambda.mjs` is 3.2 MB.
+- **Not pushed yet.** CI and deploy aren't part of this phase's DoD.
 
 ## Phase 6 evidence (2026-10-10)
 
@@ -311,6 +356,30 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 
 - [0019 Section-aware chunking with exact offsets](adr/0019-section-aware-chunking-with-exact-offsets.md)
 - [0020 Evidence-gathering agent with a separate synthesis call](adr/0020-evidence-gathering-agent-with-separate-synthesis.md)
+- [0021 OpenAPI document assembled from the contracts](adr/0021-openapi-document-from-contracts.md)
+
+Phase 7 decisions agreed with Hamzah (2026-10-11) and recorded in SPEC:
+
+- **OpenAPI is built, with no new dependency** (cut-list item 1 not used, ADR 0021). The document is assembled from the contracts with `z.toJSONSchema`. Swagger UI 5.33.0 comes from jsDelivr with SRI hashes, under a CSP.
+- **The per-tier Flash budget is deferred.** The ops summary now shows Flash fallbacks and rate-limited attempts per model, which is the evidence for deciding it.
+- **§7.4:**
+  - `PayloadTooLargeError` (413) is added.
+  - A retryable `LlmCallError` that escapes the decorators answers 503 `LLM_UNAVAILABLE`, not 500, because the embedder has no fallback tier.
+  - 5xx application errors are logged as `http.request_failed`, with their code.
+- **§10:** the `OpsSummary` and `LlmCallRow` shapes.
+  - The summary covers the cap's UTC day.
+  - Tokens, the cache ratio and latency cover live calls only, because a replay reads a fixture in about 0 ms.
+- **§17:**
+  - The logger drops a denylist of content and secret keys.
+  - The access log (`http.request`) records the route pattern, never the raw path.
+
+Phase 7 choices recorded in commit messages and ADRs:
+
+- **The body limit's `onError` throws `PayloadTooLargeError`.** Hono's default throws an `HTTPException`, which the error handler would render as a 500.
+- **The access log uses `routePath(c, -1)`** from `hono/route`, because `c.req.routePath` is deprecated. An unmatched URL logs `/*`.
+- **The ops contracts are strict objects,** so a content field fails validation. `LlmCallRow.task` and `routedReason` are plain strings, because the contracts package can't import the domain's unions.
+- **`/api/openapi.json` is serialized once per process.** `c.json` on the recursive JSON type hit TypeScript's instantiation-depth limit, so the route returns the cached string with `c.body`.
+- **The in-memory call repository mirrors `percentile_cont`'s interpolation,** so route tests see the same numbers Postgres returns.
 
 Phase 6 changes agreed with Hamzah (2026-10-09/10) and recorded in SPEC:
 
@@ -467,12 +536,11 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **Measuring a live `POST /screen` on Lambda:** it hasn't run in production yet. The recording logs latencies that include the 6 s seed throttle, so they aren't model latencies. Measure after the next deploy (see Known issues).
 - **Seeding production** (`seed-demo` workflow, replay with `--reset` against Neon): Phase 10.
 - **Classifier precision and recall, and the rules-only vs rules + classifier ablation:** the Phase 9 eval runner, over `data/evals/injection.jsonl`.
-- **Phase 7 keeps** the body limit, logger serializer test, ops routes and contract tests for every route. The daily cap was built in Phase 5.
 - **A smaller cold start:** load `@google/genai` lazily on the first live call, if the cold start matters (see Known issues).
 - **Playwright `@smoke` step in `deploy.yml`:** Phase 9, because Playwright isn't installed yet. `curl --fail` smoke tests cover the API and web until then.
-- **`LlmCallRepository.summary` and `recent`:** Phase 7, with the ops DTOs they return.
 - **An index-friendly vector arm** (`ORDER BY embedding <=> $1`, `hnsw.iterative_scan`, `job_id` on chunks): only at scale (ADR 0008). It would need a re-recording of the screening fixtures.
-- **A per-tier daily budget** (proposal for Phase 7): skip Flash once its free quota (20 requests per day) is spent, instead of failing over after each 503 or 429. See Known issues.
+- **A per-tier daily budget** (deferred on 2026-10-11): skip Flash once its free quota (20 requests per day) is spent, instead of failing over after each 503 or 429. The ops summary's per-model errors and fallbacks show whether it's needed. See Known issues.
+- **A request id on embedding rows** (see Known issues).
 - **Retrieval ablation and recall gates in the eval runner:** Phase 9 reuses `evals/retrieval-metrics.ts` and `evals/golden-report.ts`.
 - **A retry on stale connections in the health probe:** only if Lambda logs ever show `health.db_unreachable` after a thaw (ADR 0006).
 - **Scripts arriving with their phases:**
@@ -481,6 +549,10 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **No cut-list items used.**
 
 ## Known issues
+
+- **Embedding rows in `llm_calls` have no request id.** The `Embedder` port takes no `requestId`, so `withEmbeddingCallLogging` stores `null`, even for an ask's question embedding. As a result, the ops page can't tie an `embed.query` row to its request. The fix is to thread `requestId` through `embedQuery`; that changes no fixture key.
+- **The OpenAPI `OPERATIONS` table lists each route's error statuses by hand.** Tests catch a missing or extra route, but not a status that a route gained without the table being updated (ADR 0021).
+- **In replay mode, ask answers only the 23 golden questions.** Any other question gets 500 `FIXTURE_MISSING`, whose detail names `npm run seed:record`. Production runs live, so this affects only local and E2E use. The Phase 9 E2E ask question needs a fixture.
 
 - **Gemini Flash's free tier allows 20 requests per day** (seen in AI Studio, 2026-10-10), far below `DAILY_LLM_CALL_CAP` (300).
   - A live re-screen spends 1–2 Flash calls, and 5 of the 20 golden questions escalate to Flash.
@@ -596,12 +668,28 @@ Hamzah recorded the screening fixtures live (105 calls, 0 fallbacks, 0 repairs).
 
 Record mode now records only missing fixtures, so ingestion and screening were never re-recorded. Hamzah recorded 23 embeddings and 20 answers. One extra round of 20 was needed after the tie-order bug, and two Flash answers waited a day for Flash's 20-per-day free quota. recall@5 = 1.000 and MRR = 0.950. The 12 commits are local, waiting for Hamzah's approval to push. Phases 4, 5 and 6 are all unpushed, so the first CI run will cover all three, including the new ask integration test.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 7` (API hardening and ops endpoints). Phase 7 builds:
+Phases 4–6 were pushed afterwards. CI run [38050841071](https://github.com/Hqasim/hiresignal/actions/runs/38050841071) and deploy run [38050883419](https://github.com/Hqasim/hiresignal/actions/runs/38050883419) on `7966270` both passed.
 
-- typed error mapping and the 16 KB body limit (ask is the first JSON-body route)
-- the logger's no-content serializer test
-- `/api/ops/summary` and `/api/ops/calls` (`LlmCallRepository.summary` and `recent`)
-- contract tests for every route
-- curl examples in the runbook
+**2026-10-11, Phase 7 done.** The API is hardened, and the ops endpoints are built:
 
-Consider the per-tier Flash budget from Known issues. Push Phases 4–6 first, if Hamzah approves, so CI checks them.
+- typed error mapping: `PayloadTooLargeError` (413), and a retryable `LlmCallError` becomes 503 `LLM_UNAVAILABLE`
+- the 16 KB body limit, also checked inside the Lambda bundle
+- an `http.request` access log, and a logger that drops content and secret keys
+- `GET /api/ops/summary` and `/api/ops/calls`, with the aggregates computed in SQL
+- the OpenAPI 3.1 document and the Swagger UI page (ADR 0021)
+- a contract-coverage test that ties every registered route to contract cases and checks every problem's shape
+- curl examples and a quota runbook
+
+No live call and no deploy were needed. The 9 commits are local, waiting for Hamzah's approval to push.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 8` (Frontend). Phase 8 builds the SPA against these contracts:
+
+- the jobs page, candidate detail (resume highlight layers, citation scroll-and-highlight, trace timeline), Ask, Ops and About
+- loading, empty, error and quota states
+- component tests
+
+Things to plan for:
+
+- The ops page reads `OpsSummary` and `LlmCallListResponse`.
+- C03's must-haves need care (Known issues).
+- `/api/docs` can be linked from About.
