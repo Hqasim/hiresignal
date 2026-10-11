@@ -1,5 +1,4 @@
 # Quality gates for every pull request and every push to main (SPEC §15).
-# Phase 9 adds the evals and e2e jobs.
 # CI never receives GEMINI_API_KEY: anything that talks to an LLM runs in replay mode.
 name: CI
 
@@ -88,6 +87,50 @@ jobs:
       - name: Run them again to prove the runner is idempotent
         run: npm run db:migrate
       - run: npm run test:integration
+
+  e2e:
+    name: E2E (Playwright + axe)
+    runs-on: ubuntu-latest
+    # Above the config's 10-minute globalTimeout, so Playwright stops first and still writes its report.
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: hiresignal
+          POSTGRES_PASSWORD: hiresignal
+          POSTGRES_DB: hiresignal
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U hiresignal -d hiresignal"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # The example's database URLs match the service container, and its model IDs match the
+      # committed fixtures, which replay keys include (SPEC §9.8).
+      - name: Use the example environment (replay, service container)
+        run: cp .env.example .env
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - run: npm run db:migrate
+      # Playwright seeds in replay, then starts the API (LLM_MODE=replay) and the built web app.
+      - run: npm run test:e2e
+      - name: Upload the Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+          if-no-files-found: error
 
   build:
     name: Build (API bundle, web, SAM templates)
