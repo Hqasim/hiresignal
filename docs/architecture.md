@@ -1,6 +1,6 @@
 # Architecture
 
-How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-11 (Phase 7) it covers the system context, the API layers, the LLM platform, the safety layer, ingestion, screening, ask, the HTTP request pipeline and the data model.
+How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-12 (Phase 8) it covers the system context, the API layers, the LLM platform, the safety layer, ingestion, screening, ask, the HTTP request pipeline, the web app and the data model.
 
 ## System context
 
@@ -249,6 +249,30 @@ flowchart TD
 - **Logs carry no content.** The JSON logger drops content and secret keys. The access log records the matched route pattern, so neither ids nor whatever a caller typed reach CloudWatch.
 - **Ops.** `GET /api/ops/summary` and `/api/ops/calls` read `llm_calls` through `LlmCallRepository.summary` and `recent`. The aggregates run in SQL (`percentile_cont` for p50/p95), over the UTC day the cap uses. Latency and tokens cover live calls only.
 - **API reference.** `GET /api/openapi.json` is generated from the same contract schemas the routes validate with, and `GET /api/docs` renders it with Swagger UI ([ADR 0021](adr/0021-openapi-document-from-contracts.md)).
+
+## Web app
+
+A static SPA ([`apps/web`](../apps/web/README.md)): Vite, React 19, Tailwind with shadcn/ui, React Router and TanStack Query. It imports nothing from the API except `@hiresignal/contracts` (dependency-cruiser `web-not-to-api`).
+
+```mermaid
+flowchart LR
+  subgraph app["app/"]
+    router["router<br/>a lazy route per page,<br/>error boundary"] --> layout["Layout<br/>nav · banner · health line"]
+  end
+  subgraph features["features/"]
+    pages["pages: jobs · candidates ·<br/>ask · ops · about"] --> hooks["api.ts<br/>one TanStack Query hook<br/>per resource or action"]
+  end
+  router --> pages
+  hooks --> client["lib/api-client<br/>fetch → contracts schema.parse<br/>problem+json → ApiError"]
+  client -->|"/api/* (Vite proxy locally)"| api[(Hono API)]
+  client -.validates with.-> contracts["@hiresignal/contracts"]
+  pages --> states["components/<br/>Loading · Empty · Error · Quota"]
+```
+
+- **Every response is validated.** [`api-client.ts`](../apps/web/src/lib/api-client.ts) parses each body with its contracts schema, so contract drift shows as an error state, not as wrong data. A problem becomes an `ApiError` whose `detail` the page shows. A 429 from the daily cap becomes the quota banner, and the precomputed pages keep working.
+- **No business rules in the UI.** Scores, must-haves (met and strong), guard statuses and name visibility come from the API. Shortlisting replaces the cached detail with the response; re-screening refetches the detail and the ranked lists.
+- **Highlights come from spans.** The candidate page cuts the redacted resume at every citation, injection and token boundary, and renders text nodes, never HTML ([ADR 0022](adr/0022-resume-highlight-layers-from-api-spans.md)). `?cite=<start>-<end>` opens a candidate with a quote highlighted, which is how Ask's citations link to evidence.
+- **Code splitting.** Each page is a lazy chunk. As of 2026-10-12, the shell is 373 kB (119 kB gzip), and the contracts with Zod are a shared 102 kB (30 kB gzip). The largest page, the candidate page, is 29 kB (9.6 kB gzip).
 
 ## Data model
 

@@ -25,3 +25,4 @@ Decisions that shape HireSignal, in Nygard format ([ADR 0001](0001-record-archit
 | 0019 | [Section-aware chunking with exact offsets](0019-section-aware-chunking-with-exact-offsets.md)                      | Accepted |
 | 0020 | [Evidence-gathering agent with a separate synthesis call](0020-evidence-gathering-agent-with-separate-synthesis.md) | Accepted |
 | 0021 | [OpenAPI document assembled from the contracts](0021-openapi-document-from-contracts.md)                            | Accepted |
+| 0022 | [Resume highlight layers rendered from API spans](0022-resume-highlight-layers-from-api-spans.md)                   | Accepted |
