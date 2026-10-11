@@ -9,6 +9,8 @@ import { normalize, type UnitVector } from '../../src/domain/vectors/unit-vector
 export class FakeEmbedder implements Embedder {
   readonly documentBatches: (readonly RedactedText[])[] = [];
   readonly queries: string[] = [];
+  /** When set, `embedQuery` rejects with it, as a provider outage would. */
+  queryFailure: Error | null = null;
 
   constructor(private readonly dimensions = 768) {}
 
@@ -19,6 +21,9 @@ export class FakeEmbedder implements Embedder {
 
   embedQuery(text: string): Promise<UnitVector> {
     this.queries.push(text);
+    if (this.queryFailure !== null) {
+      return Promise.reject(this.queryFailure);
+    }
     return Promise.resolve(this.vectorFor(text));
   }
 

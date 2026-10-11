@@ -34,3 +34,32 @@ if (
   process.exit(1);
 }
 console.log(`Bundle smoke test passed: ${result.statusCode} ${result.body}`);
+
+// An oversized POST, built from the same event, must be refused by the body limit (SPEC §10)
+// inside the Lambda adapter too: 413 problem+json, before any route or database work.
+const oversized = JSON.stringify({ question: 'x'.repeat(17 * 1024) });
+const postEvent = {
+  ...event,
+  rawPath: '/api/jobs/senior-fullstack-ai/ask',
+  headers: { ...event.headers, 'content-type': 'application/json' },
+  requestContext: {
+    ...event.requestContext,
+    http: {
+      ...event.requestContext.http,
+      method: 'POST',
+      path: '/api/jobs/senior-fullstack-ai/ask',
+    },
+  },
+  body: oversized,
+};
+const refused = await handler(postEvent, { awsRequestId: 'smoke-413' });
+const problem = JSON.parse(refused.body);
+if (
+  refused.statusCode !== 413 ||
+  refused.headers['content-type'] !== 'application/problem+json' ||
+  problem.code !== 'PAYLOAD_TOO_LARGE'
+) {
+  console.error('Bundle body-limit smoke test failed:', refused.statusCode, refused.body);
+  process.exit(1);
+}
+console.log(`Bundle body-limit smoke test passed: ${refused.statusCode} ${problem.code}`);

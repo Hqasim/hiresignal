@@ -49,6 +49,7 @@ export async function aTestApp(options: TestAppOptions = {}) {
   });
   const app = createApp({
     logger,
+    clock,
     health: { llmMode: 'replay', gitSha: 'abc1234', database },
     jobs: {
       listJobs: createListJobs({ jobs: world.jobs }),

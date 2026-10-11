@@ -9,6 +9,7 @@ import {
   LlmOutputInvalidError,
   LlmUnavailableError,
   NotFoundError,
+  PayloadTooLargeError,
   QuotaExceededError,
 } from '.';
 
@@ -21,6 +22,7 @@ describe('application errors', () => {
     ['LlmOutputInvalidError', new LlmOutputInvalidError('x'), 'LLM_OUTPUT_INVALID', 502],
     ['FixtureMissingError', new FixtureMissingError('guard.classify'), 'FIXTURE_MISSING', 500],
     ['InjectionRejectedError', new InjectionRejectedError('x'), 'INJECTION_REJECTED', 422],
+    ['PayloadTooLargeError', new PayloadTooLargeError('x'), 'PAYLOAD_TOO_LARGE', 413],
   ])('%s maps to a stable code and status', (name, error, code, status) => {
     expect(error.name).toBe(name);
     expect(error.code).toBe(code);

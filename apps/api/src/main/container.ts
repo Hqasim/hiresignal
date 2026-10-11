@@ -78,6 +78,7 @@ export function createContainer(source: Readonly<Record<string, string | undefin
   });
   const app = createApp({
     logger,
+    clock: systemClock,
     health: {
       llmMode: env.LLM_MODE,
       gitSha: env.GIT_SHA,
