@@ -47,7 +47,8 @@ export function RedactedResumeView({
   }, [activeStart, activeEnd, scrollKey]);
 
   return (
-    <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+    // No ligatures: the resume shows its literal characters, so a comment's --> must not become an arrow.
+    <div className="text-sm leading-relaxed break-words whitespace-pre-wrap [font-variant-ligatures:none]">
       {segments.map((segment) => (
         <SegmentView
           key={segment.start}

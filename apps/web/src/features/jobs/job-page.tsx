@@ -24,7 +24,7 @@ export function JobPage() {
       {job.data && <JobHeader job={job.data} />}
       <HowToExploreCard askHref={askPath(slug)} />
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div>
+        <div className="min-w-0">
           {candidates.isPending && <LoadingState label="Loading candidates…" rows={6} />}
           {candidates.isError && (
             <ErrorState error={candidates.error} title="Couldn't load the candidates" />

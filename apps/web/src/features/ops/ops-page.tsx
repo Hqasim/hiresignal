@@ -51,10 +51,8 @@ export function OpsPage() {
       {summary.data && (
         <>
           <StatTiles summary={summary.data} />
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-            <RouteMix routes={summary.data.routeMix} />
-            <LatencyTable models={summary.data.byModel} />
-          </div>
+          <RouteMix routes={summary.data.routeMix} />
+          <LatencyTable models={summary.data.byModel} />
         </>
       )}
 

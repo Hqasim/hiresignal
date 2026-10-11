@@ -1,5 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
 
+import { LoadingState } from '@/components/loading-state';
+
 import { Layout } from './layout';
 import { NotFoundPage } from './not-found-page';
 import { RouteError } from './route-error';
@@ -7,11 +9,13 @@ import { RouteError } from './route-error';
 /**
  * Every page, each a lazy chunk, so the first load ships only the shell (SPEC §11). The pages sit
  * under a pathless route that holds the error boundary, so a failing page keeps the header and
- * footer.
+ * footer. The first page's chunk loads before anything renders, so the root route shows a loading
+ * state meanwhile (React Router's hydrate fallback).
  */
 export const routes: RouteObject[] = [
   {
     element: <Layout />,
+    hydrateFallbackElement: <LoadingState label="Loading HireSignal…" />,
     children: [
       {
         errorElement: <RouteError />,
