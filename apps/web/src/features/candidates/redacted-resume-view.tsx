@@ -21,9 +21,18 @@ const TOKEN_NAMES: Record<RedactionType, string> = {
  * picked citation stronger and scrolled into view, injection spans red with an icon and a label,
  * and redaction tokens as neutral pills. Every layer has a non-colour cue (underline style, label
  * or pill shape). Text is rendered as React text nodes, never as HTML, so a hidden HTML comment
- * shows up as the literal text it is.
+ * shows up as the literal text it is. Changing `scrollKey` scrolls to the active span again, so
+ * picking the same citation twice brings it back into view.
  */
-export function RedactedResumeView({ text, layers }: { text: string; layers: HighlightLayers }) {
+export function RedactedResumeView({
+  text,
+  layers,
+  scrollKey = 0,
+}: {
+  text: string;
+  layers: HighlightLayers;
+  scrollKey?: number;
+}) {
   const segments = useMemo(() => segmentResume(text, layers), [text, layers]);
   const activeRef = useRef<HTMLElement>(null);
   const activeStart = layers.active?.start;
@@ -35,7 +44,7 @@ export function RedactedResumeView({ text, layers }: { text: string; layers: Hig
     }
     activeRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     activeRef.current?.focus({ preventScroll: true });
-  }, [activeStart, activeEnd]);
+  }, [activeStart, activeEnd, scrollKey]);
 
   return (
     <div className="text-sm leading-relaxed break-words whitespace-pre-wrap">

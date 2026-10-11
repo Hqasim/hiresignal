@@ -37,6 +37,13 @@ export const routes: RouteObject[] = [
               return { Component: JobPage };
             },
           },
+          {
+            path: 'candidates/:id',
+            lazy: async () => {
+              const { CandidatePage } = await import('@/features/candidates/candidate-page');
+              return { Component: CandidatePage };
+            },
+          },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
