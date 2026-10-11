@@ -8,8 +8,8 @@ import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-/** Files whose tooling expects a default export (Vite, Vitest, ESLint, commitlint). */
-const CONFIG_FILES = ['**/*.config.{js,mjs,cjs,ts}'];
+/** Files whose tooling expects a default export (Vite, Vitest, ESLint, commitlint, Playwright). */
+const CONFIG_FILES = ['**/*.config.{js,mjs,cjs,ts}', 'e2e/global-setup.ts'];
 const TEST_FILES = ['**/*.test.{ts,tsx}', '**/test/**/*.{ts,tsx}'];
 
 export default defineConfig(

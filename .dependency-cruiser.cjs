@@ -89,6 +89,13 @@ module.exports = {
       to: { path: '^apps/api/' },
     },
     {
+      name: 'e2e-not-to-apps',
+      comment: 'E2E drives the running app through the browser; it imports none of its code.',
+      severity: 'error',
+      from: { path: '^e2e/' },
+      to: { path: '^apps/' },
+    },
+    {
       name: 'contracts-are-a-leaf',
       comment: 'Contracts are transport shapes; they import only zod.',
       severity: 'error',
@@ -99,7 +106,13 @@ module.exports = {
   options: {
     doNotFollow: { path: 'node_modules' },
     // Anchored to workspace build output; an unanchored '/dist/' would also drop edges into node_modules/*/dist.
-    exclude: { path: ['^apps/[a-z-]+/(dist|coverage)/', '^packages/[a-z-]+/(dist|coverage)/'] },
+    exclude: {
+      path: [
+        '^apps/[a-z-]+/(dist|coverage)/',
+        '^packages/[a-z-]+/(dist|coverage)/',
+        '^e2e/(playwright-report|test-results)/',
+      ],
+    },
     tsPreCompilationDeps: true,
     // Keep workspace packages at their node_modules/@hiresignal/* path. Without this they resolve
     // through the symlink to packages/*, count as "undetermined", and escape no-non-package-json.

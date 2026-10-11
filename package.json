@@ -22,6 +22,7 @@
     "depcruise": "depcruise apps packages e2e --config .dependency-cruiser.cjs",
     "test:unit": "npm run test:unit --workspaces --if-present",
     "test:integration": "npm run test:integration --workspaces --if-present",
+    "test:e2e": "npm run test:e2e -w @hiresignal/e2e",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run depcruise && npm run test:unit",
     "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm run dev -w @hiresignal/api\" \"npm run dev -w @hiresignal/web\"",
     "build": "npm run build -w @hiresignal/api && npm run build -w @hiresignal/web",

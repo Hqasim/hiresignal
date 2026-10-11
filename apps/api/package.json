@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/main/local-server.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/main/local-server.ts",
     "build": "node scripts/bundle.mjs",
     "typecheck": "tsc --project tsconfig.json",
     "test:unit": "vitest run --project unit --coverage",

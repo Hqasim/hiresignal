@@ -3,5 +3,15 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Playwright end-to-end tests (added in Phase 9)."
+  "description": "Playwright end-to-end tests with axe accessibility checks (SPEC §14).",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:smoke": "playwright test --grep @smoke",
+    "typecheck": "tsc --project tsconfig.json"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0",
+    "@types/node": "24.19.1"
+  }
 }
