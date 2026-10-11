@@ -58,6 +58,13 @@ export const routes: RouteObject[] = [
               return { Component: OpsPage };
             },
           },
+          {
+            path: 'about',
+            lazy: async () => {
+              const { AboutPage } = await import('@/features/about/about-page');
+              return { Component: AboutPage };
+            },
+          },
           { path: '*', element: <NotFoundPage /> },
         ],
       },
