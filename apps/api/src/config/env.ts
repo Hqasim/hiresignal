@@ -95,6 +95,17 @@ const SeedEnvSchema = z.object({
 /** Parsed, validated environment for `npm run seed`. */
 export type SeedEnv = z.infer<typeof SeedEnvSchema>;
 
+/**
+ * Variables `npm run eval` reads: the seed CLI's (it reads the seeded job as the owner, like
+ * `ask:golden`), plus the job-summary file GitHub Actions sets, so CI shows the results.
+ */
+const EvalEnvSchema = SeedEnvSchema.extend({
+  GITHUB_STEP_SUMMARY: z.string().min(1).optional(),
+});
+
+/** Parsed, validated environment for `npm run eval`. */
+export type EvalEnv = z.infer<typeof EvalEnvSchema>;
+
 type EnvSource = Readonly<Record<string, string | undefined>>;
 
 /**
@@ -145,10 +156,29 @@ export function parseSmokeEnv(source: EnvSource): SmokeEnv {
  * parseSeedEnv(process.env, 'replay');
  */
 export function parseSeedEnv(source: EnvSource, mode: SeedMode): SeedEnv {
-  const env = parseWith(SeedEnvSchema, source);
+  return requireKeyOutsideReplay(parseWith(SeedEnvSchema, source), mode, 'seeding');
+}
+
+/**
+ * Parses the eval CLI's environment. Replay needs no key; record does.
+ *
+ * @throws Error naming each invalid variable, without its value.
+ *
+ * @example
+ * parseEvalEnv(process.env, 'replay');
+ */
+export function parseEvalEnv(source: EnvSource, mode: SeedMode): EvalEnv {
+  return requireKeyOutsideReplay(parseWith(EvalEnvSchema, source), mode, 'running the evals');
+}
+
+function requireKeyOutsideReplay<T extends { GEMINI_API_KEY?: string | undefined }>(
+  env: T,
+  mode: SeedMode,
+  activity: string,
+): T {
   if (mode !== 'replay' && env.GEMINI_API_KEY === undefined) {
     throw new Error(
-      `Invalid environment configuration:\n  - GEMINI_API_KEY: required when seeding in ${mode} mode`,
+      `Invalid environment configuration:\n  - GEMINI_API_KEY: required when ${activity} in ${mode} mode`,
     );
   }
   return env;

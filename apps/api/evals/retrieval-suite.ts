@@ -10,6 +10,12 @@ import {
   summarizeGoldenRuns,
 } from './golden-report';
 
+/**
+ * The k of recall@k (SPEC §14): an expected candidate counts as found when one of the top 5
+ * retrieved chunks is theirs. Ask sends the model more (`ASK_TOP_K`), so 5 is the stricter test.
+ */
+export const RECALL_AT_K = 5;
+
 /** How the asks ended, split by whether the question has an answer in the pool. */
 export interface AnswerSummary {
   answerable: number;
@@ -30,6 +36,8 @@ export interface RetrievalSuiteSummary extends GoldenSummary {
   k: number;
   /** The mode ask uses, which the gates read. */
   askMode: KeywordMode;
+  /** `SIMILARITY_FLOOR`, which the floor check measured against. */
+  similarityFloor: number;
   /** `null` for a retrieval-only run. */
   answers: AnswerSummary | null;
 }
@@ -48,6 +56,7 @@ export function summarizeRetrievalSuite(
     ...summarizeGoldenRuns(runs, settings),
     k: settings.k,
     askMode: settings.keywordMatch,
+    similarityFloor: settings.similarityFloor,
     answers: runs.some((run) => run.answer === null) ? null : summarizeAnswers(runs),
   };
 }

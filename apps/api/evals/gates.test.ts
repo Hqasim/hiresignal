@@ -49,6 +49,7 @@ describe('checkGates', () => {
         value: 1,
         comparison: 'atLeast',
         threshold: 0.95,
+        unit: 'rate',
         passed: true,
       },
       {
@@ -57,6 +58,7 @@ describe('checkGates', () => {
         value: 1,
         comparison: 'atLeast',
         threshold: 0.9,
+        unit: 'rate',
         passed: true,
       },
       {
@@ -65,6 +67,7 @@ describe('checkGates', () => {
         value: 1,
         comparison: 'atLeast',
         threshold: 1,
+        unit: 'rate',
         passed: true,
       },
       {
@@ -73,6 +76,7 @@ describe('checkGates', () => {
         value: 0,
         comparison: 'atMost',
         threshold: 0.05,
+        unit: 'rate',
         passed: true,
       },
       {
@@ -81,6 +85,7 @@ describe('checkGates', () => {
         value: 0,
         comparison: 'atMost',
         threshold: 0,
+        unit: 'count',
         passed: true,
       },
     ]);

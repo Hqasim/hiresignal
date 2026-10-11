@@ -32,6 +32,7 @@
     "seed": "npm run seed -w @hiresignal/api --",
     "seed:record": "npm run seed:record -w @hiresignal/api",
     "ask:golden": "npm run ask:golden -w @hiresignal/api --",
+    "eval": "npm run eval -w @hiresignal/api --",
     "prepare": "lefthook install"
   },
   "devDependencies": {

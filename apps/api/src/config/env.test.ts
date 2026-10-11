@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseEnv, parseMigrationEnv, parseSeedEnv, parseSmokeEnv } from './env';
+import { parseEnv, parseEvalEnv, parseMigrationEnv, parseSeedEnv, parseSmokeEnv } from './env';
 
 const LOCAL_DB = 'postgres://hiresignal:hiresignal@localhost:5433/hiresignal';
 const MODELS = {
@@ -159,6 +159,24 @@ describe('parseSeedEnv', () => {
   it('fails fast without the owner connection string', () => {
     expect(() => parseSeedEnv({ DATABASE_URL: LOCAL_DB, ...MODELS }, 'replay')).toThrow(
       'DATABASE_MIGRATION_URL',
+    );
+  });
+});
+
+describe('parseEvalEnv', () => {
+  const EVAL = { DATABASE_MIGRATION_URL: LOCAL_DB, ...MODELS };
+
+  it('reads what seeding reads, and the job-summary file only when GitHub Actions sets it', () => {
+    expect(parseEvalEnv(EVAL, 'replay').GITHUB_STEP_SUMMARY).toBeUndefined();
+    expect(
+      parseEvalEnv({ ...EVAL, GITHUB_STEP_SUMMARY: '/runner/summary.md' }, 'replay')
+        .GITHUB_STEP_SUMMARY,
+    ).toBe('/runner/summary.md');
+  });
+
+  it('requires a key to record', () => {
+    expect(() => parseEvalEnv(EVAL, 'record')).toThrow(
+      'GEMINI_API_KEY: required when running the evals in record mode',
     );
   });
 });

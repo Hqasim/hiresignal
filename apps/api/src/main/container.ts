@@ -1,8 +1,10 @@
+import { appendFile, readFile, writeFile } from 'node:fs/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
 import type { Hono } from 'hono';
 
+import { replaceGeneratedBlock } from '../../evals/eval-report';
 import { createAskTalentPool } from '../application/ask/ask-talent-pool';
 import { createGetCandidateDetail } from '../application/candidates/get-candidate-detail';
 import { createListCandidates } from '../application/candidates/list-candidates';
@@ -20,7 +22,14 @@ import { createCheckDailyCap } from '../application/quota/check-daily-cap';
 import { createScreenCandidate } from '../application/screening/screen-candidate';
 import type { PoolScreening } from '../application/screening/screen-pool';
 import type { LlmPlatformReport } from '../application/smoke/check-llm-platform';
-import { type Env, parseEnv, parseMigrationEnv, parseSeedEnv, parseSmokeEnv } from '../config/env';
+import {
+  type Env,
+  parseEnv,
+  parseEvalEnv,
+  parseMigrationEnv,
+  parseSeedEnv,
+  parseSmokeEnv,
+} from '../config/env';
 import { systemClock } from '../infrastructure/clock/system-clock';
 import { createJsonConsoleLogger } from '../infrastructure/logging/json-console-logger';
 import { createPool, type DbPool } from '../infrastructure/postgres/create-pool';
@@ -36,7 +45,9 @@ import type { AppBindings } from '../interfaces/http/app-bindings';
 import { ASK_SETTINGS } from './ask-settings';
 import { createAskGolden, type GoldenQuestionRun, loadGoldenQuestions } from './ask-wiring';
 import type { AskGoldenArgs } from './cli/ask-golden-args';
+import type { EvalArgs } from './cli/eval-args';
 import type { SeedArgs } from './cli/seed-args';
+import { createEvals, type EvalRun, EVALS_DOCUMENT } from './eval-wiring';
 import { createLlm, createProviderClients, createSmokeCheck, type LlmSettings } from './llm-wiring';
 import { SCREENING_SETTINGS } from './screening-settings';
 import { createSeeder, loadSeedDataset } from './seed-wiring';
@@ -285,4 +296,62 @@ export function createLlmSmokeRunner(
     { clock: systemClock, logger },
   );
   return { logger, run: createSmokeCheck(provider, models) };
+}
+
+/** `YYYY-MM-DD` is the first 10 characters of an ISO timestamp. */
+const ISO_DATE_LENGTH = 10;
+
+/** The eval CLI's dependencies (`npm run eval`). */
+export interface EvalRunner {
+  logger: Logger;
+  /** Runs every suite against the seeded job; returns the results, the day and a call tally. */
+  run(): Promise<EvalRun & { date: string }>;
+  /**
+   * Publishes a rendered report: appended to the GitHub Actions job summary when
+   * `GITHUB_STEP_SUMMARY` is set, and written into docs/evals.md with `--write`.
+   */
+  publish(report: string): Promise<{ summary: boolean; document: boolean }>;
+  close(): Promise<void>;
+}
+
+/**
+ * Wires `npm run eval` on the owner connection (`DATABASE_MIGRATION_URL`, like `ask:golden`), with
+ * the LLM stack in the mode the `--mode` flag picks. The job must be seeded first.
+ *
+ * @throws Error if the environment is invalid, for example a missing key in record mode.
+ */
+export function createEvalRunner(
+  source: Readonly<Record<string, string | undefined>>,
+  args: EvalArgs,
+): EvalRunner {
+  const env = parseEvalEnv(source, args.mode);
+  const logger = createJsonConsoleLogger({ clock: systemClock });
+  const pool = createPool({ connectionString: env.DATABASE_MIGRATION_URL, logger });
+  const evals = createEvals(
+    {
+      mode: args.mode,
+      apiKey: env.GEMINI_API_KEY,
+      models: { lite: env.GEMINI_MODEL_LITE, flash: env.GEMINI_MODEL_FLASH },
+      embeddingModel: env.GEMINI_EMBEDDING_MODEL,
+    },
+    { pool, clock: systemClock, logger, sleep: (ms) => sleep(ms) },
+  );
+  return {
+    logger,
+    run: async () => ({
+      ...(await evals.run()),
+      date: systemClock.now().toISOString().slice(0, ISO_DATE_LENGTH),
+    }),
+    publish: async (report) => {
+      if (env.GITHUB_STEP_SUMMARY !== undefined) {
+        await appendFile(env.GITHUB_STEP_SUMMARY, `## Eval results\n\n${report}\n`);
+      }
+      if (args.write) {
+        const document = await readFile(EVALS_DOCUMENT, 'utf8');
+        await writeFile(EVALS_DOCUMENT, replaceGeneratedBlock(document, report));
+      }
+      return { summary: env.GITHUB_STEP_SUMMARY !== undefined, document: args.write };
+    },
+    close: () => pool.end(),
+  };
 }

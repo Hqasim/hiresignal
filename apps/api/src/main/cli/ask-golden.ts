@@ -1,4 +1,5 @@
 import { formatGoldenReport } from '../../../evals/golden-report';
+import { RECALL_AT_K } from '../../../evals/retrieval-suite';
 import { NotFoundError } from '../../application/errors';
 import { ASK_KEYWORD_MATCH, SIMILARITY_FLOOR } from '../../config/ai';
 import { toGoldenRun } from '../ask-wiring';
@@ -11,7 +12,6 @@ import { type AskGoldenArgs, parseAskGoldenArgs } from './ask-golden-args';
 // calls Gemini only for requests with no fixture yet, and only Hamzah runs it (CLAUDE.md rule 2);
 // `--retrieval-only` skips the answer call, so it records just the question embeddings. Prints ids,
 // aliases and numbers, never question or answer text.
-const RECALL_AT = 5;
 const args = parseArgsOrExit(process.argv.slice(2));
 
 function parseArgsOrExit(argv: readonly string[]): AskGoldenArgs {
@@ -31,7 +31,7 @@ try {
     [
       '',
       formatGoldenReport(runs.map(toGoldenRun), {
-        k: RECALL_AT,
+        k: RECALL_AT_K,
         keywordMatch: ASK_KEYWORD_MATCH,
         similarityFloor: SIMILARITY_FLOOR,
       }),

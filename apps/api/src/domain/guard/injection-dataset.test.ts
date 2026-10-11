@@ -1,27 +1,14 @@
-import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
 
+import { type InjectionItem, readInjectionSet } from '../../infrastructure/dataset/injection-set';
 import { prepareResume } from '../ingestion/prepare-resume';
 import type { GuardSignal } from './guard-verdict';
 
-/** One item of `data/evals/injection.jsonl` (SPEC §12). */
-const InjectionEvalItemSchema = z.object({
-  id: z.string().regex(/^[MB]\d{2}$/),
-  label: z.enum(['malicious', 'benign']),
-  category: z.string().min(1),
-  text: z.string().min(1),
-});
-type InjectionEvalItem = z.infer<typeof InjectionEvalItemSchema>;
-
-const items = readFileSync(
-  new URL('../../../../../data/evals/injection.jsonl', import.meta.url),
-  'utf8',
-)
-  .trim()
-  .split('\n')
-  .map((line) => InjectionEvalItemSchema.parse(JSON.parse(line)));
+const items = await readInjectionSet(
+  fileURLToPath(new URL('../../../../../data/', import.meta.url)),
+);
 
 /** Paraphrased attacks with no tell-tale phrase: by design, only the L3 classifier can catch them. */
 const CLASSIFIER_ONLY = new Set(['social-engineering']);
@@ -33,7 +20,7 @@ function ruleSignals(raw: string): GuardSignal[] {
   return prepareResume(raw).signals;
 }
 
-function byLabel(label: InjectionEvalItem['label']): (readonly [string, InjectionEvalItem])[] {
+function byLabel(label: InjectionItem['label']): (readonly [string, InjectionItem])[] {
   return items.filter((item) => item.label === label).map((item) => [item.id, item] as const);
 }
 

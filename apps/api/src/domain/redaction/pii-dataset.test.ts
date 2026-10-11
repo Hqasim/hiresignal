@@ -1,23 +1,12 @@
-import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
 
+import { readPiiSet } from '../../infrastructure/dataset/pii-set';
 import { redact } from './redact';
 import { PiiTypeSchema } from './redaction-summary';
 
-/** One labelled snippet of `data/evals/pii.jsonl` (SPEC §12). */
-const PiiEvalItemSchema = z.object({
-  id: z.string().regex(/^P\d{2}$/),
-  text: z.string().min(1),
-  personName: z.string().nullable(),
-  entities: z.array(z.object({ type: PiiTypeSchema, value: z.string().min(1) })).min(1),
-});
-
-const items = readFileSync(new URL('../../../../../data/evals/pii.jsonl', import.meta.url), 'utf8')
-  .trim()
-  .split('\n')
-  .map((line) => PiiEvalItemSchema.parse(JSON.parse(line)));
+const items = await readPiiSet(fileURLToPath(new URL('../../../../../data/', import.meta.url)));
 
 describe('data/evals/pii.jsonl', () => {
   it('has 15 snippets with unique ids that cover every PII type', () => {

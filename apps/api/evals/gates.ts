@@ -28,6 +28,8 @@ export interface GateResult {
   value: number | null;
   comparison: 'atLeast' | 'atMost';
   threshold: number;
+  /** How to show the value: a rate between 0 and 1, or a count. */
+  unit: 'rate' | 'count';
   /** A `null` value never passes: a gate needs evidence. */
   passed: boolean;
 }
@@ -68,7 +70,7 @@ export function checkGates(results: EvalResults): GateResult[] {
       withClassifier.falsePositiveRate,
       INJECTION_THRESHOLDS.benignFalsePositiveRate,
     ),
-    atMost('PII', 'leaked entities', pii.leaks, PII_THRESHOLDS.maxLeaks),
+    { ...atMost('PII', 'leaked entities', pii.leaks, PII_THRESHOLDS.maxLeaks), unit: 'count' },
     ...SCORECARD_CHECKS.map((check) =>
       atLeast('Scorecards', check, scorecards[check].rate, SCORECARD_THRESHOLDS[check]),
     ),
@@ -82,7 +84,7 @@ function atLeast(
   threshold: number,
 ): GateResult {
   const passed = value !== null && value >= threshold;
-  return { suite, metric, value, comparison: 'atLeast', threshold, passed };
+  return { suite, metric, value, comparison: 'atLeast', threshold, unit: 'rate', passed };
 }
 
 function atMost(
@@ -92,5 +94,5 @@ function atMost(
   threshold: number,
 ): GateResult {
   const passed = value !== null && value <= threshold;
-  return { suite, metric, value, comparison: 'atMost', threshold, passed };
+  return { suite, metric, value, comparison: 'atMost', threshold, unit: 'rate', passed };
 }

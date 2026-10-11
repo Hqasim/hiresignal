@@ -44,6 +44,16 @@ export interface PiiSummary {
 }
 
 /**
+ * Splits a header name into the words the name check looks for.
+ *
+ * @example
+ * nameWords("Liam O'Connor"); // ['Liam', "O'Connor"]
+ */
+export function nameWords(name: string | null): string[] {
+  return (name ?? '').split(/\s+/).filter((word) => word !== '');
+}
+
+/**
  * Counts the words of `name` that still appear, as whole words and ignoring case, in `redacted`.
  * Whole words, so "Lin" doesn't match "pipeline" (the same check as the resume dataset test).
  *
@@ -51,8 +61,7 @@ export interface PiiSummary {
  * leakedNameWords('[PERSON_1] led it; Chen reviewed it.', 'Mei Lin Chen'); // 1
  */
 export function leakedNameWords(redacted: string, name: string | null): number {
-  const words = (name ?? '').split(/\s+/).filter((word) => word !== '');
-  return words.filter((word) => wholeWord(word).test(redacted)).length;
+  return nameWords(name).filter((word) => wholeWord(word).test(redacted)).length;
 }
 
 function wholeWord(word: string): RegExp {
