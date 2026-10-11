@@ -37,6 +37,62 @@ describe('createJsonConsoleLogger', () => {
     });
   });
 
+  it.each([
+    'resume',
+    'redactedResume',
+    'prompt',
+    'system',
+    'content',
+    'contents',
+    'question',
+    'Question',
+    'answer',
+    'ANSWER',
+    'text',
+    'quote',
+    'rationale',
+    'summary',
+    'output',
+    'apiKey',
+    'APIKEY',
+    'password',
+    'secret',
+    'authorization',
+    'cookie',
+    'token',
+  ])('never writes a field named %s, whatever its value', (key) => {
+    const { logger, lines } = setup();
+
+    logger.info('ask.answered', { requestId: 'r-1', [key]: 'Who knows Go? sk-secret' });
+
+    expect(lines[0]).not.toContain('Who knows Go?');
+    expect(JSON.parse(lines[0] ?? '')).toEqual({
+      level: 'info',
+      time: '2026-10-08T12:00:00.000Z',
+      event: 'ask.answered',
+      requestId: 'r-1',
+    });
+  });
+
+  it('keeps counts and hashes whose names only contain a dropped word', () => {
+    const { logger, lines } = setup();
+    const fields = { inputTokens: 900, cachedTokens: 512, questionLength: 42, contentHash: 'ab12' };
+
+    logger.info('llm.call', fields);
+
+    expect(JSON.parse(lines[0] ?? '')).toMatchObject(fields);
+  });
+
+  it('drops content fields from error entries too, but keeps the error itself', () => {
+    const { logger, lines } = setup();
+
+    logger.error('ask.failed', new Error('timeout'), { requestId: 'r-2', prompt: 'You are…' });
+
+    const entry = JSON.parse(lines[0] ?? '') as Record<string, unknown>;
+    expect(entry).not.toHaveProperty('prompt');
+    expect(entry).toMatchObject({ requestId: 'r-2', errorMessage: 'timeout' });
+  });
+
   it('records thrown non-Error values without a stack', () => {
     const { logger, lines } = setup();
 
