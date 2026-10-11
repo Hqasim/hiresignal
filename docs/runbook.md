@@ -179,6 +179,18 @@ npm run seed -- --reset    # deletes the job's candidates, then ingests all ten 
 
 It then precomputes a scorecard for every non-quarantined candidate that has none, and ends with two tables: each candidate's guard status, signals, classifier verdict and chunk count, then the ranking (score, must-haves, rating counts, citations, repairs). Last comes a `Model calls:` line. In replay mode that line must say `live 0`. As of 2026-10-09, a replay seed takes about 2.5 s.
 
+## Reseed production
+
+`.github/workflows/seed-demo.yml` runs `npm run seed -- --reset` against Neon in replay mode, from the committed fixtures. It makes zero Gemini calls, and production ends up with the same data as CI. The reset also clears shortlists and anything a visitor re-screened. Run it after the first deploy, after a fixture change, or whenever the public demo needs a clean slate:
+
+```powershell
+gh workflow run seed-demo.yml --ref main
+gh run watch $(gh run list --workflow seed-demo.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+curl.exe -s "$api/api/jobs/senior-fullstack-ai/candidates"   # 10 candidates, every displayName null
+```
+
+It uses the `production` environment's `DATABASE_MIGRATION_URL` secret and `GEMINI_MODEL_*` variables. The model IDs must match the fixtures, so a model change means re-recording before reseeding. It shares the deploy's concurrency group, so it never runs during a migration. GitHub keeps only one waiting run per group, though, so dispatching it while a deploy is already waiting cancels that deploy. Re-run the deploy if that happens.
+
 ## Ask the golden questions
 
 `npm run ask:golden` asks the seeded job the 23 questions in `data/evals/retrieval.jsonl` through the same use case as `POST /api/jobs/:slug/ask`, in replay mode, so it is offline. Seed first. It prints:

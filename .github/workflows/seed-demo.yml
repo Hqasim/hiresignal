@@ -1,0 +1,57 @@
+# Reseeds production from the committed fixtures (SPEC §15): the demo job, its ten resumes and
+# their precomputed scorecards, in replay mode with --reset. Zero Gemini calls. The reset also
+# clears shortlists and anything a visitor re-screened, so the public demo starts clean again.
+# Runs by hand only: `gh workflow run seed-demo.yml --ref main` (docs/runbook.md, Reseed production).
+name: Seed demo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# The deploy's group, so a reseed never runs during a deploy's migration. GitHub keeps one pending
+# run per group, so dispatching this while a deploy is already waiting cancels that deploy; re-run it.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Reseed production (replay)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: ${{ vars.ALLOWED_ORIGIN }}
+    env:
+      # Replay keys include the model IDs, so these must match the committed fixtures (SPEC §9.8).
+      GEMINI_MODEL_LITE: ${{ vars.GEMINI_MODEL_LITE }}
+      GEMINI_MODEL_FLASH: ${{ vars.GEMINI_MODEL_FLASH }}
+      GEMINI_EMBEDDING_MODEL: ${{ vars.GEMINI_EMBEDDING_MODEL }}
+    steps:
+      - name: Check required environment variables and secrets
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: |
+          missing=0
+          for name in GEMINI_MODEL_LITE GEMINI_MODEL_FLASH GEMINI_EMBEDDING_MODEL; do
+            if [ -z "${!name}" ]; then echo "::error::Variable $name is not set in the production environment"; missing=1; fi
+          done
+          # Only emptiness is checked; the secret's value is never printed.
+          if [ -z "$DATABASE_MIGRATION_URL" ]; then echo "::error::Secret DATABASE_MIGRATION_URL is not set in the production environment"; missing=1; fi
+          exit "$missing"
+
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      # The owner role on the direct endpoint, like migrations: --reset deletes candidates, which
+      # the runtime role can't (SPEC §16). Replay is the CLI's default mode, so no key is needed.
+      - name: Reseed (replay, --reset)
+        env:
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+        run: npm run seed -- --reset
