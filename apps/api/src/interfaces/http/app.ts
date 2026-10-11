@@ -10,6 +10,7 @@ import { createErrorHandler, notFoundHandler } from './error-handler';
 import { accessLog } from './middleware/access-log';
 import { askRoutes, type AskRoutesDeps } from './routes/ask';
 import { candidateRoutes, type CandidateRoutesDeps } from './routes/candidates';
+import { docsRoutes } from './routes/docs';
 import { type HealthRouteDeps, healthRoutes } from './routes/health';
 import { jobRoutes, type JobRoutesDeps } from './routes/jobs';
 import { opsRoutes, type OpsRoutesDeps } from './routes/ops';
@@ -68,6 +69,7 @@ export function createApp(deps: AppDeps): Hono<AppBindings> {
   app.route('/api', candidateRoutes(deps.candidates));
   app.route('/api', askRoutes(deps.ask));
   app.route('/api', opsRoutes(deps.ops));
+  app.route('/api', docsRoutes());
 
   return app;
 }

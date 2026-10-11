@@ -12,7 +12,7 @@ import {
   ScreenResponseSchema,
 } from '@hiresignal/contracts';
 import { describe, expect, it } from 'vitest';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import { fakeLlmResponse } from '../../../test/fakes/fake-llm-client';
 import { callsTurn } from '../../../test/helpers/screening-world';
@@ -41,7 +41,10 @@ interface Probe {
 
 /** A successful response, validated against its contract schema. */
 interface HappyProbe extends Probe {
+  /** Validates the parsed JSON body, or the text of an HTML page. */
   schema: z.ZodType;
+  /** `json` unless stated. */
+  format?: 'json' | 'html';
 }
 
 /** An error response, which must be a consistent problem. */
@@ -106,6 +109,12 @@ const SCREENING_SCRIPT = [
     }),
   ),
 ];
+
+/** The parts of an OpenAPI document a client relies on. */
+const OpenApiDocumentSchema = z.object({
+  openapi: z.string().regex(/^3.1./),
+  paths: z.record(z.string(), z.record(z.string(), z.unknown())),
+});
 
 /** Every route, keyed `METHOD /pattern` exactly as Hono registers it. */
 const CONTRACTS: Record<string, RouteContract> = {
@@ -299,6 +308,23 @@ const CONTRACTS: Record<string, RouteContract> = {
       },
     ],
   },
+  'GET /api/openapi.json': {
+    happy: {
+      name: 'document',
+      request: () => ['/api/openapi.json'],
+      schema: OpenApiDocumentSchema,
+    },
+    errors: [],
+  },
+  'GET /api/docs': {
+    happy: {
+      name: 'Swagger UI',
+      request: () => ['/api/docs'],
+      schema: z.string().includes('swagger-ui'),
+      format: 'html',
+    },
+    errors: [],
+  },
   'GET /api/ops/calls': {
     happy: { name: 'recent', request: () => ['/api/ops/calls'], schema: LlmCallListResponseSchema },
     errors: [
@@ -346,13 +372,17 @@ describe.each(Object.entries(CONTRACTS))('%s', (_route, contract) => {
   it(`answers the happy path in its contract shape (${contract.happy.name})`, async () => {
     const { response } = await send(contract.happy);
 
+    const html = contract.happy.format === 'html';
     expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toMatch(/^application\/json/);
+    expect(response.headers.get('content-type')).toMatch(
+      html ? /^text\/html/ : /^application\/json/,
+    );
     expect(response.headers.get('x-request-id')).toBeTruthy();
-    expect(contract.happy.schema.safeParse(await response.json()).success).toBe(true);
+    const body: unknown = html ? await response.text() : await response.json();
+    expect(contract.happy.schema.safeParse(body).success).toBe(true);
   });
 
-  // Health has no error case; see its entry above and the degraded test below.
+  // Health and the docs have no error case; health reports a down database as degraded (below).
   const errors = contract.errors.map((probe) => [probe.name, probe] as const);
   it.skipIf(errors.length === 0).each(errors)(
     'answers %s with a consistent problem',
