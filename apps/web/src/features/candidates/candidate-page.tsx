@@ -85,11 +85,19 @@ function CandidateView({ candidate }: { candidate: CandidateDetail }) {
         </div>
       </header>
       <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-labelledby="resume-heading" className="space-y-3 rounded-lg border p-4">
+        <section className="space-y-3 rounded-lg border p-4">
           <h2 id="resume-heading" className="text-lg font-semibold">
             Redacted resume
           </h2>
-          <div className="max-h-[75vh] overflow-y-auto pr-2">
+          {/* The resume scrolls on its own, so it takes keyboard focus: arrow keys and Page Down
+              then scroll it without a mouse (WCAG 2.1.1, axe scrollable-region-focusable). */}
+          <div
+            role="region"
+            aria-labelledby="resume-heading"
+            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrollable region must be focusable to be scrolled by keyboard
+            tabIndex={0}
+            className="max-h-[75vh] overflow-y-auto rounded-sm pr-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             <RedactedResumeView
               text={candidate.redactedResume}
               layers={layers}

@@ -34,6 +34,16 @@ describe('CandidatePage', () => {
     expect(within(resume).getByText('[EMAIL_1]')).toBeInTheDocument();
   });
 
+  it('lets a keyboard user focus the scrolling resume pane, so it scrolls without a mouse', async () => {
+    server.use(http.get(`*/api/candidates/${C01_DETAIL.id}`, () => HttpResponse.json(C01_DETAIL)));
+    renderCandidate(C01_DETAIL.id);
+
+    const resume = await screen.findByRole('region', { name: 'Redacted resume' });
+    resume.focus();
+
+    expect(resume).toHaveFocus();
+  });
+
   it('opens with the quote from ?cite= highlighted', async () => {
     server.use(http.get(`*/api/candidates/${C01_DETAIL.id}`, () => HttpResponse.json(C01_DETAIL)));
     const span = C01_DETAIL.scorecard?.requirements[1]?.citations[0]?.span;
