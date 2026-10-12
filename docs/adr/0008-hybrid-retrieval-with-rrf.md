@@ -106,3 +106,7 @@ Approximate search could then reorder near-ties. That would change the screening
 - **AND matching (`websearch_to_tsquery`) for ask too.** Rejected: natural questions rarely have every word in one chunk, so the keyword arm returned nothing for 17 of the 20 golden questions. It measured recall@5 0.983 against 1.000 for `any`.
 - **An LLM reranker or query rewriting.** Rejected for now: it adds a model call to every question on a free-tier quota, and the measured recall leaves nothing to gain on this set.
 - **A dedicated vector database (Pinecone, Qdrant).** Rejected in [ADR 0005](0005-neon-postgres-pgvector-only-datastore.md): Postgres does both arms and the filters in one statement, at $0.
+
+## Update (2026-10-12, Phase 10)
+
+The eval runner now gates these numbers on every push: recall@5 ≥ 0.95 and MRR ≥ 0.90 on `any`, with the `all` and `off` ablations reported beside them ([`docs/evals.md`](../evals.md#retrieval), ADR 0023). The set is still saturated; harder questions remain future work.

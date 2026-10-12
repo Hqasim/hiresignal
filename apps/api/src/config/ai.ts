@@ -38,7 +38,7 @@ export const ASK_KEYWORD_MATCH = 'any';
 /**
  * Output budget for one `ask.answer` call. The reply is at most 1,200 characters of answer plus
  * eight short citations, under 700 tokens of JSON, but comparative questions route to Flash, which
- * thinks first (about 4,000 output tokens per synthesis in Phase 5), so it leaves that headroom.
+ * thinks first (about 4,000 output tokens per screening synthesis, recorded 2026-10-09), so it leaves that headroom.
  */
 export const ASK_MAX_OUTPUT_TOKENS = 4096;
 
@@ -51,7 +51,7 @@ export const MAX_AGENT_STEPS = 8;
 /**
  * Output budget for one `screen.agent` turn. A turn is a few function calls or a one-word reply,
  * well under 200 tokens, but Gemini 3 thinking tokens count toward the limit (288 for a 20-token
- * reply in the Phase 2 smoke check), so it leaves the same headroom as the smoke check.
+ * reply in the 2026-10-09 smoke check), so it leaves the same headroom as the smoke check.
  */
 export const AGENT_MAX_OUTPUT_TOKENS = 2048;
 
@@ -107,7 +107,7 @@ export const CLASSIFIER_QUARANTINE_CONFIDENCE = 0.7;
 /**
  * Output budget for one `guard.classify` call. The reply is an enum, a number and at most 300
  * characters of rationale (under 100 tokens), but Gemini 3 thinking tokens count toward the limit
- * (288 for a 20-token reply in the Phase 2 smoke check), so it leaves room for both.
+ * (288 for a 20-token reply in the 2026-10-09 smoke check), so it leaves room for both.
  */
 export const CLASSIFIER_MAX_OUTPUT_TOKENS = 1024;
 

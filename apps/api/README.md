@@ -22,9 +22,12 @@ dependency-cruiser enforces these rules (`npm run depcruise`); see [ADR 0002](..
 | `npm run build -w @hiresignal/api`            | esbuild bundle to `dist/lambda.mjs` (ESM, `node24`)                                                                  |
 | `npm run test:unit -w @hiresignal/api`        | Unit and route tests with coverage gates                                                                             |
 | `npm run test:integration -w @hiresignal/api` | Integration tests against local Postgres (`npm run db:up`)                                                           |
+| `npm run typecheck -w @hiresignal/api`        | `tsc` over `src/`, `test/` and `evals/`                                                                              |
+| `npm run smoke:bundle -w @hiresignal/api`     | Boots `dist/lambda.mjs` with Function URL events: health, and the 16 KB body limit                                   |
 | `npm run db:migrate -w @hiresignal/api`       | Apply `db/migrations/*.sql` using `DATABASE_MIGRATION_URL`                                                           |
 | `npm run llm:smoke -w @hiresignal/api`        | Live check of the Gemini key and model IDs; records fixtures (needs `GEMINI_API_KEY`)                                |
 | `npm run seed -w @hiresignal/api`             | Load the demo job and resumes and precompute scorecards (replay; `-- --reset` re-ingests)                            |
+| `npm run seed:record -w @hiresignal/api`      | Reset and record every missing fixture: seed, golden questions, eval items (live; Hamzah runs it)                    |
 | `npm run ask:golden -w @hiresignal/api`       | Ask the seeded job the golden questions and print recall@5 and MRR (replay)                                          |
 | `npm run eval -w @hiresignal/api`             | The four eval suites against their gates (replay); `-- --write` updates `docs/evals.md` and the README's gates table |
 

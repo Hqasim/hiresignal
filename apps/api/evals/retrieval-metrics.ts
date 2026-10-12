@@ -1,5 +1,5 @@
 // Retrieval metrics for the golden questions (SPEC §14, Retrieval suite). Pure functions over
-// aliases, so the ask CLI, the integration test and the Phase 9 eval runner score retrieval the
+// aliases, so the ask CLI, the integration test and the eval runner score retrieval the
 // same way.
 
 /** One question's retrieval, as the metrics see it. */

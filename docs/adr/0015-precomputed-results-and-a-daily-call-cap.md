@@ -37,3 +37,7 @@ The cap was planned for Phase 7, but it was built in Phase 5 with the first LLM 
 - **Gemini's own quota errors as the only limit.** Rejected: the 429s would arrive mid-screening and leave partial work, and the limit is unpublished and shared with seeding.
 - **API Gateway usage plans or AWS WAF rate rules.** Rejected: they cost money or add infrastructure beyond SPEC §16, and the Function URL has no usage plans.
 - **An in-memory counter in the Lambda.** Rejected: every concurrent instance and cold start would have its own count.
+
+## Update (2026-10-12, Phase 10)
+
+Production was first seeded in Phase 9, not Phase 10, by the `seed-demo` workflow, because the deploy's smoke test needs the seeded job (ADR 0024). Since Phase 10 the workflow also runs nightly, so shortlists and live re-screens made by visitors last at most a day.
