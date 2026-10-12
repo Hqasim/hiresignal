@@ -45,6 +45,9 @@ import { DATA_DIRECTORY, loadSeedDataset, SEED_JOB_SLUG } from './seed-wiring';
 /** `docs/evals.md`, whose generated block `npm run eval -- --write` replaces (SPEC §14). */
 export const EVALS_DOCUMENT = fileURLToPath(new URL('../../../../docs/evals.md', import.meta.url));
 
+/** The root `README.md`, whose gates block `npm run eval -- --write` replaces (SPEC §13.3). */
+export const README_DOCUMENT = fileURLToPath(new URL('../../../../README.md', import.meta.url));
+
 /** Dependencies of {@link createEvalHarness}. */
 export interface EvalHarnessDeps {
   /** An owner-role pool, like seeding: the harness reads the seeded job and logs model calls. */

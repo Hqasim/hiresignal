@@ -9,7 +9,7 @@ HireSignal's claims (blind screening, injection resistance, evidence-backed scor
 ```powershell
 npm run db:up; npm run db:migrate; npm run seed
 npm run eval                 # prints the tables; exits 1 if a gate fails
-npm run eval -- --write      # also replaces the results block of this file
+npm run eval -- --write      # also replaces the results block of this file and the README's gates table
 ```
 
 In CI, the `evals` job runs the same commands against a Postgres service container and posts the tables to the job summary. The code is in [`apps/api/evals/`](../apps/api/evals/): one pure module per suite, [`thresholds.ts`](../apps/api/evals/thresholds.ts) for the gates, and [`main/eval-wiring.ts`](../apps/api/src/main/eval-wiring.ts) for the wiring.
@@ -47,7 +47,7 @@ The gates live in [`thresholds.ts`](../apps/api/evals/thresholds.ts). Each one s
 
 <!-- eval-results:start -->
 
-As of 2026-10-11 (UTC): `npm run eval` in replay mode, all 10 gates pass.
+As of 2026-10-12 (UTC): `npm run eval` in replay mode, all 10 gates pass.
 
 ### Gates
 

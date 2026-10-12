@@ -81,7 +81,7 @@ This is a portfolio project. **The code, tests and docs are the product.** Recru
 | `npm run verify` | Format check, lint, typecheck, depcruise, unit tests. Run after every step. |
 | `npm run test:integration` | Integration tests against local Postgres (needs `npm run db:up`) |
 | `npm run test:e2e` | Playwright against the local stack in replay mode |
-| `npm run eval` | Eval suites with thresholds (replay, offline; exits 1 when a gate fails); `-- --write` updates `docs/evals.md`; `-- --mode record` records missing classifier verdicts for new eval items (I run that) |
+| `npm run eval` | Eval suites with thresholds (replay, offline; exits 1 when a gate fails); `-- --write` updates `docs/evals.md` and the README's gates table; `-- --mode record` records missing classifier verdicts for new eval items (I run that) |
 | `npm run build` | esbuild API bundle (`apps/api/dist/lambda.mjs`) and Vite web build |
 
 Each phase adds the scripts its code needs: Phase 0 created `dev`, `verify`, `build`, `db:up`/`db:down` and `test:integration`; `db:migrate` arrives in Phase 1, `llm:smoke` in Phase 2, `seed`/`seed:record` in Phase 4, `ask:golden` in Phase 6, `eval` and `test:e2e` in Phase 9. Keep this table accurate if any of them change.

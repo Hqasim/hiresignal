@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  GENERATED_END,
-  GENERATED_START,
+  EVALS_MARKERS,
   markdownTable,
+  README_MARKERS,
   renderEvalReport,
+  renderGatesSummary,
   replaceGeneratedBlock,
 } from './eval-report';
 import { checkGates, type EvalResults } from './gates';
@@ -110,17 +111,46 @@ describe('renderEvalReport', () => {
   });
 });
 
+describe('renderGatesSummary', () => {
+  const gates = checkGates(RESULTS);
+  const summary = renderGatesSummary(gates, META);
+
+  it('is the full report up to the end of its gates table, without the heading', () => {
+    const report = renderEvalReport(RESULTS, gates, META);
+    const [verdict, , ...table] = summary.split('\n');
+    expect(verdict).toBe(report.split('\n')[0]);
+    expect(report).toContain(table.join('\n'));
+    expect(table).toHaveLength(gates.length + 2);
+  });
+
+  it('leaves out the per-suite sections', () => {
+    expect(summary).not.toContain('### ');
+    expect(summary).not.toContain('`off` (vector only)');
+  });
+});
+
 describe('replaceGeneratedBlock', () => {
-  const document = `# Evals\n\nMethod.\n\n${GENERATED_START}\n\nold results\n\n${GENERATED_END}\n\n## After\n`;
+  const { start, end } = EVALS_MARKERS;
+  const document = `# Evals\n\nMethod.\n\n${start}\n\nold results\n\n${end}\n\n## After\n`;
 
   it('replaces only what sits between the markers', () => {
-    expect(replaceGeneratedBlock(document, 'new results\n')).toBe(
-      `# Evals\n\nMethod.\n\n${GENERATED_START}\n\nnew results\n\n${GENERATED_END}\n\n## After\n`,
+    expect(replaceGeneratedBlock(document, 'new results\n', EVALS_MARKERS)).toBe(
+      `# Evals\n\nMethod.\n\n${start}\n\nnew results\n\n${end}\n\n## After\n`,
+    );
+  });
+
+  it("uses the markers it's given, so the README's block and the evals block never mix", () => {
+    const readme = `# HireSignal\n\n${README_MARKERS.start}\nold\n${README_MARKERS.end}\n\n${start}\nkept\n${end}\n`;
+    expect(replaceGeneratedBlock(readme, 'gates', README_MARKERS)).toBe(
+      `# HireSignal\n\n${README_MARKERS.start}\n\ngates\n\n${README_MARKERS.end}\n\n${start}\nkept\n${end}\n`,
     );
   });
 
   it('refuses a document without both markers in order', () => {
-    expect(() => replaceGeneratedBlock('# Evals\n', 'x')).toThrow(GENERATED_START);
-    expect(() => replaceGeneratedBlock(`${GENERATED_END}\n${GENERATED_START}`, 'x')).toThrow();
+    expect(() => replaceGeneratedBlock('# Evals\n', 'x', EVALS_MARKERS)).toThrow(start);
+    expect(() => replaceGeneratedBlock(`${end}\n${start}`, 'x', EVALS_MARKERS)).toThrow();
+    expect(() => replaceGeneratedBlock(document, 'x', README_MARKERS)).toThrow(
+      README_MARKERS.start,
+    );
   });
 });

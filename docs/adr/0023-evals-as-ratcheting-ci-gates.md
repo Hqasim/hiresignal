@@ -43,3 +43,7 @@ The constraints:
 - **Live evals on a schedule (nightly, with the real key).** Rejected: the free tier allows Flash 20 requests a day, a nightly run would compete with the public demo's daily cap, and a result that changes from night to night can't gate a merge.
 - **Counting only quarantined items as detected.** Rejected as the gate definition: the rules alone quarantine 5 of 20 attacks, and flagging is a real, visible outcome. The quarantine count is still reported, so the stricter view is one column away.
 - **Fixed thresholds set by judgement** (for example recall ≥ 0.8). Rejected: a loose bar lets a real regression through while still passing. Starting just below the measured result makes any drop visible.
+
+## Update (2026-10-12, Phase 10): the README's gates table is generated too
+
+SPEC §13.3 asks for the evals table in the README, copied from `docs/evals.md`. A copy goes stale the first time a number moves, so `npm run eval -- --write` writes both: the full report between the markers in `docs/evals.md`, and the dated verdict with the gates table (`renderGatesSummary`) between `<!-- eval-gates:start -->` and `<!-- eval-gates:end -->` in `README.md`. `replaceGeneratedBlock` takes the markers as a parameter. Both files are read and checked before either is written, so a missing marker changes neither.
