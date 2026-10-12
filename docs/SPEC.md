@@ -128,7 +128,7 @@ Authentication and multi-tenancy · file upload and PDF/DOCX parsing · real can
 **Could**
 
 - Guard playground: paste text, see the redaction preview and guard verdict.
-- Nightly demo reset workflow (replay seed, zero Gemini calls).
+- Nightly demo reset workflow (replay seed, zero Gemini calls). Built in Phase 10: `seed-demo.yml` runs at 04:17 UTC.
 - Sentry free tier.
 - Dark mode.
 
@@ -883,7 +883,7 @@ As built (Phase 9, ADR 0023): the suites are pure modules in `apps/api/evals/`, 
 5. Amplify manual deploy: `create-deployment` → upload zip → `start-deployment` → poll until `SUCCEED`.
 6. Smoke test: `curl --fail` on `/api/health`, then Playwright `@smoke` against the live URL.
 
-**`.github/workflows/seed-demo.yml`** (`workflow_dispatch`, plus an optional nightly schedule as a Could): replay seed with `--reset` against production. Zero Gemini calls. Built in Phase 9, so the deploy's `@smoke` step has data to check (ADR 0024). It shares the deploy's concurrency group.
+**`.github/workflows/seed-demo.yml`** (`workflow_dispatch`, and nightly at 04:17 UTC since Phase 10): replay seed with `--reset` against production. Zero Gemini calls. Built in Phase 9, so the deploy's `@smoke` step has data to check (ADR 0024). It shares the deploy's concurrency group.
 
 **Also:**
 
@@ -1211,7 +1211,7 @@ Total ≈ −2h 20m.
 | 11 | Amplify deep links 404 | SPA rewrite rule in the bootstrap stack |
 | 12 | Cold starts (Lambda + Neon scale-to-zero) | Health call on page load; skeletons; arm64 at 1024 MB; lazy-initialize clients outside the handler |
 | 13 | Windows development machine | LF endings, cross-platform scripts, Docker Desktop with WSL 2, repo outside Google Drive/OneDrive |
-| 14 | Shared state in the public demo (shortlists) | `seed-demo` reset workflow (Could: nightly) |
+| 14 | Shared state in the public demo (shortlists) | `seed-demo` reset workflow, nightly since Phase 10 |
 | 15 | Ethics and legal perception of AI hiring tools | Responsible-AI doc, blind screening, human decision, synthetic data |
 | 16 | Local Node (24.21.0) differs from Lambda's AWS-managed `nodejs24.x` patch level | Pin 24.21.0 locally and in CI; use no APIs newer than 24.21.0; async handlers only (`nodejs24.x` drops callback handlers); the deploy smoke test runs against the real runtime |
 | 17 | npm hoisting lets a workspace import a package it never declared | dependency-cruiser `no-non-package-json` and `not-to-unresolvable` in `npm run verify` and CI |

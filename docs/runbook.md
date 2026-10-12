@@ -181,7 +181,7 @@ It then precomputes a scorecard for every non-quarantined candidate that has non
 
 ## Reseed production
 
-`.github/workflows/seed-demo.yml` runs `npm run seed -- --reset` against Neon in replay mode, from the committed fixtures. It makes zero Gemini calls, and production ends up with the same data as CI. The reset also clears shortlists and anything a visitor re-screened. Run it after the first deploy, after a fixture change, or whenever the public demo needs a clean slate:
+`.github/workflows/seed-demo.yml` runs `npm run seed -- --reset` against Neon in replay mode, from the committed fixtures. It makes zero Gemini calls, and production ends up with the same data as CI. The reset also clears shortlists and anything a visitor re-screened. It runs every night at 04:17 UTC. Run it by hand after the first deploy, after a fixture change, or whenever the public demo needs a clean slate before then:
 
 ```powershell
 gh workflow run seed-demo.yml --ref main
@@ -189,7 +189,9 @@ gh run watch $(gh run list --workflow seed-demo.yml --limit 1 --json databaseId 
 curl.exe -s "$api/api/jobs/senior-fullstack-ai/candidates"   # 10 candidates, every displayName null
 ```
 
-It uses the `production` environment's `DATABASE_MIGRATION_URL` secret and `GEMINI_MODEL_*` variables. The model IDs must match the fixtures, so a model change means re-recording before reseeding. It shares the deploy's concurrency group, so it never runs during a migration. GitHub keeps only one waiting run per group, though, so dispatching it while a deploy is already waiting cancels that deploy. Re-run the deploy if that happens.
+It uses the `production` environment's `DATABASE_MIGRATION_URL` secret and `GEMINI_MODEL_*` variables. The model IDs must match the fixtures, so a model change means re-recording before reseeding. It shares the deploy's concurrency group, so it never runs during a migration. GitHub keeps only one waiting run per group, though, so dispatching it while a deploy is already waiting cancels that deploy. Re-run the deploy if that happens; the nightly run can do the same, though a deploy rarely waits at 04:17 UTC.
+
+In a public repository, GitHub disables a scheduled workflow after 60 days without repository activity. To turn it back on, run `gh workflow enable seed-demo.yml`.
 
 ## Ask the golden questions
 
