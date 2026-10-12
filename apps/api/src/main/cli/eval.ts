@@ -1,4 +1,4 @@
-import { renderEvalReport } from '../../../evals/eval-report';
+import { renderEvalReport, renderGatesSummary } from '../../../evals/eval-report';
 import { checkGates } from '../../../evals/gates';
 import { NotFoundError } from '../../application/errors';
 import { createEvalRunner } from '../container';
@@ -8,7 +8,8 @@ import { type EvalArgs, parseEvalArgs } from './eval-args';
 // the seeded job and data/evals/, with the thresholds in evals/thresholds.ts. Replay mode (the
 // default) is offline and exits 1 when a gate fails, so CI can gate on it. `--mode record` calls
 // Gemini only for requests with no fixture yet (in practice, classifier verdicts for new
-// injection items), and only Hamzah runs it (CLAUDE.md rule 2). `--write` updates docs/evals.md.
+// injection items), and only Hamzah runs it (CLAUDE.md rule 2). `--write` updates docs/evals.md
+// and the gates table in README.md.
 // Prints ids, labels and numbers, never eval text.
 const args = parseArgsOrExit(process.argv.slice(2));
 
@@ -28,15 +29,19 @@ try {
   const failed = gates.filter((gate) => !gate.passed);
   runner.logger.info('eval.llm_calls', { mode: args.mode, ...calls });
   runner.logger.info('eval.gates', { passed: gates.length - failed.length, failed: failed.length });
-  const report = renderEvalReport(results, gates, { date, mode: args.mode });
-  const published = await runner.publish(report);
+  const meta = { date, mode: args.mode };
+  const report = renderEvalReport(results, gates, meta);
+  const published = await runner.publish({
+    report,
+    gatesSummary: renderGatesSummary(gates, meta),
+  });
   process.stdout.write(
     [
       '',
       report,
       '',
       `Model calls: ${String(calls.attempts)} (live ${String(calls.live)}, fallbacks ${String(calls.fallbacks)}, failed ${String(calls.failed)})`,
-      ...(published.document ? ['Wrote docs/evals.md.'] : []),
+      ...(published.documents ? ['Wrote docs/evals.md and the gates table in README.md.'] : []),
       '',
     ].join('\n'),
   );

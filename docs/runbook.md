@@ -215,7 +215,7 @@ npm run ask:golden
 ```powershell
 npm run seed
 npm run eval
-npm run eval -- --write    # also refreshes the results block of docs/evals.md; commit it
+npm run eval -- --write    # also refreshes docs/evals.md and the README's gates table; commit both
 ```
 
 A gate only ever moves up. To raise one, change `thresholds.ts` in the commit that improves the result. To lower one, write an ADR first ([ADR 0023](adr/0023-evals-as-ratcheting-ci-gates.md)).

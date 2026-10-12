@@ -4,7 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 import type { Hono } from 'hono';
 
-import { replaceGeneratedBlock } from '../../evals/eval-report';
+import {
+  EVALS_MARKERS,
+  README_MARKERS,
+  type RenderedEvals,
+  replaceGeneratedBlock,
+} from '../../evals/eval-report';
 import { createAskTalentPool } from '../application/ask/ask-talent-pool';
 import { createGetCandidateDetail } from '../application/candidates/get-candidate-detail';
 import { createListCandidates } from '../application/candidates/list-candidates';
@@ -47,7 +52,7 @@ import { createAskGolden, type GoldenQuestionRun, loadGoldenQuestions } from './
 import type { AskGoldenArgs } from './cli/ask-golden-args';
 import type { EvalArgs } from './cli/eval-args';
 import type { SeedArgs } from './cli/seed-args';
-import { createEvals, type EvalRun, EVALS_DOCUMENT } from './eval-wiring';
+import { createEvals, type EvalRun, EVALS_DOCUMENT, README_DOCUMENT } from './eval-wiring';
 import { createLlm, createProviderClients, createSmokeCheck, type LlmSettings } from './llm-wiring';
 import { SCREENING_SETTINGS } from './screening-settings';
 import { createSeeder, loadSeedDataset } from './seed-wiring';
@@ -307,10 +312,11 @@ export interface EvalRunner {
   /** Runs every suite against the seeded job; returns the results, the day and a call tally. */
   run(): Promise<EvalRun & { date: string }>;
   /**
-   * Publishes a rendered report: appended to the GitHub Actions job summary when
-   * `GITHUB_STEP_SUMMARY` is set, and written into docs/evals.md with `--write`.
+   * Publishes a run: the report is appended to the GitHub Actions job summary when
+   * `GITHUB_STEP_SUMMARY` is set. With `--write`, the report goes into docs/evals.md and the
+   * gates summary into README.md, each between its markers.
    */
-  publish(report: string): Promise<{ summary: boolean; document: boolean }>;
+  publish(rendered: RenderedEvals): Promise<{ summary: boolean; documents: boolean }>;
   close(): Promise<void>;
 }
 
@@ -342,15 +348,26 @@ export function createEvalRunner(
       ...(await evals.run()),
       date: systemClock.now().toISOString().slice(0, ISO_DATE_LENGTH),
     }),
-    publish: async (report) => {
+    publish: async ({ report, gatesSummary }) => {
       if (env.GITHUB_STEP_SUMMARY !== undefined) {
         await appendFile(env.GITHUB_STEP_SUMMARY, `## Eval results\n\n${report}\n`);
       }
       if (args.write) {
-        const document = await readFile(EVALS_DOCUMENT, 'utf8');
-        await writeFile(EVALS_DOCUMENT, replaceGeneratedBlock(document, report));
+        // Both are read before either is written, so a missing marker changes neither file.
+        const evals = replaceGeneratedBlock(
+          await readFile(EVALS_DOCUMENT, 'utf8'),
+          report,
+          EVALS_MARKERS,
+        );
+        const readme = replaceGeneratedBlock(
+          await readFile(README_DOCUMENT, 'utf8'),
+          gatesSummary,
+          README_MARKERS,
+        );
+        await writeFile(EVALS_DOCUMENT, evals);
+        await writeFile(README_DOCUMENT, readme);
       }
-      return { summary: env.GITHUB_STEP_SUMMARY !== undefined, document: args.write };
+      return { summary: env.GITHUB_STEP_SUMMARY !== undefined, documents: args.write };
     },
     close: () => pool.end(),
   };

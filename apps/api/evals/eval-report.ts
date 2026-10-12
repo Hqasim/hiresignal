@@ -1,6 +1,7 @@
 // Renders `npm run eval` results as Markdown: printed to the console, appended to the GitHub
 // Actions job summary, and written between the markers of docs/evals.md with `--write`
-// (SPEC §14). Ids, labels and numbers only. Tables are padded the way Prettier formats them, so a
+// (SPEC §14). `--write` also puts the gates summary between the README's markers, so the README's
+// evals table is generated too (SPEC §13.3). Ids, labels and numbers only. Tables are padded the way Prettier formats them, so a
 // written docs/evals.md passes `npm run format:check` unchanged.
 
 import type { EvalResults, GateResult } from './gates';
@@ -15,16 +16,35 @@ import type { PiiSummary } from './pii-suite';
 import type { RetrievalSuiteSummary } from './retrieval-suite';
 import { SCORECARD_CHECKS, type ScorecardCheck, type ScorecardSummary } from './scorecard-suite';
 
-/** Opens the generated block of docs/evals.md. */
-export const GENERATED_START = '<!-- eval-results:start -->';
-/** Closes the generated block of docs/evals.md. */
-export const GENERATED_END = '<!-- eval-results:end -->';
+/** The comments that open and close a generated block in a Markdown document. */
+export interface GeneratedMarkers {
+  start: string;
+  end: string;
+}
+
+/** The generated block of docs/evals.md: the full report. */
+export const EVALS_MARKERS: GeneratedMarkers = {
+  start: '<!-- eval-results:start -->',
+  end: '<!-- eval-results:end -->',
+};
+
+/** The generated block of README.md: the gates summary only. */
+export const README_MARKERS: GeneratedMarkers = {
+  start: '<!-- eval-gates:start -->',
+  end: '<!-- eval-gates:end -->',
+};
 
 /** What the report says about the run itself. */
 export interface EvalReportMeta {
   /** `YYYY-MM-DD`, the day of the run (UTC). */
   date: string;
   mode: 'replay' | 'record';
+}
+
+/** A run rendered both ways: the full report for docs/evals.md, the gates summary for the README. */
+export interface RenderedEvals {
+  report: string;
+  gatesSummary: string;
 }
 
 const NONE = '–';
@@ -43,13 +63,8 @@ export function renderEvalReport(
   gates: readonly GateResult[],
   meta: EvalReportMeta,
 ): string {
-  const failed = gates.filter((gate) => !gate.passed).length;
-  const verdict =
-    failed === 0
-      ? `all ${String(gates.length)} gates pass`
-      : `${String(failed)} of ${String(gates.length)} gates fail`;
   return [
-    `As of ${meta.date} (UTC): \`npm run eval\` in ${meta.mode} mode, ${verdict}.`,
+    verdictLine(gates, meta),
     '',
     '### Gates',
     '',
@@ -74,21 +89,36 @@ export function renderEvalReport(
 }
 
 /**
- * Replaces everything between {@link GENERATED_START} and {@link GENERATED_END} with `block`,
- * leaving the hand-written rest of the document as it is.
+ * Renders the short form for the README: the dated verdict and the gates table, without the
+ * per-suite sections.
+ *
+ * @example
+ * renderGatesSummary(checkGates(results), { date: '2026-10-12', mode: 'replay' });
+ */
+export function renderGatesSummary(gates: readonly GateResult[], meta: EvalReportMeta): string {
+  return [verdictLine(gates, meta), '', gatesTable(gates)].join('\n');
+}
+
+/**
+ * Replaces everything between the two markers with `block`, leaving the hand-written rest of the
+ * document as it is.
  *
  * @throws Error if either marker is missing, or they are out of order.
  *
  * @example
- * replaceGeneratedBlock(await readFile('docs/evals.md', 'utf8'), report);
+ * replaceGeneratedBlock(await readFile('docs/evals.md', 'utf8'), report, EVALS_MARKERS);
  */
-export function replaceGeneratedBlock(document: string, block: string): string {
-  const start = document.indexOf(GENERATED_START);
-  const end = document.indexOf(GENERATED_END);
+export function replaceGeneratedBlock(
+  document: string,
+  block: string,
+  markers: GeneratedMarkers,
+): string {
+  const start = document.indexOf(markers.start);
+  const end = document.indexOf(markers.end);
   if (start === -1 || end === -1 || end < start) {
-    throw new Error(`Expected ${GENERATED_START} … ${GENERATED_END} in the document`);
+    throw new Error(`Expected ${markers.start} … ${markers.end} in the document`);
   }
-  return `${document.slice(0, start + GENERATED_START.length)}\n\n${block.trim()}\n\n${document.slice(end)}`;
+  return `${document.slice(0, start + markers.start.length)}\n\n${block.trim()}\n\n${document.slice(end)}`;
 }
 
 /**
@@ -114,6 +144,15 @@ export function markdownTable(rows: readonly (readonly string[])[]): string {
   return [line(header), line(widths.map((width) => '-'.repeat(width))), ...body.map(line)].join(
     '\n',
   );
+}
+
+function verdictLine(gates: readonly GateResult[], meta: EvalReportMeta): string {
+  const failed = gates.filter((gate) => !gate.passed).length;
+  const verdict =
+    failed === 0
+      ? `all ${String(gates.length)} gates pass`
+      : `${String(failed)} of ${String(gates.length)} gates fail`;
+  return `As of ${meta.date} (UTC): \`npm run eval\` in ${meta.mode} mode, ${verdict}.`;
 }
 
 function gatesTable(gates: readonly GateResult[]): string {
