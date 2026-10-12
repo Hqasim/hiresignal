@@ -46,3 +46,11 @@ SPEC §14 asks for Playwright journeys with axe "against the local stack in repl
 - **The full suite against production.** Rejected: Ask and re-screen spend the live quota on every deploy, and shortlisting changes what visitors see.
 - **Reusing a running dev server** (`reuseExistingServer: !CI`, Playwright's usual default). Rejected: a dev server in live mode would turn the Ask journey into a live call.
 - **A data-free smoke until Phase 10.** Rejected: checking only the shell would prove the deploy serves a page, not that the journeys work.
+
+## Update (2026-10-12, Phase 10): a nightly reset
+
+`seed-demo.yml` also runs on a schedule, every night at 04:17 UTC (SPEC §4 Could, §21 risk 14). Visitors can shortlist and re-screen in the public demo, and before this their changes stayed until someone dispatched a reseed. The smoke's ranked-list journey checks only structure, so a visitor's re-screen never failed a deploy, but the next visitor saw changed data.
+
+- It's free: a replay seed makes zero Gemini calls and takes about 20 s of runner time.
+- It joins the deploy's concurrency group like a dispatch. A deploy waiting at 04:17 UTC would be cancelled; re-run it.
+- GitHub disables the schedule after 60 days without repository activity (runbook, Reseed production).
