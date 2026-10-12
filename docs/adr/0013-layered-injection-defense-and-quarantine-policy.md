@@ -66,3 +66,7 @@ Some honest resumes also talk about prompt injection, because their authors buil
 - **Rules only, rejecting any match.** Rejected: rules miss paraphrased social engineering (C07), and treating every match as an attack would quarantine security engineers (C02). The benign hard negatives exist to keep this honest.
 - **Sanitizing (deleting) suspicious text and screening the rest.** Rejected: the system would quietly screen a different document than the applicant submitted, and an attacker would learn exactly which phrases get removed. Quarantine is visible, and a person can review it.
 - **Always running the classifier, even after a high signal.** Rejected: its answer can't change a quarantine, it costs quota, and it sends a known attack to a model for nothing.
+
+## Update (2026-10-12, Phase 10): the classifier's share, measured
+
+The injection eval ([`docs/evals.md`](../evals.md#injection), ADR 0023) now measures both arms on every push. The rules alone detect 18 of 20 attacks and flag 4 of 20 benign items. With the classifier, 20 of 20 attacks are detected, all 20 quarantined, and 0 of 20 benign items are flagged: L3 catches both paraphrased attacks and dismisses every medium signal on the hard negatives, as this decision expected.

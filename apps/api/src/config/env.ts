@@ -44,7 +44,7 @@ const EnvSchema = z
     /** Required in `live` and `record` modes; replay never calls Gemini, so CI has no key (ADR 0016). */
     GEMINI_API_KEY: OptionalApiKeySchema,
     ...geminiModelFields,
-    /** Live LLM calls allowed per UTC day across the demo (SPEC §7.5). Enforced from Phase 7. */
+    /** Live LLM calls per UTC day, enforced on the routes that call a model (SPEC §7.5). */
     DAILY_LLM_CALL_CAP: z.coerce.number().int().min(0).default(300),
   })
   .superRefine((env, context) => {
