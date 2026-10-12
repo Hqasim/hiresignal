@@ -2,11 +2,6 @@
 
 How to run, deploy and operate HireSignal. Commands are for Windows PowerShell unless marked otherwise; they also work in bash with `\` line continuations.
 
-Sections still to come, each with its phase:
-
-- reseed production with the `seed-demo` workflow (Phase 10)
-- branch protection (Phase 9)
-
 ## Local setup
 
 Prerequisites:
@@ -29,7 +24,7 @@ npm run dev               # API on http://localhost:3000, web on http://localhos
 
 The defaults in `.env` run the API in `LLM_MODE=replay`, which needs no Gemini key: model calls are answered from `apps/api/fixtures/llm/`.
 
-Open http://localhost:5173. The card should say **API: healthy**. If it says **API: degraded**, the database isn't reachable: run `npm run db:up`.
+Open http://localhost:5173. The footer should say **API: healthy**. If it says **API: degraded**, the database isn't reachable: run `npm run db:up`.
 
 ### Local database
 
@@ -186,7 +181,7 @@ It then precomputes a scorecard for every non-quarantined candidate that has non
 ```powershell
 gh workflow run seed-demo.yml --ref main
 gh run watch $(gh run list --workflow seed-demo.yml --limit 1 --json databaseId --jq '.[0].databaseId')
-curl.exe -s "$api/api/jobs/senior-fullstack-ai/candidates"   # 10 candidates, every displayName null
+curl.exe -s "https://5crt5hrdkorhfczeh4u552j3pm0vkutl.lambda-url.us-east-1.on.aws/api/jobs/senior-fullstack-ai/candidates"   # 10 candidates, every displayName null
 ```
 
 It uses the `production` environment's `DATABASE_MIGRATION_URL` secret and `GEMINI_MODEL_*` variables. The model IDs must match the fixtures, so a model change means re-recording before reseeding. It shares the deploy's concurrency group, so it never runs during a migration. GitHub keeps only one waiting run per group, though, so dispatching it while a deploy is already waiting cancels that deploy. Re-run the deploy if that happens; the nightly run can do the same, though a deploy rarely waits at 04:17 UTC.
@@ -295,6 +290,20 @@ curl.exe -s "$api/api/ops/calls?limit=20"    # recent attempts, newest first, me
 | Any model route once the cap is used up                                                                                                                   | 429    | `QUOTA_EXCEEDED`     |
 
 Pass your own id with `-H 'x-request-id: my-trace-1'` (up to 128 characters) to find the request in the logs.
+
+## Measure a live re-screen
+
+A re-screen is the slowest request: about three Flash-Lite agent turns with their query embeddings, then one Flash synthesis that writes a few thousand output tokens. The Lambda times out at 60 s. To measure one in production, click **Re-run screening** on a candidate (it spends about five of the day's live calls), then read the request's duration from the access log and each call's latency from the ops API. AWS CLI with read access to CloudWatch Logs:
+
+```powershell
+$since = [DateTimeOffset]::UtcNow.AddMinutes(-15).ToUnixTimeMilliseconds()
+(aws logs filter-log-events --region us-east-1 --log-group-name /aws/lambda/hiresignal-api `
+  --start-time $since --query 'events[].message' --output json | ConvertFrom-Json) |
+  Select-String -SimpleMatch -Pattern 'http.request', 'Task timed out'
+curl.exe -s "https://5crt5hrdkorhfczeh4u552j3pm0vkutl.lambda-url.us-east-1.on.aws/api/ops/calls"
+```
+
+The `http.request` line for `/api/candidates/:id/screen` carries `status` and `durationMs`; the calls show each attempt's task, model, latency and status. A timed-out request logs no `http.request` line, only Lambda's `Task timed out`. The filter runs in PowerShell, because Windows PowerShell 5.1 strips the double quotes a CloudWatch filter pattern needs. Afterwards, reseed (above) to restore the seeded scorecard.
 
 ## Quota exhausted
 
