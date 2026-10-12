@@ -2,6 +2,7 @@ import { Info } from 'lucide-react';
 import { Link, Outlet } from 'react-router';
 
 import { HealthStatus } from '@/features/health/health-status';
+import { REPO_URL } from '@/lib/links';
 
 import { SiteNav } from './site-nav';
 
@@ -45,10 +46,7 @@ export function Layout() {
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-sm text-muted-foreground">
           <HealthStatus />
-          <a
-            href="https://github.com/Hqasim/hiresignal"
-            className={`underline underline-offset-4 ${FOCUS_RING}`}
-          >
+          <a href={REPO_URL} className={`underline underline-offset-4 ${FOCUS_RING}`}>
             Source on GitHub
           </a>
         </div>
