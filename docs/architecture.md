@@ -1,8 +1,32 @@
 # Architecture
 
-How HireSignal is put together. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md). This page grows phase by phase; as of 2026-10-12 (Phase 9) it covers the system context, the API layers, the LLM platform, the safety layer, ingestion, screening, ask, the HTTP request pipeline, the web app, the data model and the delivery pipeline.
+How HireSignal is put together, as of 2026-10-12. Decisions are in the [ADR index](adr/README.md), and the full design is in [SPEC.md](SPEC.md).
 
-## System context
+The page zooms in the way the C4 model does: the system in its context, its containers, then the API's components and layers. It then follows each runtime flow (the LLM platform, the safety layer, ingestion, screening, ask, an HTTP request, the web app), and ends with the data model and the delivery pipeline.
+
+## System context (C4 level 1)
+
+```mermaid
+flowchart LR
+  recruiter([Recruiter<br/>screens, asks, shortlists])
+  reviewer([Reviewer<br/>clicks the demo, reads the code])
+  hs["HireSignal<br/>blind, injection-aware screening<br/>of a synthetic talent pool"]
+  gemini["Google Gemini API<br/>generation and embeddings"]
+  github["GitHub<br/>source, CI, secrets, deploys"]
+  aws["AWS<br/>Lambda and Amplify"]
+  recruiter -->|uses| hs
+  reviewer -->|uses| hs
+  reviewer -->|reads the source on| github
+  hs -->|"redacted text, questions"| gemini
+  github -->|"deploys through OIDC"| aws
+  aws -->|hosts| hs
+```
+
+- **People:** the recruiter is the in-app persona, and the reviewer is the real audience (SPEC §3). There is no sign-in, so both reach the same public demo.
+- **Gemini is the one external dependency at run time.** It receives redacted resume text, recruiter questions and agent search queries, never PII.
+- **GitHub is the control plane:** the source, CI, the secrets (in the `production` environment) and every deploy.
+
+## Containers (C4 level 2)
 
 ```mermaid
 flowchart LR
@@ -20,9 +44,61 @@ flowchart LR
 - **One Postgres database** holds the relational data, the JSONB documents, the vectors and the full-text indexes ([ADR 0005](adr/0005-neon-postgres-pgvector-only-datastore.md)). The Lambda connects as the least-privilege `hiresignal_app` role through Neon's pooler. Migrations run as the owner on the direct endpoint, **before** each code deploy ([ADR 0018](adr/0018-forward-only-migrations-before-deploy.md)).
 - **The Gemini API** is reached only through the [LLM platform](#llm-platform): Flash-Lite and Flash for generation, `gemini-embedding-2` for embeddings ([ADR 0007](adr/0007-embedding-model-dimensions-and-normalization.md)). CI and tests replay recorded responses and never call it ([ADR 0009](adr/0009-record-replay-llm-adapter.md)).
 
+## API components (C4 level 3)
+
+Each route calls a use case, each use case receives its ports as factory parameters, and `main/container.ts` chooses the adapters ([ADR 0002](adr/0002-hexagonal-architecture-with-enforced-boundaries.md)). The diagram shows the request path; the seed, eval and smoke CLIs reuse the same use cases.
+
+```mermaid
+flowchart LR
+  subgraph http["interfaces/http"]
+    rJobs["jobs.ts"]
+    rCand["candidates.ts"]
+    rAsk["ask.ts"]
+    rOps["ops.ts"]
+    rHealth["health.ts"]
+    cap["daily-cap middleware"]
+  end
+  subgraph app["application: use cases"]
+    ucJobs["ListJobs · GetJob"]
+    ucCand["ListCandidates · GetCandidateDetail<br/>ShortlistCandidate"]
+    ucScreen["ScreenCandidate<br/>agent, then synthesis"]
+    ucAsk["AskTalentPool"]
+    ucOps["GetOpsSummary · ListRecentCalls"]
+    ucCap["CheckDailyCap"]
+  end
+  subgraph ports["application/ports"]
+    pLlm["LlmClient · Embedder"]
+    pRepo["Job · Candidate · Chunk ·<br/>Scorecard · LlmCall repositories"]
+    pProbe["DatabaseProbe"]
+  end
+  subgraph infra["infrastructure: adapters"]
+    aLlm["Gemini clients, decorators,<br/>record/replay"]
+    aPg["Pg repositories and probe<br/>(pg, pgvector)"]
+  end
+  rJobs --> ucJobs
+  rCand --> ucCand
+  rCand --> cap
+  rAsk --> cap
+  cap --> ucCap
+  rCand --> ucScreen
+  rAsk --> ucAsk
+  rOps --> ucOps
+  rHealth --> pProbe
+  ucJobs & ucCand & ucOps & ucCap --> pRepo
+  ucScreen & ucAsk --> pLlm
+  ucScreen & ucAsk --> pRepo
+  aLlm -.->|implements| pLlm
+  aPg -.->|implements| pRepo
+  aPg -.->|implements| pProbe
+```
+
+- **The two routes that call a model** (`POST …/screen` and `POST …/ask`) sit behind the daily-cap middleware, which counts today's live calls in `llm_calls` ([ADR 0015](adr/0015-precomputed-results-and-a-daily-call-cap.md)).
+- **Use cases never import an adapter.** They see only ports, so unit tests run them on hand-written fakes ([`apps/api/test/fakes/`](../apps/api/test/fakes/)), and the model provider could change without touching them.
+- **Not drawn:** `Clock` and `Logger`, which most use cases take, and `docs.ts`, which serves the OpenAPI document and Swagger UI ([ADR 0021](adr/0021-openapi-document-from-contracts.md)).
+
 ## API layers
 
-The API is hexagonal ([ADR 0002](adr/0002-hexagonal-architecture-with-enforced-boundaries.md)). [`.dependency-cruiser.cjs`](../.dependency-cruiser.cjs) enforces the arrows in CI.
+[`.dependency-cruiser.cjs`](../.dependency-cruiser.cjs) enforces the arrows in CI (`npm run depcruise`, part of `npm run verify`).
 
 ```mermaid
 flowchart TD
@@ -37,6 +113,24 @@ flowchart TD
   infrastructure -.->|only layer allowed| pg[(pg)]
   infrastructure -.->|only layer allowed| genai[("@google/genai")]
 ```
+
+| Layer              | Responsibility                                                                                                                | May import                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `domain/`          | Pure rules: entities, branded types, redaction, guard rules and policy, chunking, routing policy, scoring, citations, vectors | `domain/` and `zod`                                |
+| `application/`     | Use cases, ports, prompt builders, LLM output schemas                                                                         | `domain/` and `zod`                                |
+| `infrastructure/`  | Adapters: Gemini, LLM decorators, record/replay, Postgres, logger, clock, dataset readers                                     | `application/`, `domain/`, SDKs                    |
+| `interfaces/http/` | Hono routes, middleware, DTO mappers, problem+json, OpenAPI                                                                   | `application/`, `domain/`, `@hiresignal/contracts` |
+| `config/`          | Env parsing and AI tunables                                                                                                   | `zod`                                              |
+| `main/`            | The composition root (`container.ts`) and the entry points: Lambda, local server, CLIs                                        | everything                                         |
+
+The rules, by their names in the config:
+
+- `domain-is-pure`, `application-depends-on-domain-only` and `config-is-standalone`: the inner layers import only inward, and never a Node built-in or an SDK.
+- `interfaces-not-to-adapters`: routes receive use cases from `main/`; they never reach an adapter or config.
+- `infrastructure-not-to-outer-layers` and `nothing-imports-main`: adapters know nothing of HTTP, and nothing depends on the composition root.
+- `sdks-only-in-infrastructure`: `@google/genai` and `pg` are imported only in `infrastructure/`.
+- `web-not-to-api`, `contracts-are-a-leaf` and `e2e-not-to-apps`: the web app shares only `@hiresignal/contracts` with the API, the contracts import only `zod`, and E2E imports no app code.
+- `no-circular`, `not-to-unresolvable` and `no-non-package-json`: no cycles, and no import of a package the workspace doesn't declare, which npm's hoisting would otherwise hide.
 
 Persistence follows ports and adapters ([ADR 0006](adr/0006-node-postgres-everywhere.md)):
 
@@ -75,6 +169,7 @@ flowchart TD
 - **Failures are provider-neutral.** Adapters translate SDK errors into `LlmCallError` (`rate_limited`, `unavailable`, `timeout`, `rejected`), and the decorators decide what to retry from that.
 - **Model turns are opaque.** `LlmResponse.content` is the provider's turn as JSON, appended unchanged to the next request, which Gemini 3 needs for thought signatures in tool loops.
 - **Structured output** goes through [`generateStructured`](../apps/api/src/application/llm/generate-structured.ts): Zod schema → JSON Schema → reply → Zod parse, with one repair turn.
+- **Two decorators sit outside this chain.** `withThrottle` spaces out live calls in the seed and eval CLIs only; it sits innermost, so retries and fallbacks are spaced too. `withPinnedRoute` replaces routing in `npm run llm:smoke`, which checks each tier on purpose.
 - **Embeddings** get call logging and record/replay, but no retry or fallback: there is no second embedding tier. [`GeminiEmbedder`](../apps/api/src/infrastructure/llm/gemini/gemini-embedder.ts) sends one `Content` per text with retrieval prefixes, checks one 768-d vector per input, and normalizes.
 - **Record/replay** keys each fixture by `sha256` of the model and everything that decides the answer ([ADR 0009](adr/0009-record-replay-llm-adapter.md)). `npm run llm:smoke` records one structured call per tier and one embedding; a unit test replays them offline.
 - **Record mode records only what's missing** ([`fixture-first.ts`](../apps/api/src/infrastructure/llm/replay/fixture-first.ts), ADR 0009 update): a request with a fixture replays it, and only new requests reach Gemini. Each side has its own call logging, so `llm_calls` and the seed tally count only real Gemini calls.
@@ -381,9 +476,9 @@ flowchart LR
     oidc[OIDC] --> migrate[Migrate Neon] --> sam[SAM deploy] --> apismoke[curl /api/health]
     apismoke --> amplify[Amplify deploy] --> websmoke[curl web + deep link] --> smoke["Playwright @smoke<br/>read-only · axe · build SHA"]
   end
-  seed(["seed-demo.yml<br/>by hand"]) -->|"replay seed --reset<br/>zero Gemini calls"| neon[(Neon)]
+  seed(["seed-demo.yml<br/>nightly 04:17 UTC, or by hand"]) -->|"replay seed --reset<br/>zero Gemini calls"| neon[(Neon)]
   migrate --> neon
 ```
 
 - **The evals and E2E jobs each seed a fresh service container in replay mode,** so they test the committed fixtures, not whatever production holds.
-- **The production smoke is read-only:** it never shortlists, asks or re-screens. It needs the seeded demo data, which `seed-demo` loads with the same replay seed CI uses.
+- **The production smoke is read-only:** it never shortlists, asks or re-screens. It needs the seeded demo data, which `seed-demo` loads with the same replay seed CI uses. The nightly run also undoes whatever visitors shortlisted or re-screened that day.
