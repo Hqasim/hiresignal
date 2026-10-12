@@ -15,7 +15,7 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 | 6   | Ask the talent pool (hybrid RAG)            | ☑ Done        | 2026-10-10 | 23 golden questions replay offline; recall@5 = 1.000, MRR = 0.950 (hybrid)       |
 | 7   | API hardening and ops endpoints             | ☑ Done        | 2026-10-11 | 12 routes, each with contract cases; one problem shape checked for every error   |
 | 8   | Frontend                                    | ☑ Done        | 2026-10-12 | The §3 tour works end to end in Chrome on seeded data; 0 console errors          |
-| 9   | Evals, E2E and CI hardening                 | ☐ Not started |            |                                                                                  |
+| 9   | Evals, E2E and CI hardening                 | ☑ Done        | 2026-10-12 | 6 CI jobs green; 10/10 eval gates pass; 12 read-only smoke tests on every deploy |
 | 10  | Launch and documentation                    | ☐ Not started |            |                                                                                  |
 
 Status values: ☐ Not started · ◐ In progress · ☑ Done
@@ -28,6 +28,40 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
 - Neon: project `hiresignal` (`green-mouse-27720064`, `aws-us-east-1`, Postgres 18.6, pgvector 0.8.6), branch `production`, database `neondb`
   - owner `neondb_owner`: migrations, direct endpoint (`DATABASE_MIGRATION_URL`)
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
+  - Seeded in replay by `seed-demo` (run [38173582978](https://github.com/Hqasim/hiresignal/actions/runs/38173582978), 2026-10-12): the same 10 candidates and 8 scorecards as CI.
+- GitHub: ruleset `main` (id 24912738) protects the default branch; CodeQL default setup is on.
+
+## Phase 9 evidence (2026-10-12)
+
+Phase 9's DoD: every CI job is green, and `docs/evals.md` shows real numbers and the ablation tables.
+
+- **Every CI job is green.** Two runs proved it:
+  - Push 1 (`848c623`, CI run [38173335117](https://github.com/Hqasim/hiresignal/actions/runs/38173335117)): quality 56 s, unit 40 s, integration 42 s, **evals** 37 s, **e2e** 90 s and build 25 s, all green. In CI the e2e job replayed the seed (`live 0`), then 15 passed and 1 skipped.
+  - Push 2 (`cb2574f`, CI run [38215037935](https://github.com/Hqasim/hiresignal/actions/runs/38215037935)): all six green again.
+  - Deploy [38215145437](https://github.com/Hqasim/hiresignal/actions/runs/38215145437) took 1 min 59 s. Its new last step ran the **12 read-only `@smoke` tests against production, all passing in 14.7 s**, the deployed-build check included. A dry run from a workstation had passed 12/12 first.
+- **`docs/evals.md` shows real numbers** (`npm run eval -- --write`, 2026-10-11 UTC, replay, all 10 gates pass):
+
+  | Suite                          | Result                                                                            | Gate                    |
+  | ------------------------------ | --------------------------------------------------------------------------------- | ----------------------- |
+  | Retrieval (`any`, ask)         | recall@5 1.000, MRR 0.950                                                         | ≥ 0.95, ≥ 0.90          |
+  | Injection (rules + classifier) | 20/20 attacks detected, all 20 quarantined; 0/20 benign flagged                   | recall 1.00, FPR ≤ 0.05 |
+  | PII                            | 0 leaks over 44 labelled entities and 10 resume names; every type at recall 1.000 | 0 leaks                 |
+  | Scorecards                     | coverage 10/10, schema 8/8, citations 73/73, evidence 47/47, scores 8/8           | all 1.00                |
+  - **Retrieval ablation:** `all` 0.983 / 1.000, `any` 1.000 / 0.950, vector-only `off` 0.958 / 0.938. The floor splits all 23 questions correctly, 20/20 answered with 34 verified citations, and 3/3 out-of-scope declined.
+  - **Injection ablation:** the rules alone detect 18/20 attacks (they miss M19 and M20, both paraphrased social engineering) and flag 4/20 benign items (B02–B04 security vocabulary, B14 ordinary markup). Precision 0.818, F1 0.857, FPR 0.200, 5 quarantined. Adding the classifier: 20/20, 0/20, precision and F1 1.000.
+
+- **Classifier fixtures recorded by Hamzah** (`npm run eval -- --mode record`, 2026-10-12): 34 live Flash-Lite calls, 0 fallbacks, 0 failures; verdicts 14 malicious, 20 benign. 35 items reach the classifier, but M15 (zero-width-wrapped) and M18 (fullwidth) normalize to the same redacted text and share a fixture. A grep found no PII in them.
+- **E2E locally:** `npm run test:e2e`, 15 passed and 1 skipped (the build check, deploy only) in 19 s. axe found **no violations at any impact** on the job page, C01, C06, Ask (empty and answered), Ops, About and the 404. The first run found one serious one: the scrolling resume pane couldn't be focused by keyboard (`scrollable-region-focusable`). It's fixed in `fix(web)` with a component test. No orphaned server held port 3000 afterwards.
+- **Production seeded** by `seed-demo` (20 s): `Model calls: 105 (live 0, …)`, and the ranking is identical to CI. `GET …/candidates` returns 10, with every `displayName` null.
+- **Branch protection and CodeQL**, applied with Hamzah's approval:
+  - The ruleset requires a pull request (0 approvals, squash or rebase) and the six checks, each tied to the GitHub Actions app, on an up-to-date branch. It blocks deletion and force pushes, and has 0 bypass actors.
+  - CodeQL's first default-setup run passed with 0 alerts.
+  - This hand-off is the first pull request under the ruleset.
+- **`npm run verify` is green:**
+  - 1,332 unit tests: contracts 40, api 1,182, web 110. Phase 8 had 1,277.
+  - 0 dependency-cruiser violations (460 modules)
+  - every coverage gate passes; the API's overall unit coverage is 89.0% of statements
+- **`npm run test:integration` passes:** 102 tests in 7 files (Phase 8: 96 in 6). The new `eval.test.ts` replays every suite on a fresh seed and pins each suite's coverage.
 
 ## Phase 8 evidence (2026-10-12)
 
@@ -388,6 +422,27 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 - [0020 Evidence-gathering agent with a separate synthesis call](adr/0020-evidence-gathering-agent-with-separate-synthesis.md)
 - [0021 OpenAPI document assembled from the contracts](adr/0021-openapi-document-from-contracts.md)
 - [0022 Resume highlight layers rendered from API spans](adr/0022-resume-highlight-layers-from-api-spans.md)
+- [0023 Evals as ratcheting CI gates over replayed fixtures](adr/0023-evals-as-ratcheting-ci-gates.md)
+- [0024 E2E on a replay stack, and a read-only smoke against production](adr/0024-e2e-on-replay-stack-and-read-only-production-smoke.md)
+
+Phase 9 decisions agreed with Hamzah (2026-10-12) and recorded in SPEC and ADRs:
+
+- **`seed-demo.yml` is built in Phase 9,** because production was empty and `@smoke` needs data (§15, §20, ADR 0024). It was run once before the smoke step landed. Phase 10 only re-runs it.
+- **"Detected" means flagged or quarantined** in the injection suite (§14, ADR 0023). Quarantines are reported separately.
+- **`npm run eval -- --mode record`** records missing classifier verdicts for eval items. It's a live command in CLAUDE.md and the testing rules, and `seed:record` chains it.
+- **The golden set stays saturated.** Its gates sit one question below today's numbers, and `docs/evals.md` says it's a regression gate. Harder questions are deferred.
+
+Phase 9 choices recorded in commit messages and ADRs:
+
+- **Gates start one measurable step below the first result** (one question or one item on these sets), or at the stricter SPEC bar. The benign FPR gate stays at 0.05 (1 of 20), although 0.000 was measured.
+- **Evals are pure modules in `apps/api/evals/`,** wired through the product's own code paths in `main/eval-wiring.ts`. A gate whose value is undefined fails, so an empty set can't pass.
+- **The report is one Markdown renderer** for the console, the job summary and the `docs/evals.md` block. Its tables are padded the way Prettier formats them, which was checked by running Prettier on the output.
+- **One JSONL reader** backs the retrieval, injection and PII loaders. The dataset tests use the loaders instead of their own schemas.
+- **E2E forces `LLM_MODE=replay`** in Playwright's web-server environment, which beats `.env`, as Node confirmed. It never reuses a running dev server, and reseeds in a global setup. `@smoke` is read-only, and the C01/C02 order check is local-only, because a live re-screen can reorder production.
+- **The `mark[data-active]` attribute** is the E2E hook for the active quote: `<mark>` has no queryable role.
+- **The resume pane is the labelled, focusable "Redacted resume" region** (`tabIndex=0`, with a justified `eslint-disable` for `no-noninteractive-tabindex`).
+- **Dependencies:** `@playwright/test` 1.64.0 and `@axe-core/playwright` 4.13.0 (devDependencies of `@hiresignal/e2e`, no install scripts). Playwright 1.64 supports Ubuntu 26.04, so `ubuntu-latest` isn't pinned.
+- **The ruleset lives in `.github/rulesets/main.json`.** Its checks are tied to the GitHub Actions app (id 15368), and CodeQL isn't a required check.
 
 Phase 8 decisions agreed with Hamzah (2026-10-11) and recorded in SPEC:
 
@@ -582,19 +637,16 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 ## Deferred and cut-list items
 
 - **Measuring a live `POST /screen` on Lambda:** it hasn't run in production yet. The recording logs latencies that include the 6 s seed throttle, so they aren't model latencies. Measure after the next deploy (see Known issues).
-- **Seeding production** (`seed-demo` workflow, replay with `--reset` against Neon): Phase 10.
-- **Classifier precision and recall, and the rules-only vs rules + classifier ablation:** the Phase 9 eval runner, over `data/evals/injection.jsonl`.
+- **Re-running `seed-demo` at launch** (Phase 10). It was built and first run in Phase 9. A nightly schedule is still a Could.
+- **Harder golden questions** (deferred on 2026-10-12): the retrieval set is saturated. New questions need live embeddings and answers, and an update to the ask integration test's counts and route mix.
+- **Ratcheting the gates:** the benign FPR gate stays at 0.05 while 0.000 was measured, and all 20 attacks are quarantined, which no gate checks yet. Raise them if later runs hold.
 - **A smaller cold start:** load `@google/genai` lazily on the first live call, if the cold start matters (see Known issues).
-- **Playwright `@smoke` step in `deploy.yml`:** Phase 9, because Playwright isn't installed yet. `curl --fail` smoke tests cover the API and web until then.
 - **An index-friendly vector arm** (`ORDER BY embedding <=> $1`, `hnsw.iterative_scan`, `job_id` on chunks): only at scale (ADR 0008). It would need a re-recording of the screening fixtures.
 - **A per-tier daily budget** (deferred on 2026-10-11): skip Flash once its free quota (20 requests per day) is spent, instead of failing over after each 503 or 429. The ops summary's per-model errors and fallbacks show whether it's needed. See Known issues.
 - **A request id on embedding rows** (see Known issues).
-- **Retrieval ablation and recall gates in the eval runner:** Phase 9 reuses `evals/retrieval-metrics.ts` and `evals/golden-report.ts`.
 - **A retry on stale connections in the health probe:** only if Lambda logs ever show `health.db_unreachable` after a thaw (ADR 0006).
-- **Scripts arriving with their phases:**
-  - `eval` and `test:e2e` (Phase 9)
 - **`ValidationError` and the other `AppError` subclasses:** added by the phases that raise them (SPEC §7.4).
-- **axe checks and the Playwright tour:** Phase 9. The headless-Chrome script used for the Phase 8 DoD lives outside the repo; Playwright replaces it.
+- **E2E at 360 px and in a second browser:** the journeys run on desktop Chromium only. Phase 8 checked 360 px by hand.
 - **Dark mode** (a Could): the tokens exist under `.dark`, but nothing toggles them, and the amber, red and emerald highlight classes have no dark variants.
 - **The About page links `docs/responsible-ai.md`** once Phase 10 writes it.
 - **No cut-list items used.** The re-run button and trace timeline (item 3) and the full ops page (item 4) were both built.
@@ -603,7 +655,10 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 
 - **Embedding rows in `llm_calls` have no request id.** The `Embedder` port takes no `requestId`, so `withEmbeddingCallLogging` stores `null`, even for an ask's question embedding. As a result, the ops page can't tie an `embed.query` row to its request. The fix is to thread `requestId` through `embedQuery`; that changes no fixture key.
 - **The OpenAPI `OPERATIONS` table lists each route's error statuses by hand.** Tests catch a missing or extra route, but not a status that a route gained without the table being updated (ADR 0021).
-- **In replay mode, ask answers only the 23 golden questions.** Any other question gets 500 `FIXTURE_MISSING`, whose detail names `npm run seed:record`. Production runs live, so this affects only local and E2E use. The Ask page suggests golden questions only, and the Phase 9 E2E ask journey can use Q01, which is recorded.
+- **In replay mode, ask answers only the 23 golden questions.** Any other question gets 500 `FIXTURE_MISSING`, whose detail names `npm run seed:record`. Production runs live, so this affects only local and E2E use. The Ask page suggests golden questions only, and the E2E ask journey uses Q01, which is recorded.
+- **A local `npm run test:e2e` reseeds the local database** (shortlists reset) and needs port 3000 free: stop `npm run dev` first.
+- **The production smoke needs seeded data.** After a fixture change, run `seed-demo` (runbook, Reseed production). Dispatching it while a deploy is already waiting cancels that deploy, because they share a concurrency group; re-run the deploy.
+- **The smoke's ranked-list journey checks structure only** (8 ranked in score order, 2 quarantined). A visitor's live re-screen can change production's order and scores until the next `seed-demo`.
 
 - **Gemini Flash's free tier allows 20 requests per day** (seen in AI Studio, 2026-10-10), far below `DAILY_LLM_CALL_CAP` (300).
   - A live re-screen spends 1–2 Flash calls, and 5 of the 20 golden questions escalate to Flash.
@@ -611,7 +666,8 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
   - Recording is affected too: a full screening re-record needs at least 8 Flash calls, so plan recordings around the daily reset (midnight Pacific).
 - **The similarity floor's margin is narrow:** 0.022 on each side of 0.65 (ADR 0008). It's a cost guard. A new kind of question can land on the wrong side, and then the model's insufficient-evidence flag and citation verification decide.
 - **Q10 matches comparative intent by accident** ("reciprocal **rank** fusion" contains `rank`), so it routes to Flash. This is harmless, and it's pinned by the ask integration test's route mix.
-- **The golden set is close to saturated** (recall@5 = 1.000 with 8 candidates). Add harder questions before reading it as a quality claim (Phase 9).
+- **The golden set is saturated** (recall@5 = 1.000 with 8 candidates). `docs/evals.md` presents it as a regression gate, not a quality claim; harder questions are deferred.
+- **M15 and M18 share a classifier fixture,** because they normalize to the same redacted text. Editing one of them makes replay miss for that item only; run `npm run eval -- --mode record`.
 
 - **Regex detectors have documented gaps** (`docs/threat-model.md`, Known limits):
   - names outside the header, non-US addresses
@@ -631,10 +687,10 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **`npm run dev` now needs the three `GEMINI_MODEL_*` variables in `.env`.** Copy them from `.env.example`. Replay mode needs no key.
 
 - **Dependabot npm updates may fail for a few days.** Its default cooldown hides versions published in the last 3 days, and our exact pins (for example typescript-eslint 8.71.1) are newer than that. The error is `ETARGET … with a date before …`. It clears by itself.
-- **Dependabot PR #1 (`@types/node` 24 → 26) should be closed.** `dependabot.yml` now ignores `@types/node` majors, because the types must follow the Node 24 runtime.
-- **The `ubuntu-latest` runner label moves to Ubuntu 26 on 2026-10-19 (GitHub notice).** Watch the first CI run after that date.
+- **The `ubuntu-latest` runner label moves to Ubuntu 26 on 2026-10-19 (GitHub notice).** Playwright 1.64 lists Ubuntu 26.04, so `--with-deps` should work. Watch the first CI run after that date, the e2e job above all.
+- **Renaming a CI job breaks the ruleset:** pull requests would wait for a check that never reports. Rename it in `.github/rulesets/main.json` in the same pull request, then re-apply (runbook, Branch protection).
 - **The web shell chunk is 373 kB (119 kB gzip)** as of 2026-10-12, and the contracts with Zod a shared 102 kB (30 kB gzip). Pages are 5–29 kB each. Measure again if a page grows; Zod is the first thing to look at.
-- **The API's overall unit-coverage figure fell to about 43%** because the Postgres adapters run only in integration tests, which don't collect coverage. Only the domain and application gates are enforced, and they pass. Don't read the "All files" line as a regression.
+- **The API's overall unit-coverage figure leaves out the Postgres adapters,** which run only in integration tests, and those don't collect coverage. As of 2026-10-12 it is 89.0% of statements. Only the domain and application gates are enforced.
 - **A machine that ran the Postgres 17 container needs a one-time reset:** `docker compose down --volumes; npm run db:up; npm run db:migrate`. Postgres 18 can't open a 17 data directory.
 
 ## Session handoff
@@ -742,14 +798,27 @@ No live call and no deploy were needed. The 9 commits are local, waiting for Ham
 
 A headless-Chrome walk through the §3 tour found three issues (a router warning, a favicon 404, overflow at 360 px), which were fixed; the final run logged 0 errors and 0 warnings. No live call and no deploy were needed. The 14 commits are local, waiting for Hamzah's approval to push, on top of the unpushed Phase 7.
 
-**Suggested prompt for the next session:** `/clear`, then `/phase 9` (Evals, E2E and CI hardening):
+Phases 7 and 8 were pushed afterwards. CI run [38169652220](https://github.com/Hqasim/hiresignal/actions/runs/38169652220) and deploy run [38169728179](https://github.com/Hqasim/hiresignal/actions/runs/38169728179) on `394d46e` both passed.
 
-- the eval runner with the four suites and the ablations, thresholds, `docs/evals.md`
-- Playwright journeys from §14 with axe, a `@smoke` subset, and the deploy step that runs it
-- the CI `evals` and `e2e` jobs, and the branch-protection runbook
+**2026-10-12, Phase 9 done.** Evals, E2E and CI hardening are complete and live:
+
+- `npm run eval`: four replayed suites (retrieval, injection, PII, scorecards) with both ablations, ratcheting gates in `thresholds.ts`, a Markdown report for the console, the job summary and `docs/evals.md` (ADR 0023). All 10 gates pass.
+- Classifier verdicts for the injection set, recorded by Hamzah (34 live calls). With the classifier: 20/20 attacks detected (all quarantined) and 0/20 benign flagged; the rules alone: 18/20 and 4/20.
+- Playwright journeys with axe against a replay stack Playwright starts itself, and a read-only `@smoke` subset (ADR 0024). axe found one real bug (the resume pane couldn't be scrolled by keyboard), now fixed; no violations remain.
+- CI `evals` and `e2e` jobs; the deploy runs `@smoke` against production; `seed-demo.yml` seeded production in replay.
+- Branch protection by ruleset (`.github/rulesets/main.json`) and CodeQL default setup, applied with Hamzah's approval.
+
+Two pushes went to `main` with Hamzah's approval, and both CI runs and both deploys passed. From now on every change goes through a pull request; this hand-off is the first.
+
+**Suggested prompt for the next session:** `/clear`, then `/phase 10` (Launch and documentation):
+
+- re-run `seed-demo` and the production smoke (both exist now)
+- the final README (§13.3), with the eval table copied from `docs/evals.md`, `docs/responsible-ai.md`, and the threat model, architecture and runbook brought up to date
+- the quality pass (dead code, TODOs, TSDoc, folder READMEs), and the demo GIF (Hamzah)
 
 Things to plan for:
 
-- The E2E ask journey can use golden Q01; locally any other question is `FIXTURE_MISSING`.
-- Shortlisting persists, so E2E needs a fresh `seed -- --reset` or a candidate it doesn't shortlist elsewhere.
-- Phases 7 and 8 are unpushed; the first CI run covers both.
+- `main` is protected: work on a branch, open a pull request, and wait for the six checks. Merging deploys.
+- The About page should link `docs/responsible-ai.md` once it exists.
+- §2 needs at least 12 ADRs; there are 24.
+- A fixture change needs a `seed-demo` run, or the deploy's smoke checks stale data.
