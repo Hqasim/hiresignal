@@ -26,5 +26,13 @@ describe('AboutPage', () => {
       'href',
       'https://github.com/Hqasim/hiresignal/blob/main/docs/threat-model.md',
     );
+    expect(screen.getByRole('link', { name: 'Responsible AI' })).toHaveAttribute(
+      'href',
+      'https://github.com/Hqasim/hiresignal/blob/main/docs/responsible-ai.md',
+    );
+    expect(screen.getByRole('link', { name: 'Evals and results' })).toHaveAttribute(
+      'href',
+      'https://github.com/Hqasim/hiresignal/blob/main/docs/evals.md',
+    );
   });
 });

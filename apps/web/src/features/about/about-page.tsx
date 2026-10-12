@@ -1,8 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 
 import { apiUrl } from '@/lib/api-client';
-
-const REPO = 'https://github.com/Hqasim/hiresignal';
+import { REPO_URL, repoFileUrl } from '@/lib/links';
 
 /** The pipeline every resume goes through, in order (SPEC §6.3). */
 const PIPELINE = [
@@ -32,10 +31,12 @@ const PIPELINE = [
   },
 ] as const;
 
-/** Docs that exist today; Phase 10 adds docs/responsible-ai.md here. */
+/** The design docs a reviewer reads next, on GitHub. */
 const DOCS = [
   { label: 'Architecture', path: 'docs/architecture.md' },
   { label: 'Threat model', path: 'docs/threat-model.md' },
+  { label: 'Responsible AI', path: 'docs/responsible-ai.md' },
+  { label: 'Evals and results', path: 'docs/evals.md' },
   { label: 'Architecture decisions (ADRs)', path: 'docs/adr/README.md' },
 ] as const;
 
@@ -112,7 +113,7 @@ export function AboutPage() {
         </h2>
         <ul className="space-y-1">
           <li>
-            <a href={REPO} className={LINK}>
+            <a href={REPO_URL} className={LINK}>
               Source code on GitHub
               <ExternalLink aria-hidden className="size-3.5" />
             </a>
@@ -125,7 +126,7 @@ export function AboutPage() {
           </li>
           {DOCS.map((doc) => (
             <li key={doc.path}>
-              <a href={`${REPO}/blob/main/${doc.path}`} className={LINK}>
+              <a href={repoFileUrl(doc.path)} className={LINK}>
                 {doc.label}
                 <ExternalLink aria-hidden className="size-3.5" />
               </a>
