@@ -4,19 +4,19 @@ Claude Code maintains this file. It's updated at the end of every phase and read
 
 ## Phases
 
-| #   | Phase                                       | Status        | Date       | Notes                                                                            |
-| --- | ------------------------------------------- | ------------- | ---------- | -------------------------------------------------------------------------------- |
-| 0   | Foundations and walking skeleton            | ☑ Done        | 2026-10-08 | CI and deploy green; the live web page shows "API: healthy" from the live Lambda |
-| 1   | Database and persistence                    | ☑ Done        | 2026-10-08 | Neon migrated by the deploy workflow; live health reports `db: up`               |
-| 2   | LLM platform                                | ☑ Done        | 2026-10-09 | Live smoke passed on both tiers and embeddings; its fixtures replay in CI        |
-| 3   | Safety layer: redaction and injection guard | ☑ Done        | 2026-10-09 | Redaction and guard ≥ 95% covered; every rule has attack and hard-negative cases |
-| 4   | Synthetic data and ingestion                | ☑ Done        | 2026-10-09 | Offline replay seed in 2.5 s; all ten guard outcomes match SPEC §12              |
-| 5   | Screening agent and scorecards              | ☑ Done        | 2026-10-09 | 8 scorecards, 73/73 citations verified; C01 and C02 rank first; replay in 2.1 s  |
-| 6   | Ask the talent pool (hybrid RAG)            | ☑ Done        | 2026-10-10 | 23 golden questions replay offline; recall@5 = 1.000, MRR = 0.950 (hybrid)       |
-| 7   | API hardening and ops endpoints             | ☑ Done        | 2026-10-11 | 12 routes, each with contract cases; one problem shape checked for every error   |
-| 8   | Frontend                                    | ☑ Done        | 2026-10-12 | The §3 tour works end to end in Chrome on seeded data; 0 console errors          |
-| 9   | Evals, E2E and CI hardening                 | ☑ Done        | 2026-10-12 | 6 CI jobs green; 10/10 eval gates pass; 12 read-only smoke tests on every deploy |
-| 10  | Launch and documentation                    | ☐ Not started |            |                                                                                  |
+| #   | Phase                                       | Status | Date       | Notes                                                                            |
+| --- | ------------------------------------------- | ------ | ---------- | -------------------------------------------------------------------------------- |
+| 0   | Foundations and walking skeleton            | ☑ Done | 2026-10-08 | CI and deploy green; the live web page shows "API: healthy" from the live Lambda |
+| 1   | Database and persistence                    | ☑ Done | 2026-10-08 | Neon migrated by the deploy workflow; live health reports `db: up`               |
+| 2   | LLM platform                                | ☑ Done | 2026-10-09 | Live smoke passed on both tiers and embeddings; its fixtures replay in CI        |
+| 3   | Safety layer: redaction and injection guard | ☑ Done | 2026-10-09 | Redaction and guard ≥ 95% covered; every rule has attack and hard-negative cases |
+| 4   | Synthetic data and ingestion                | ☑ Done | 2026-10-09 | Offline replay seed in 2.5 s; all ten guard outcomes match SPEC §12              |
+| 5   | Screening agent and scorecards              | ☑ Done | 2026-10-09 | 8 scorecards, 73/73 citations verified; C01 and C02 rank first; replay in 2.1 s  |
+| 6   | Ask the talent pool (hybrid RAG)            | ☑ Done | 2026-10-10 | 23 golden questions replay offline; recall@5 = 1.000, MRR = 0.950 (hybrid)       |
+| 7   | API hardening and ops endpoints             | ☑ Done | 2026-10-11 | 12 routes, each with contract cases; one problem shape checked for every error   |
+| 8   | Frontend                                    | ☑ Done | 2026-10-12 | The §3 tour works end to end in Chrome on seeded data; 0 console errors          |
+| 9   | Evals, E2E and CI hardening                 | ☑ Done | 2026-10-12 | 6 CI jobs green; 10/10 eval gates pass; 12 read-only smoke tests on every deploy |
+| 10  | Launch and documentation                    | ☑ Done | 2026-10-15 | Every §2 success criterion checked off; production reseeded; smoke 12/12         |
 
 Status values: ☐ Not started · ◐ In progress · ☑ Done
 
@@ -30,6 +30,58 @@ Status values: ☐ Not started · ◐ In progress · ☑ Done
   - `hiresignal_app`: the Lambda, pooled endpoint (`DATABASE_URL`). Created with SQL, so it isn't in `neon_superuser`.
   - Seeded in replay by `seed-demo` (run [38173582978](https://github.com/Hqasim/hiresignal/actions/runs/38173582978), 2026-10-12): the same 10 candidates and 8 scorecards as CI.
 - GitHub: ruleset `main` (id 24912738) protects the default branch; CodeQL default setup is on.
+
+## Phase 10 evidence (2026-10-15)
+
+Phase 10's DoD: every SPEC §2 success criterion is checked off.
+
+| §2 criterion                                                                       | Evidence (2026-10-15)                                                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Live web URL and API; health returns 200 with DB status and git SHA                | `GET /api/health` → `200 {"status":"ok","db":"up","llmMode":"live","gitSha":"447db4c…"}`, the merged commit. The web app is at [Live endpoints](#live-endpoints).                                                                |
+| CI green on `main`                                                                 | CI run [38706882728](https://github.com/Hqasim/hiresignal/actions/runs/38706882728) on `447db4c`: quality (format, lint, typecheck, boundaries), unit, integration, evals, e2e and build all passed.                             |
+| Eval thresholds met; results in `docs/evals.md` and the job summary                | All 10 gates pass in that run's evals job, which writes its tables to the job summary. `docs/evals.md` and the README's gates table hold the same numbers.                                                                       |
+| README: live link, tour, skills map, architecture diagram, eval results, ADR index | [README](../README.md): the live demo link, the tour GIF and three screenshots, the 60-second tour, the skills map linked to files, a Mermaid architecture diagram, the gates table and the ADR index.                           |
+| At least 12 ADRs; the four docs complete                                           | 24 ADRs, indexed in [`adr/README.md`](adr/README.md). [Architecture](architecture.md), [threat model](threat-model.md), [responsible AI](responsible-ai.md) and [runbook](runbook.md) are final.                                 |
+| Zero `any`; zero unexplained suppressions; coverage gates met                      | See the zero-`any` item below.                                                                                                                                                                                                   |
+| Playwright + axe: no serious or critical violations                                | No serious or critical violations on the job page, C01, C06, Ask (empty and answered), Ops, About and the 404, locally and in CI's e2e job. The deploy's `@smoke` repeats every scan except the answered Ask against production. |
+
+- **Zero `any`, no unexplained suppressions, coverage gates met.**
+  - A grep of `apps/`, `packages/` and `e2e/` finds no `any` and no `@ts-ignore`.
+  - There is exactly one `eslint-disable`, with its reason on the same line (`candidate-page.tsx`, the focusable resume pane).
+  - ESLint enforces this: `eslint-comments/require-description` and `reportUnusedDisableDirectives: 'error'`.
+  - `npm run verify` enforces the coverage gates; the API's unit coverage is 89.0% of statements.
+- **Phase 10 step 1, reseed and smoke production:**
+  - `seed-demo` run [38707735359](https://github.com/Hqasim/hiresignal/actions/runs/38707735359) created 10 candidates (2 quarantined) in 4.1 s. It reported `Model calls: 105 (live 0, fallbacks 0, failed 0)`.
+  - The live API afterwards: 10 candidates, every `displayName` null. Scores: C01, C02, C10 100; C05 69; C09 58; C03 50; C04 50; C08 27; C06 and C07 unscored.
+  - The `@smoke` subset from the workstation, with `E2E_BASE_URL` and `E2E_GIT_SHA=447db4c…`: **12 passed in 14.9 s**. Without `E2E_GIT_SHA`, the build check skips (11 passed, 1 skipped).
+- **The launch pull request** ([#4](https://github.com/Hqasim/hiresignal/pull/4)):
+  - 15 commits; all six required checks and both CodeQL analyses passed.
+  - Rebase-merged as `447db4c`. CI on `main` took 1 min 23 s.
+  - The deploy [38707050392](https://github.com/Hqasim/hiresignal/actions/runs/38707050392) took 2 min 24 s: the migration applied 0, then SAM, the health and web smoke checks, Amplify, and **12 `@smoke` tests passed in 15.5 s**.
+- **Verified locally on the branch before pushing:**
+  - `npm run verify`: 1,336 unit tests (contracts 40, api 1,185, web 111), 0 dependency-cruiser violations (460 modules), every coverage gate met
+  - `npm run test:integration`: 102/102 in 7 files
+  - `npm run eval`: 10/10 gates (`Model calls: 147 (live 0, …)`)
+  - `npm run test:e2e`: 15 passed and 1 skipped (the deploy-only build check) in 17.8 s
+  - `npm run smoke:bundle`: 200 for health, 413 for the body limit
+- **The tour GIF** (`docs/media/tour.gif`): 1280 × 641, 37 frames, 38.8 s, 2.9 MB.
+  - Recorded with the Claude in Chrome recorder on the local replay stack, after a fresh replay seed, so it shows the committed demo data.
+  - It was resized and re-encoded with `sharp` in a scratch directory, not a project dependency. The recorder's "wait" tags were painted out of the top-left corner.
+  - It shortlists C01 before opening C06, one round trip fewer than the README's order. Ops shows "–" for the cache ratio and p95, because every local call is replayed.
+- **Docs (step 2):**
+  - the launch README (§13.3), with the GIF and screenshots
+  - `docs/responsible-ai.md`, linked from About
+  - the final threat model
+  - the C4 context, API components and layer rules in `architecture.md`
+  - the runbook's sections on reseeding, measuring a live re-screen and branch protection
+  - `npm run eval -- --write` now also writes the README's gates table
+- **Quality pass (step 3):**
+  - folder READMEs brought up to date, and new ones for `apps/api/test/` and `db/`
+  - comments that cited a phase now give a date
+  - dated updates to ADRs 0008, 0013 and 0015
+  - the unused shadcn card and separator primitives removed
+  - a grep found no TODO or FIXME
+- **No live model calls this phase.** No prompt, model, resume or golden question changed, so nothing was re-recorded.
 
 ## Phase 9 evidence (2026-10-12)
 
@@ -425,6 +477,13 @@ Phase 3 is offline: no live call, no deploy. Its Definition of Done is about tes
 - [0023 Evals as ratcheting CI gates over replayed fixtures](adr/0023-evals-as-ratcheting-ci-gates.md)
 - [0024 E2E on a replay stack, and a read-only smoke against production](adr/0024-e2e-on-replay-stack-and-read-only-production-smoke.md)
 
+Phase 10 decisions agreed with Hamzah (2026-10-15):
+
+- **The tour GIF is recorded on the local replay stack, not production.** Every take is identical, uses no quota and changes nothing public. Claude recorded it in Hamzah's Chrome, at Hamzah's request (SPEC §20 had assigned it to him).
+- **`seed-demo` runs nightly at 04:17 UTC** (SPEC §4 Could, risk 14), so visitors' shortlists and re-screens last a day at most.
+- **The live re-screen measurement was skipped at launch.** It stays deferred, with its runbook section.
+- **The launch was two pull requests:** #4 for the work, merged by rebase so each step keeps its Conventional Commit, then a docs-only one for this evidence and the §2 ticks.
+
 Phase 9 decisions agreed with Hamzah (2026-10-12) and recorded in SPEC and ADRs:
 
 - **`seed-demo.yml` is built in Phase 9,** because production was empty and `@smoke` needs data (§15, §20, ADR 0024). It was run once before the smoke step landed. Phase 10 only re-runs it.
@@ -636,8 +695,7 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 
 ## Deferred and cut-list items
 
-- **Measuring a live `POST /screen` on Lambda:** it hasn't run in production yet. The recording logs latencies that include the 6 s seed throttle, so they aren't model latencies. Measure after the next deploy (see Known issues).
-- **Re-running `seed-demo` at launch** (Phase 10). It was built and first run in Phase 9. A nightly schedule is still a Could.
+- **Measuring a live `POST /screen` on Lambda:** it hasn't run in production yet; Hamzah skipped it at launch (2026-10-15). The recording logs latencies that include the 6 s seed throttle, so they aren't model latencies. The steps are in the runbook (Measure a live re-screen), and it costs about 5 live calls. Reseed afterwards (see Known issues).
 - **Harder golden questions** (deferred on 2026-10-12): the retrieval set is saturated. New questions need live embeddings and answers, and an update to the ask integration test's counts and route mix.
 - **Ratcheting the gates:** the benign FPR gate stays at 0.05 while 0.000 was measured, and all 20 attacks are quarantined, which no gate checks yet. Raise them if later runs hold.
 - **A smaller cold start:** load `@google/genai` lazily on the first live call, if the cold start matters (see Known issues).
@@ -648,7 +706,6 @@ Phase 0 choices recorded in commit messages rather than ADRs, because they're de
 - **`ValidationError` and the other `AppError` subclasses:** added by the phases that raise them (SPEC §7.4).
 - **E2E at 360 px and in a second browser:** the journeys run on desktop Chromium only. Phase 8 checked 360 px by hand.
 - **Dark mode** (a Could): the tokens exist under `.dark`, but nothing toggles them, and the amber, red and emerald highlight classes have no dark variants.
-- **The About page links `docs/responsible-ai.md`** once Phase 10 writes it.
 - **No cut-list items used.** The re-run button and trace timeline (item 3) and the full ops page (item 4) were both built.
 
 ## Known issues
@@ -822,3 +879,22 @@ Things to plan for:
 - The About page should link `docs/responsible-ai.md` once it exists.
 - §2 needs at least 12 ADRs; there are 24.
 - A fixture change needs a `seed-demo` run, or the deploy's smoke checks stale data.
+
+**2026-10-15, Phase 10 done. The project is launched.** Every SPEC §2 success criterion is checked off, with its evidence in Phase 10 evidence above.
+
+- the launch README with the 60-second tour GIF, the responsible-AI doc, the final threat model, architecture and runbook
+- a quality pass over READMEs, comments and ADR notes
+- `seed-demo` nightly
+- production reseeded in replay (live 0), and the `@smoke` subset passing 12/12 against it
+
+The work merged as PR #4 (`447db4c`), and its deploy passed. This evidence follows in a docs-only PR. No live model call was made this phase.
+
+**Suggested prompt for the next session:** `/clear`, then pick from Deferred and cut-list items.
+
+- The first CI run after 2026-10-19 lands on Ubuntu 26 (`ubuntu-latest`); watch the e2e job.
+- The likely next items:
+  - measure a live re-screen on Lambda
+  - thread `requestId` through `embedQuery`
+  - harder golden questions
+  - counterfactual bias evaluation (SPEC §22)
+- Every change still goes through a pull request, and a fixture change still needs a `seed-demo` run.

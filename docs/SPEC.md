@@ -73,13 +73,15 @@ Authentication and multi-tenancy · file upload and PDF/DOCX parsing · real can
 
 ### Success criteria (project Definition of Done)
 
-- [ ] Live web URL and API; `GET /api/health` returns 200 with DB status and git SHA.
-- [ ] CI green on `main`: format, lint, typecheck, dependency boundaries, unit, integration, evals, E2E.
-- [ ] Eval thresholds met; results published in `docs/evals.md` and in the CI job summary.
-- [ ] README with live link, 60-second tour, skills map linking to exact files, architecture diagram, eval results, ADR index.
-- [ ] At least 12 ADRs; `docs/architecture.md`, `docs/threat-model.md`, `docs/responsible-ai.md`, `docs/runbook.md` complete.
-- [ ] Zero `any`; zero unexplained lint suppressions; coverage gates met.
-- [ ] Playwright + axe: no serious or critical accessibility violations on main pages.
+- [x] Live web URL and API; `GET /api/health` returns 200 with DB status and git SHA.
+- [x] CI green on `main`: format, lint, typecheck, dependency boundaries, unit, integration, evals, E2E.
+- [x] Eval thresholds met; results published in `docs/evals.md` and in the CI job summary.
+- [x] README with live link, 60-second tour, skills map linking to exact files, architecture diagram, eval results, ADR index.
+- [x] At least 12 ADRs; `docs/architecture.md`, `docs/threat-model.md`, `docs/responsible-ai.md`, `docs/runbook.md` complete.
+- [x] Zero `any`; zero unexplained lint suppressions; coverage gates met.
+- [x] Playwright + axe: no serious or critical accessibility violations on main pages.
+
+All seven were checked off on 2026-10-15, at launch. The evidence for each is in [`PROGRESS.md`](PROGRESS.md#phase-10-evidence-2026-10-15).
 
 ---
 
