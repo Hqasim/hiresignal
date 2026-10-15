@@ -9,7 +9,7 @@
 
 HireSignal screens a batch of resumes against one job. It hides who the candidates are, catches resumes written to manipulate an AI screener, and rates each requirement only with quotes that code has found in the resume. A person makes the decision.
 
-![C01's scorecard: a citation is picked, and its quote is highlighted in the redacted resume](docs/media/candidate-c01.png)
+![The 60-second tour on the seeded demo: the ranked list, a citation highlighted in C01's redacted resume, shortlisting reveals the name, C06's hidden instruction, a cited answer from Ask, and the Ops page](docs/media/tour.gif)
 
 ## Try it in 60 seconds
 
@@ -20,9 +20,9 @@ HireSignal screens a batch of resumes against one job. It hides who the candidat
 5. **Go to [Ask](https://main.dcq94s69atcgh.amplifyapp.com/ask)** and pick "Who has built retrieval-augmented generation with embeddings and a vector store?" The answer cites candidates and quotes, and each citation opens the candidate with the quote highlighted.
 6. **Open [Ops](https://main.dcq94s69atcgh.amplifyapp.com/ops):** calls by model, cache hit ratio, p95 latency, fallbacks and the day's remaining quota.
 
-| Ranked list and quarantine                                                                           | A quarantined resume                                                                                       |
-| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| ![Eight ranked candidates and two quarantined, with the job's requirements](docs/media/job-page.png) | ![C06: the hidden HTML comment highlighted in red, with the guard's signals](docs/media/candidate-c06.png) |
+| Ranked list and quarantine                                                                           | A cited rating                                                                                                              | A quarantined resume                                                                                       |
+| ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| ![Eight ranked candidates and two quarantined, with the job's requirements](docs/media/job-page.png) | ![C01's scorecard: a citation is picked, and its quote is highlighted in the redacted resume](docs/media/candidate-c01.png) | ![C06: the hidden HTML comment highlighted in red, with the guard's signals](docs/media/candidate-c06.png) |
 
 ## Why this exists
 
